@@ -1,89 +1,131 @@
 
-# TownWelcome — MVP Plan
+# TownWelcome — Design Overhaul + Featured Grouping + Logo Fallbacks
 
-A mobile-first directory site that auto-routes visitors to their local Wisconsin town page (starting with Ozaukee County), shows sponsored + categorized businesses, and lets anyone download a one-page PDF with a QR code back to the live page.
-
-Stack: TanStack Start (React 19 + Vite) + Tailwind + shadcn/ui + Lovable Cloud (Supabase under the hood) + server functions for PDF generation. Admin panel and Firecrawl scraping deferred to a follow-up.
+A full visual rebuild inspired by SNAPTURE's warm, editorial aesthetic, plus two structural improvements: featured businesses grouped by category (no auto-care-next-to-bistro), and category-themed image fallbacks for businesses that haven't uploaded a logo yet.
 
 ---
 
-## 1. Database (Lovable Cloud)
+## 1. Design system overhaul (`src/styles.css`)
 
-Tables created via migration:
+New "Snapture shell + WI accent" palette, defined in oklch tokens:
 
-- **towns** — `id, slug, name, county, state, zip_codes (text[]), latitude, longitude, hero_blurb, created_at`
-- **categories** — `id, slug, name, icon (lucide name), display_order`
-- **businesses** — `id, town_id (fk), category_id (fk), name, subcategory, address, phone, website, description, logo_url, coupon_text, coupon_expires (date), sponsor_tier (enum: none|bronze|silver|gold|s_tier), featured_order (int), scraped_from, last_scraped, created_at`
-- **sponsor_tiers** — `id, key, name, price_monthly, display_priority` (reference table for future billing)
+- `--background` — warm cream (#F9F5F0-ish)
+- `--foreground` — deep charcoal (near-black, slightly warm)
+- `--primary` — vibrant orange (#FF6B00-ish) for CTAs, pills, links
+- `--primary-foreground` — cream
+- `--card` — pure cream / off-white
+- `--muted` — soft taupe
+- `--border` — warm sand
+- Keep existing `--wi-lake / --wi-pine / --wi-cheddar / --wi-cranberry / --wi-sunset / --wi-corn / --wi-sky / --wi-barn` tokens — used ONLY on category chips, section badges, and category icon tiles for personality.
+- New gradients: `--gradient-warm`, `--gradient-orange-glow`
+- New shadows: `--shadow-soft` (cream cards), `--shadow-cta` (orange glow)
+- Typography scale: bold uppercase display, clean body. Use `font-display` (e.g. Bricolage Grotesque or Fraunces via Google Fonts `<link>` in `__root.tsx`) for headings; system sans for body. Set tracking-tight + uppercase utilities for hero headlines.
+- Dark mode kept consistent (deeper warm-charcoal bg, orange unchanged).
 
-RLS: public `select` on all four tables. No public writes (admin/scraping comes later behind auth).
+## 2. Shared layout pieces
 
-Seed data: ~5 Ozaukee towns (Grafton, Cedarburg, Mequon, Port Washington, Thiensville) with lat/lng + zip arrays, ~8 categories (Restaurants, Coffee & Breakfast, Shopping, Services, Health, Parks & Rec, Schools, City Services), and ~6–10 sample businesses per town including 1–2 sponsored ones with coupons so the prototype looks real.
+- **`src/components/site-header.tsx`** — sticky top bar: left "TOWNWELCOME." wordmark; center nav (Home, Towns, Sponsor, About); right black pill "Get Listed" button with small orange dot. Cream bg, dark text. Reused on every route.
+- **`src/components/site-footer.tsx`** — dark charcoal footer with cream text, contact + nav columns, "List your business" orange button, social row. Reused.
+- **`src/components/section-divider.tsx`** — small uppercase eyebrow + thin rule (matches Snapture's `// PHOTOGRAPHY` markers) — `// RESTAURANTS`, `// FEATURED`, etc.
 
-## 2. Routes
+## 3. Home page (`/` — `src/routes/index.tsx`)
 
+Snapture-style split hero:
+- Left: tall hero image (Wisconsin landscape — lake/forest/farm, Unsplash) with small "// WELCOME" eyebrow.
+- Right: massive uppercase headline "DISCOVER YOUR TOWN, ONE LOCAL AT A TIME." with small bird/leaf illustration accent (lucide `Bird` tinted in WI cheddar). Subhead. Big orange "Use my location" pill button + secondary "Browse towns" ghost button.
+- Below hero: 3 horizontal "category showcase" cards (Snapture-style) — "EAT LOCAL", "SHOP MAIN STREET", "EXPLORE OUTDOORS" with photo + arrow CTA, each linking to a filter on a town page.
+- Town picker section (existing `<Select>` + ZIP form) restyled into Snapture cream card with orange accents.
+- **Hydration fix**: wrap the ZIP `<form>` so LastPass extension injection on `<input type="text">` doesn't mismatch — use `suppressHydrationWarning` on the form and ensure consistent SSR markup. (Also resolves the current runtime hydration error.)
+
+## 4. Town page (`/$townSlug` — `src/routes/$townSlug.tsx`)
+
+Major restructure:
+
+### Hero
+Snapture split hero adapted to a town: photo of the town on the left (Unsplash by town name), big uppercase "WELCOME TO {TOWN}." + hero blurb on the right, orange "Download Welcome PDF" CTA + ghost "Share" button with small QR preview.
+
+### Sticky category nav
+Keep current scroll-spy chip bar but restyled: cream bg with subtle blur, chips use WI palette colors (lake, pine, cheddar, etc.) — active chip lifts with orange ring instead of full color flip. Sits below site header.
+
+### Featured — grouped by category (NEW behavior)
+A "// FEATURED LOCALS" section at the top. Inside it, render **one mini-row per category that has any sponsored business**, ordered by category display order. Each row:
+- Small WI-colored category badge + category name ("FEATURED RESTAURANTS")
+- Horizontal scroll of premium sponsor cards (sorted by `sponsor_tier` priority then `featured_order`)
+- Each card: large business image (logo or fallback), "FEATURED" pill, name, 1-line description, coupon badge if present, phone + website
+This guarantees no auto-care card next to a bistro card.
+
+### Category sections
+Then the full categorized list as today, but each section restyled as a Snapture "module": large uppercase section title, WI-color icon tile, business cards in a 2–3 column grid with cream bg, generous whitespace, thin borders, hover lift.
+
+### Business card
+- Square image area (logo if present, else fallback — see §5)
+- Name (bold uppercase), subcategory (small caps, muted)
+- Description (2 lines clamped)
+- Coupon as orange pill with expiry
+- Phone (tel:) + Website (new tab) + Map link as small icon-buttons row
+
+### Footer block
+"Not the right town?" → back to `/`. Then full site footer.
+
+## 5. Logo fallback system
+
+New helper `src/lib/logo.ts`:
+
+```ts
+businessImage(business, category) -> string
 ```
-src/routes/
-  __root.tsx              shell + QueryClient
-  index.tsx               landing + geolocation CTA + manual fallback
-  $townSlug.tsx           dynamic town page (/grafton, /cedarburg, …)
-  api/pdf.$townSlug.ts    server route returning a PDF stream
-```
 
-No `/admin` in this MVP.
+Logic:
+1. If `business.logo_url` exists → return it.
+2. Otherwise return a stable Unsplash Source URL keyed by `category.slug` — e.g.
+   - `restaurants` → `https://source.unsplash.com/600x600/?restaurant,food`
+   - `coffee` → `?coffee,cafe`
+   - `shopping` → `?boutique,storefront`
+   - `services` → `?storefront,smalltown`
+   - `health` → `?wellness,clinic`
+   - `parks` → `?park,wisconsin`
+   - `schools` → `?school,classroom`
+   - `city` → `?cityhall,townhall`
+   Append `&sig=${business.id}` so each business gets a stable, unique image.
+3. As an extra-safe fallback (if image fails to load), client-side `onError` swaps to an initials tile generated from the business name on a WI-palette color picked from `business.id`.
 
-## 3. Home page (`/`)
+No DB change required — `logo_url` already exists. Admin/scrape work stays deferred.
 
-- Hero: "Welcome to your town" + big primary "Use my location" button.
-- On click → `navigator.geolocation.getCurrentPosition` → server function `resolveTownFromCoords({ lat, lng })` that:
-  1. Finds nearest town in our `towns` table within ~25km using lat/lng (haversine in SQL).
-  2. Falls back to Nominatim reverse geocode → match returned postcode against `zip_codes`.
-  3. Returns `{ slug }` or `null`.
-- On success → `navigate({ to: '/$townSlug', params: { townSlug: slug } })`.
-- Fallback UI (denied / no match / error): manual town `<Select>` + ZIP input.
-- Loading and error states for each branch; never a blank screen.
+## 6. PDF redesign (`src/routes/api/pdf.$townSlug.tsx`)
 
-## 4. Town page (`/$townSlug`)
+Match new aesthetic in `@react-pdf/renderer`:
+- Cream page bg, charcoal text, orange accent rules
+- Header: "TOWNWELCOME · {TOWN}, WI" wordmark + QR top-right
+- "FEATURED LOCALS" section grouped by category (mirrors web)
+- Two-column compact category lists below
+- Footer line: "Scan to view live → townwelcome.com/{slug}"
 
-Loader calls a server function `getTownPage(slug)` returning `{ town, categoriesWithBusinesses }`.
+## 7. Out of scope (still deferred)
 
-Layout:
-- Sticky header: town name, "Download PDF" button, small QR (links to current URL).
-- Hero banner with `town.hero_blurb`.
-- **Featured / Sponsored** section at top — sorted by `sponsor_tier` priority (s_tier > gold > silver > bronze) then `featured_order`. Larger cards with logo, coupon badge, "Featured" pill.
-- **Category sections** below as tab strip on mobile, anchored sections on desktop. Each business card: logo, name, short description, phone (tel:), website (new tab), coupon if present, address with map link (`https://maps.google.com/?q=…`).
-- Footer: "Not the right town?" → back to `/`.
-- Empty state per category when no businesses.
-- 404 (`notFoundComponent`) when slug doesn't exist.
+- Real logo scraping (Firecrawl/OG-image) — flagged for next iteration
+- Admin CRUD / business self-serve upload portal
+- Stripe billing for sponsor tiers
 
-## 5. PDF + QR
+## Technical notes
 
-Server route `GET /api/pdf/$townSlug`:
-- Fetches the same data as the town page.
-- Generates QR code as a data URL with `qrcode` pointing to `https://{host}/{slug}`.
-- Renders a one-page A4 PDF with `@react-pdf/renderer` (`renderToStream`): town header + QR top-right, sponsored block, then categorized business list in a compact two-column layout. Print-friendly typography, no images required beyond logos (lazy — fall back to initials if missing).
-- Returns the stream with `Content-Type: application/pdf` and `Content-Disposition: inline; filename="townwelcome-{slug}.pdf"`.
+- Add Google Fonts link in `__root.tsx` `<head>`: Bricolage Grotesque (700/800) for display, Inter for body.
+- Featured grouping is a pure client-side derivation from existing `businesses` query: `groupBy(category_id).filter(g => g.some(b => b.sponsor_tier !== 'none')).sort(category.display_order)`. Inside each group, sort by `tierPriority[sponsor_tier]` desc then `featured_order` asc. No new server function needed.
+- Unsplash Source URLs (`source.unsplash.com`) require no API key; cache-friendly. If they ever rate-limit we can swap to a curated `src/assets/category-fallbacks/*.jpg` set without changing call sites.
+- Hydration mismatch on `/`: the LastPass injection happens on visible `<input>` siblings of the submit button. Fix by adding `suppressHydrationWarning` on the form wrapper and ensuring no `Date.now()`/random IDs in rendered markup.
+- All color usage in components must reference semantic tokens (`bg-background`, `text-primary`, `border-border`) plus the `--wi-*` tokens via small utility classes (e.g. `bg-[hsl(var(--wi-cheddar))]`-style — actually `oklch` via `bg-[var(--wi-cheddar)]`). Document in `src/styles.css` comments.
+- Mobile-first: hero stacks, featured rows become horizontal-snap carousels, category nav stays sticky and horizontally scrollable.
 
-The header "Download PDF" button is a plain `<a href="/api/pdf/{slug}" target="_blank">`.
+## Files touched
 
-## 6. Design system
+- `src/styles.css` — palette + typography + gradients/shadows
+- `src/routes/__root.tsx` — Google Fonts, site header/footer wrappers
+- `src/routes/index.tsx` — Snapture hero, showcase row, restyled picker, hydration fix
+- `src/routes/$townSlug.tsx` — new hero, grouped featured, restyled sections/cards, fallback images
+- `src/routes/api/pdf.$townSlug.tsx` — restyled PDF
+- `src/components/site-header.tsx` (new)
+- `src/components/site-footer.tsx` (new)
+- `src/components/section-divider.tsx` (new)
+- `src/components/business-card.tsx` (new — extracted, uses fallback)
+- `src/lib/logo.ts` (new)
 
-Friendly community feel: soft greens + blues on warm off-white. Define tokens in `src/styles.css` (oklch) — `--primary` (sage green), `--accent` (lake blue), `--card`, gradient + shadow tokens for sponsored cards. Use shadcn `Button`, `Card`, `Badge`, `Tabs`, `Select`, `Input`, `Skeleton`, `Sonner` for toasts. Mobile-first; large tap targets.
-
-## 7. Out of scope for this build (next iteration)
-
-- `/admin` route + Lovable Cloud auth + business CRUD + tier editor.
-- Firecrawl edge function to scrape "best pizza in Grafton WI" → upsert into `businesses`.
-- Stripe/Paddle for sponsor billing.
-- Milwaukee County expansion (just add rows to `towns` later — schema already supports it).
-
----
-
-## Technical details
-
-- **Geolocation flow timing**: The "<3s" target is met by trying nearest-neighbor lat/lng first (single SQL query) and only hitting Nominatim if no match within radius.
-- **Server functions**: `resolveTownFromCoords`, `getTownPage`, `listTowns` in `src/lib/towns.functions.ts`. Public reads use the browser Supabase client through the auth-middleware-less path (anon key, RLS public-read).
-- **PDF**: `@react-pdf/renderer` works in Worker SSR runtime; QR generated server-side as PNG data URL via `qrcode`. Both packages added with `bun add`.
-- **Routing**: town page uses `$townSlug` param; `notFoundComponent` for unknown slugs. No layout wrappers under `_app/` (TanStack convention).
-- **SEO per route**: each town page sets `head()` with `title: "Welcome to {Town}, WI — TownWelcome"`, description, og tags. Index sets generic landing meta.
-- **Nominatim usage**: free tier, called from server function with a descriptive `User-Agent`; cached briefly per coord to be polite.
+No DB migration. No new packages required.
