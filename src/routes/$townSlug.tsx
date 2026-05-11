@@ -182,8 +182,8 @@ function TownView({ data }: { data: TownPage }) {
       <SiteHeader />
 
       {/* OUTER FRAME (the dark "Snapture" mat) ------------------------ */}
-      <div className="px-3 pb-6 pt-3 sm:px-6 sm:pb-10 sm:pt-4">
-        <div className="relative overflow-hidden rounded-[28px] bg-background shadow-[0_30px_80px_-30px_rgba(0,0,0,0.45)]">
+      <div className="px-4 pb-8 pt-4 sm:px-8 sm:pb-12 lg:px-16 xl:px-24 2xl:px-32">
+        <div className="relative mx-auto max-w-[1180px] overflow-hidden rounded-[28px] bg-background shadow-[0_30px_80px_-30px_rgba(0,0,0,0.45)]">
           {/* Vertical rail label — // CATEGORY, mirrors active section */}
           <div
             aria-hidden
@@ -202,7 +202,7 @@ function TownView({ data }: { data: TownPage }) {
 
           <div className="md:pl-10">
             {/* HERO --------------------------------------------------------- */}
-            <section className="mx-auto grid max-w-6xl grid-cols-1 gap-8 px-5 pt-10 pb-12 md:grid-cols-[minmax(0,360px)_1fr] md:gap-12 md:pt-14">
+            <section className="mx-auto grid max-w-5xl grid-cols-1 gap-8 px-5 pt-10 pb-12 md:grid-cols-[minmax(0,340px)_1fr] md:gap-10 md:pt-14">
               {(() => {
                 const hero = townHeroImage(town.slug, town.name);
                 return (
@@ -279,7 +279,7 @@ function TownView({ data }: { data: TownPage }) {
 
             {/* FEATURED — GROUPED BY CATEGORY ------------------------------ */}
             {featuredByCategory.length > 0 && (
-              <section className="mx-auto max-w-6xl px-5 pt-10">
+              <section className="mx-auto max-w-5xl px-5 pt-10">
                 <div className="mb-6 flex items-center gap-3">
                   <span className="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-[var(--shadow-cta)]">
                     <Sparkles className="h-4 w-4" />
@@ -320,7 +320,7 @@ function TownView({ data }: { data: TownPage }) {
             )}
 
             {/* CATEGORY SECTIONS ------------------------------------------- */}
-            <section className="mx-auto max-w-6xl space-y-16 px-5 py-16">
+            <section className="mx-auto max-w-5xl space-y-14 px-5 py-14">
               {categories.map((c, idx) => {
                 const list = byCategory.get(c.id) ?? [];
                 if (list.length === 0) return null;
@@ -336,7 +336,7 @@ function TownView({ data }: { data: TownPage }) {
             </section>
 
             {/* WRONG TOWN PROMPT ------------------------------------------- */}
-            <section className="mx-auto max-w-6xl px-5 pb-12 text-center text-sm text-muted-foreground">
+            <section className="mx-auto max-w-5xl px-5 pb-12 text-center text-sm text-muted-foreground">
               Not the right town?{" "}
               <Link to="/" className="font-semibold text-primary underline">
                 Pick another
