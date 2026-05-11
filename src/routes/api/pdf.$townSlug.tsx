@@ -141,6 +141,7 @@ function TownPdf({
       <Page size="A4" style={styles.page}>
         <View style={styles.header}>
           <View>
+            <Text style={styles.brand}>TownWelcome · {town.state}</Text>
             <Text style={styles.title}>Welcome to {town.name}</Text>
             <Text style={styles.blurb}>
               {town.county} County, {town.state}
