@@ -147,147 +147,204 @@ function TownView({ data }: { data: TownPage }) {
     );
   }, [town.slug]);
 
+  // Lifted active-category tracking so the vertical rail label can mirror it.
+  const visibleCategories = useMemo(
+    () => categories.filter((c) => (byCategory.get(c.id) ?? []).length > 0),
+    [categories, byCategory],
+  );
+  const [activeId, setActiveId] = useState<string | null>(
+    visibleCategories[0] ? `cat-${visibleCategories[0].id}` : null,
+  );
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const top = entries
+          .filter((e) => e.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+        if (top) setActiveId(top.target.id);
+      },
+      { rootMargin: "-40% 0px -50% 0px", threshold: [0, 0.25, 0.5, 1] },
+    );
+    visibleCategories.forEach((c) => {
+      const el = document.getElementById(`cat-${c.id}`);
+      if (el) observer.observe(el);
+    });
+    return () => observer.disconnect();
+  }, [visibleCategories.map((c) => c.id).join(",")]);
+
+  const activeCategory =
+    visibleCategories.find((c) => `cat-${c.id}` === activeId) ?? visibleCategories[0];
+  const activeLabel = activeCategory ? activeCategory.slug : "welcome";
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-[color:var(--wi-pine)]">
       <SiteHeader />
 
-      {/* HERO --------------------------------------------------------- */}
-      <section className="mx-auto grid max-w-6xl grid-cols-1 gap-8 px-5 pt-10 pb-12 md:grid-cols-[minmax(0,360px)_1fr] md:gap-12 md:pt-14">
-        {(() => {
-          const hero = townHeroImage(town.slug, town.name);
-          return (
-            <div
-              className="relative overflow-hidden rounded-3xl border border-border shadow-[var(--shadow-soft)]"
-              style={hero.fit === "contain" ? { background: "var(--card)" } : undefined}
-            >
-              <span className="absolute left-4 top-4 z-10 rounded-full bg-background/85 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-foreground/70 backdrop-blur">
-                // {town.county} County
-              </span>
-              <img
-                src={hero.src}
-                alt={`${town.name}, Wisconsin`}
-                className={
-                  "h-[420px] w-full md:h-full " +
-                  (hero.fit === "contain" ? "object-contain p-10" : "object-cover")
-                }
-              />
-            </div>
-          );
-        })()}
-
-        <div className="flex flex-col justify-center">
-          <Link
-            to="/"
-            className="mb-6 inline-flex w-fit items-center gap-1 text-xs font-semibold uppercase tracking-[0.22em] text-foreground/60 hover:text-foreground"
+      {/* OUTER FRAME (the dark "Snapture" mat) ------------------------ */}
+      <div className="px-3 pb-6 pt-3 sm:px-6 sm:pb-10 sm:pt-4">
+        <div className="relative overflow-hidden rounded-[28px] bg-background shadow-[0_30px_80px_-30px_rgba(0,0,0,0.45)]">
+          {/* Vertical rail label — // CATEGORY, mirrors active section */}
+          <div
+            aria-hidden
+            className="pointer-events-none absolute left-0 top-0 z-20 hidden h-full w-10 md:block"
           >
-            <ArrowLeft className="h-3.5 w-3.5" /> All towns
-          </Link>
-          <SectionDivider label={`${town.state} · Welcome`} className="mb-5" />
-          <h1 className="font-display text-[44px] font-extrabold uppercase leading-[0.95] tracking-tight text-foreground sm:text-6xl">
-            Welcome to
-            <br />
-            <span className="text-primary">{town.name}.</span>
-          </h1>
-          {town.hero_blurb && (
-            <p className="mt-5 max-w-xl text-base text-foreground/70">
-              {town.hero_blurb}
-            </p>
-          )}
-          <div className="mt-8 flex flex-wrap items-center gap-3">
-            <Button
-              asChild
-              size="lg"
-              className="h-14 rounded-full bg-primary px-7 text-base font-semibold text-primary-foreground shadow-[var(--shadow-cta)] hover:bg-primary/90"
-            >
-              <a href={`/api/pdf/${town.slug}`} target="_blank" rel="noreferrer">
-                <Download className="mr-1 h-5 w-5" />
-                Download Welcome PDF
-              </a>
-            </Button>
-            {qrUrl && (
-              <div className="flex items-center gap-3 rounded-full border border-foreground/15 bg-background py-1.5 pl-2 pr-4">
-                <img
-                  src={qrUrl}
-                  alt="QR to this page"
-                  className="h-10 w-10 rounded-full border border-border bg-white p-0.5"
-                />
-                <span className="text-xs font-medium uppercase tracking-wider text-foreground/70">
-                  Scan to share
-                </span>
+            <div className="sticky top-[120px] flex flex-col items-center gap-2 pt-4 text-[10px] font-semibold uppercase tracking-[0.32em] text-foreground/60">
+              <span>//</span>
+              <span
+                key={activeLabel}
+                className="[writing-mode:vertical-rl] [transform:rotate(180deg)] transition-opacity duration-500"
+              >
+                {activeLabel}
+              </span>
+            </div>
+          </div>
+
+          <div className="md:pl-10">
+            {/* HERO --------------------------------------------------------- */}
+            <section className="mx-auto grid max-w-6xl grid-cols-1 gap-8 px-5 pt-10 pb-12 md:grid-cols-[minmax(0,360px)_1fr] md:gap-12 md:pt-14">
+              {(() => {
+                const hero = townHeroImage(town.slug, town.name);
+                return (
+                  <div
+                    className="relative overflow-hidden rounded-3xl border border-border shadow-[var(--shadow-soft)]"
+                    style={hero.fit === "contain" ? { background: "var(--card)" } : undefined}
+                  >
+                    <span className="absolute left-4 top-4 z-10 rounded-full bg-background/85 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-foreground/70 backdrop-blur">
+                      // {town.county} County
+                    </span>
+                    <img
+                      src={hero.src}
+                      alt={`${town.name}, Wisconsin`}
+                      className={
+                        "h-[420px] w-full md:h-full " +
+                        (hero.fit === "contain" ? "object-contain p-10" : "object-cover")
+                      }
+                    />
+                  </div>
+                );
+              })()}
+
+              <div className="flex flex-col justify-center">
+                <Link
+                  to="/"
+                  className="mb-6 inline-flex w-fit items-center gap-1 text-xs font-semibold uppercase tracking-[0.22em] text-foreground/60 hover:text-foreground"
+                >
+                  <ArrowLeft className="h-3.5 w-3.5" /> All towns
+                </Link>
+                <SectionDivider label={`${town.state} · Welcome`} className="mb-5" />
+                <h1 className="font-display text-[44px] font-extrabold uppercase leading-[0.95] tracking-tight text-foreground sm:text-6xl">
+                  Welcome to
+                  <br />
+                  <span className="text-primary">{town.name}.</span>
+                </h1>
+                {town.hero_blurb && (
+                  <p className="mt-5 max-w-xl text-base text-foreground/70">
+                    {town.hero_blurb}
+                  </p>
+                )}
+                <div className="mt-8 flex flex-wrap items-center gap-3">
+                  <Button
+                    asChild
+                    size="lg"
+                    className="h-14 rounded-full bg-primary px-7 text-base font-semibold text-primary-foreground shadow-[var(--shadow-cta)] hover:bg-primary/90"
+                  >
+                    <a href={`/api/pdf/${town.slug}`} target="_blank" rel="noreferrer">
+                      <Download className="mr-1 h-5 w-5" />
+                      Download Welcome PDF
+                    </a>
+                  </Button>
+                  {qrUrl && (
+                    <div className="flex items-center gap-3 rounded-full border border-foreground/15 bg-background py-1.5 pl-2 pr-4">
+                      <img
+                        src={qrUrl}
+                        alt="QR to this page"
+                        className="h-10 w-10 rounded-full border border-border bg-white p-0.5"
+                      />
+                      <span className="text-xs font-medium uppercase tracking-wider text-foreground/70">
+                        Scan to share
+                      </span>
+                    </div>
+                  )}
+                </div>
               </div>
+            </section>
+
+            {/* STICKY CATEGORY NAV ----------------------------------------- */}
+            <CategoryNav
+              categories={categories}
+              byCategory={byCategory}
+              activeId={activeId}
+            />
+
+            {/* FEATURED — GROUPED BY CATEGORY ------------------------------ */}
+            {featuredByCategory.length > 0 && (
+              <section className="mx-auto max-w-6xl px-5 pt-10">
+                <div className="mb-6 flex items-center gap-3">
+                  <span className="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-[var(--shadow-cta)]">
+                    <Sparkles className="h-4 w-4" />
+                  </span>
+                  <SectionDivider label="Featured locals" className="flex-1" />
+                </div>
+
+                <div className="space-y-10">
+                  {featuredByCategory.map(({ category, idx, list }) => {
+                    const p = paletteFor(idx);
+                    const Icon = iconFor(category);
+                    return (
+                      <div key={category.id}>
+                        <div className="mb-3 flex items-center gap-3">
+                          <span
+                            className="inline-flex h-7 items-center gap-1.5 rounded-full px-3 text-[11px] font-semibold uppercase tracking-[0.18em]"
+                            style={{ background: p.bg, color: p.fg }}
+                          >
+                            <Icon className="h-3.5 w-3.5" />
+                            Featured {category.name}
+                          </span>
+                          <span className="text-xs text-foreground/50">
+                            {list.length} sponsor{list.length === 1 ? "" : "s"}
+                          </span>
+                        </div>
+                        <div className="-mx-5 flex snap-x snap-mandatory gap-4 overflow-x-auto px-5 pb-3 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+                          {list.map((b) => (
+                            <div key={b.id} className="snap-start">
+                              <BusinessCard b={b} category={category} variant="featured" />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
             )}
+
+            {/* CATEGORY SECTIONS ------------------------------------------- */}
+            <section className="mx-auto max-w-6xl space-y-16 px-5 py-16">
+              {categories.map((c, idx) => {
+                const list = byCategory.get(c.id) ?? [];
+                if (list.length === 0) return null;
+                return (
+                  <CategorySection
+                    key={c.id}
+                    category={c}
+                    businesses={list}
+                    palette={paletteFor(idx)}
+                  />
+                );
+              })}
+            </section>
+
+            {/* WRONG TOWN PROMPT ------------------------------------------- */}
+            <section className="mx-auto max-w-6xl px-5 pb-12 text-center text-sm text-muted-foreground">
+              Not the right town?{" "}
+              <Link to="/" className="font-semibold text-primary underline">
+                Pick another
+              </Link>
+            </section>
           </div>
         </div>
-      </section>
-
-      {/* STICKY CATEGORY NAV ----------------------------------------- */}
-      <CategoryNav categories={categories} byCategory={byCategory} />
-
-      {/* FEATURED — GROUPED BY CATEGORY ------------------------------ */}
-      {featuredByCategory.length > 0 && (
-        <section className="mx-auto max-w-6xl px-5 pt-10">
-          <div className="mb-6 flex items-center gap-3">
-            <span className="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-[var(--shadow-cta)]">
-              <Sparkles className="h-4 w-4" />
-            </span>
-            <SectionDivider label="Featured locals" className="flex-1" />
-          </div>
-
-          <div className="space-y-10">
-            {featuredByCategory.map(({ category, idx, list }) => {
-              const p = paletteFor(idx);
-              const Icon = iconFor(category);
-              return (
-                <div key={category.id}>
-                  <div className="mb-3 flex items-center gap-3">
-                    <span
-                      className="inline-flex h-7 items-center gap-1.5 rounded-full px-3 text-[11px] font-semibold uppercase tracking-[0.18em]"
-                      style={{ background: p.bg, color: p.fg }}
-                    >
-                      <Icon className="h-3.5 w-3.5" />
-                      Featured {category.name}
-                    </span>
-                    <span className="text-xs text-foreground/50">
-                      {list.length} sponsor{list.length === 1 ? "" : "s"}
-                    </span>
-                  </div>
-                  <div className="-mx-5 flex snap-x snap-mandatory gap-4 overflow-x-auto px-5 pb-3 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-                    {list.map((b) => (
-                      <div key={b.id} className="snap-start">
-                        <BusinessCard b={b} category={category} variant="featured" />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-      )}
-
-      {/* CATEGORY SECTIONS ------------------------------------------- */}
-      <section className="mx-auto max-w-6xl space-y-16 px-5 py-16">
-        {categories.map((c, idx) => {
-          const list = byCategory.get(c.id) ?? [];
-          if (list.length === 0) return null;
-          return (
-            <CategorySection
-              key={c.id}
-              category={c}
-              businesses={list}
-              palette={paletteFor(idx)}
-            />
-          );
-        })}
-      </section>
-
-      {/* WRONG TOWN PROMPT ------------------------------------------- */}
-      <section className="mx-auto max-w-6xl px-5 pb-12 text-center text-sm text-muted-foreground">
-        Not the right town?{" "}
-        <Link to="/" className="font-semibold text-primary underline">
-          Pick another
-        </Link>
-      </section>
+      </div>
 
       <SiteFooter />
     </div>
@@ -297,33 +354,15 @@ function TownView({ data }: { data: TownPage }) {
 function CategoryNav({
   categories,
   byCategory,
+  activeId,
 }: {
   categories: Category[];
   byCategory: Map<string, Business[]>;
+  activeId: string | null;
 }) {
   const visible = categories.filter((c) => (byCategory.get(c.id) ?? []).length > 0);
-  const [active, setActive] = useState<string | null>(
-    visible[0] ? `cat-${visible[0].id}` : null,
-  );
+  const active = activeId;
   const scrollerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const top = entries
-          .filter((e) => e.isIntersecting)
-          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
-        if (top) setActive(top.target.id);
-      },
-      { rootMargin: "-40% 0px -50% 0px", threshold: [0, 0.25, 0.5, 1] },
-    );
-    visible.forEach((c) => {
-      const el = document.getElementById(`cat-${c.id}`);
-      if (el) observer.observe(el);
-    });
-    return () => observer.disconnect();
-  }, [visible.map((c) => c.id).join(",")]);
 
   useEffect(() => {
     if (!active || !scrollerRef.current) return;
