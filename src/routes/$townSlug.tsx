@@ -153,16 +153,27 @@ function TownView({ data }: { data: TownPage }) {
 
       {/* HERO --------------------------------------------------------- */}
       <section className="mx-auto grid max-w-6xl grid-cols-1 gap-8 px-5 pt-10 pb-12 md:grid-cols-[minmax(0,360px)_1fr] md:gap-12 md:pt-14">
-        <div className="relative overflow-hidden rounded-3xl border border-border shadow-[var(--shadow-soft)]">
-          <span className="absolute left-4 top-4 z-10 rounded-full bg-background/85 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-foreground/70 backdrop-blur">
-            // {town.county} County
-          </span>
-          <img
-            src={townHeroImage(town.slug, town.name)}
-            alt={`${town.name}, Wisconsin`}
-            className="h-[420px] w-full object-cover md:h-full"
-          />
-        </div>
+        {(() => {
+          const hero = townHeroImage(town.slug, town.name);
+          return (
+            <div
+              className="relative overflow-hidden rounded-3xl border border-border shadow-[var(--shadow-soft)]"
+              style={hero.fit === "contain" ? { background: "var(--card)" } : undefined}
+            >
+              <span className="absolute left-4 top-4 z-10 rounded-full bg-background/85 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-foreground/70 backdrop-blur">
+                // {town.county} County
+              </span>
+              <img
+                src={hero.src}
+                alt={`${town.name}, Wisconsin`}
+                className={
+                  "h-[420px] w-full md:h-full " +
+                  (hero.fit === "contain" ? "object-contain p-10" : "object-cover")
+                }
+              />
+            </div>
+          );
+        })()}
 
         <div className="flex flex-col justify-center">
           <Link
