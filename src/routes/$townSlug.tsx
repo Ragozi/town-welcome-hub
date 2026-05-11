@@ -2,13 +2,8 @@ import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  ArrowLeft,
   Download,
-  ExternalLink,
-  MapPin,
-  Phone,
   Sparkles,
-  Tag,
   Utensils,
   Coffee,
   ShoppingBag,
@@ -20,11 +15,10 @@ import {
   Building2,
   Hammer,
   Sparkle,
+  ArrowLeft,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import {
   fetchTownPage,
   tierPriority,
@@ -32,8 +26,13 @@ import {
   type Category,
   type TownPage,
 } from "@/lib/towns";
+import { townHeroImage } from "@/lib/logo";
+import { SiteHeader } from "@/components/site-header";
+import { SiteFooter } from "@/components/site-footer";
+import { SectionDivider } from "@/components/section-divider";
+import { BusinessCard } from "@/components/business-card";
 
-// Wisconsin landscape palette mapped to category chips.
+// Wisconsin landscape palette mapped to category chips/badges.
 const WI_PALETTE = [
   { bg: "var(--wi-lake)", fg: "white" },
   { bg: "var(--wi-cranberry)", fg: "white" },
@@ -62,7 +61,7 @@ const iconFor = (c: Category): LucideIcon => CATEGORY_ICONS[c.slug] ?? Sparkle;
 const paletteFor = (i: number) => WI_PALETTE[i % WI_PALETTE.length];
 
 export const Route = createFileRoute("/$townSlug")({
-  component: TownPage,
+  component: TownRoute,
   head: ({ params }) => {
     const name = params.townSlug
       .split("-")
@@ -81,7 +80,7 @@ export const Route = createFileRoute("/$townSlug")({
   },
 });
 
-function TownPage() {
+function TownRoute() {
   const { townSlug } = Route.useParams();
   const q = useQuery<TownPage | null>({
     queryKey: ["town", townSlug],
@@ -90,16 +89,17 @@ function TownPage() {
 
   if (q.isLoading) return <CenterMsg>Loading…</CenterMsg>;
   if (q.isError) return <CenterMsg>Couldn't load this town. Try again.</CenterMsg>;
-  if (!q.data) {
-    throw notFound();
-  }
+  if (!q.data) throw notFound();
   return <TownView data={q.data} />;
 }
 
 function CenterMsg({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen flex items-center justify-center text-muted-foreground">
-      {children}
+    <div className="min-h-screen bg-background">
+      <SiteHeader />
+      <div className="flex min-h-[60vh] items-center justify-center text-muted-foreground">
+        {children}
+      </div>
     </div>
   );
 }
@@ -107,18 +107,26 @@ function CenterMsg({ children }: { children: React.ReactNode }) {
 function TownView({ data }: { data: TownPage }) {
   const { town, categories, businesses } = data;
 
-  const featured = useMemo(
-    () =>
-      businesses
-        .filter((b) => b.sponsor_tier !== "none")
-        .sort(
-          (a, b) =>
-            tierPriority[b.sponsor_tier] - tierPriority[a.sponsor_tier] ||
-            a.featured_order - b.featured_order,
-        )
-        .slice(0, 4),
-    [businesses],
-  );
+  // Group sponsored businesses BY category (no auto-care next to bistros).
+  const featuredByCategory = useMemo(() => {
+    const sponsored = businesses.filter((b) => b.sponsor_tier !== "none");
+    const map = new Map<string, Business[]>();
+    for (const b of sponsored) {
+      const arr = map.get(b.category_id) ?? [];
+      arr.push(b);
+      map.set(b.category_id, arr);
+    }
+    for (const [, arr] of map) {
+      arr.sort(
+        (a, b) =>
+          tierPriority[b.sponsor_tier] - tierPriority[a.sponsor_tier] ||
+          a.featured_order - b.featured_order,
+      );
+    }
+    return categories
+      .map((c, idx) => ({ category: c, idx, list: map.get(c.id) ?? [] }))
+      .filter((g) => g.list.length > 0);
+  }, [businesses, categories]);
 
   const byCategory = useMemo(() => {
     const map = new Map<string, Business[]>();
@@ -140,66 +148,114 @@ function TownView({ data }: { data: TownPage }) {
   }, [town.slug]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted">
-      <header className="sticky top-0 z-30 backdrop-blur bg-background/80 border-b">
-        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-3">
+    <div className="min-h-screen bg-background">
+      <SiteHeader />
+
+      {/* HERO --------------------------------------------------------- */}
+      <section className="mx-auto grid max-w-6xl grid-cols-1 gap-8 px-5 pt-10 pb-12 md:grid-cols-[minmax(0,360px)_1fr] md:gap-12 md:pt-14">
+        <div className="relative overflow-hidden rounded-3xl border border-border shadow-[var(--shadow-soft)]">
+          <span className="absolute left-4 top-4 z-10 rounded-full bg-background/85 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-foreground/70 backdrop-blur">
+            // {town.county} County
+          </span>
+          <img
+            src={townHeroImage(town.slug, town.name)}
+            alt={`${town.name}, Wisconsin`}
+            className="h-[420px] w-full object-cover md:h-full"
+          />
+        </div>
+
+        <div className="flex flex-col justify-center">
           <Link
             to="/"
-            className="text-muted-foreground hover:text-foreground inline-flex items-center text-sm"
+            className="mb-6 inline-flex w-fit items-center gap-1 text-xs font-semibold uppercase tracking-[0.22em] text-foreground/60 hover:text-foreground"
           >
-            <ArrowLeft className="h-4 w-4 mr-1" /> All towns
+            <ArrowLeft className="h-3.5 w-3.5" /> All towns
           </Link>
-          <div className="flex-1 text-center font-semibold truncate">
-            {town.name}, {town.state}
-          </div>
-          <a href={`/api/pdf/${town.slug}`} target="_blank" rel="noreferrer">
-            <Button size="sm" variant="secondary" className="gap-2">
-              <Download className="h-4 w-4" />
-              <span className="hidden sm:inline">PDF</span>
-            </Button>
-          </a>
-        </div>
-      </header>
-
-      <section className="max-w-5xl mx-auto px-4 pt-10 pb-6">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-xs uppercase tracking-widest text-primary/70">
-              {town.county} County, {town.state}
-            </p>
-            <h1 className="text-4xl sm:text-5xl font-semibold tracking-tight mt-1">
-              Welcome to {town.name}
-            </h1>
-            <p className="text-muted-foreground mt-3 max-w-2xl">
+          <SectionDivider label={`${town.state} · Welcome`} className="mb-5" />
+          <h1 className="font-display text-[44px] font-extrabold uppercase leading-[0.95] tracking-tight text-foreground sm:text-6xl">
+            Welcome to
+            <br />
+            <span className="text-primary">{town.name}.</span>
+          </h1>
+          {town.hero_blurb && (
+            <p className="mt-5 max-w-xl text-base text-foreground/70">
               {town.hero_blurb}
             </p>
-          </div>
-          {qrUrl && (
-            <div className="hidden sm:flex flex-col items-center text-[10px] text-muted-foreground">
-              <img src={qrUrl} alt="QR to this page" className="rounded-md border bg-white p-1" />
-              <span className="mt-1">Scan to share</span>
-            </div>
           )}
+          <div className="mt-8 flex flex-wrap items-center gap-3">
+            <Button
+              asChild
+              size="lg"
+              className="h-14 rounded-full bg-primary px-7 text-base font-semibold text-primary-foreground shadow-[var(--shadow-cta)] hover:bg-primary/90"
+            >
+              <a href={`/api/pdf/${town.slug}`} target="_blank" rel="noreferrer">
+                <Download className="mr-1 h-5 w-5" />
+                Download Welcome PDF
+              </a>
+            </Button>
+            {qrUrl && (
+              <div className="flex items-center gap-3 rounded-full border border-foreground/15 bg-background py-1.5 pl-2 pr-4">
+                <img
+                  src={qrUrl}
+                  alt="QR to this page"
+                  className="h-10 w-10 rounded-full border border-border bg-white p-0.5"
+                />
+                <span className="text-xs font-medium uppercase tracking-wider text-foreground/70">
+                  Scan to share
+                </span>
+              </div>
+            )}
+          </div>
         </div>
       </section>
 
-      {featured.length > 0 && (
-        <section className="max-w-5xl mx-auto px-4 py-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Sparkles className="h-5 w-5 text-primary" />
-            <h2 className="text-lg font-semibold">Featured locals</h2>
+      {/* STICKY CATEGORY NAV ----------------------------------------- */}
+      <CategoryNav categories={categories} byCategory={byCategory} />
+
+      {/* FEATURED — GROUPED BY CATEGORY ------------------------------ */}
+      {featuredByCategory.length > 0 && (
+        <section className="mx-auto max-w-6xl px-5 pt-10">
+          <div className="mb-6 flex items-center gap-3">
+            <span className="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-[var(--shadow-cta)]">
+              <Sparkles className="h-4 w-4" />
+            </span>
+            <SectionDivider label="Featured locals" className="flex-1" />
           </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            {featured.map((b) => (
-              <FeaturedCard key={b.id} b={b} />
-            ))}
+
+          <div className="space-y-10">
+            {featuredByCategory.map(({ category, idx, list }) => {
+              const p = paletteFor(idx);
+              const Icon = iconFor(category);
+              return (
+                <div key={category.id}>
+                  <div className="mb-3 flex items-center gap-3">
+                    <span
+                      className="inline-flex h-7 items-center gap-1.5 rounded-full px-3 text-[11px] font-semibold uppercase tracking-[0.18em]"
+                      style={{ background: p.bg, color: p.fg }}
+                    >
+                      <Icon className="h-3.5 w-3.5" />
+                      Featured {category.name}
+                    </span>
+                    <span className="text-xs text-foreground/50">
+                      {list.length} sponsor{list.length === 1 ? "" : "s"}
+                    </span>
+                  </div>
+                  <div className="-mx-5 flex snap-x snap-mandatory gap-4 overflow-x-auto px-5 pb-3 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+                    {list.map((b) => (
+                      <div key={b.id} className="snap-start">
+                        <BusinessCard b={b} category={category} variant="featured" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </section>
       )}
 
-      <CategoryNav categories={categories} byCategory={byCategory} />
-
-      <section className="max-w-5xl mx-auto px-4 py-6 space-y-12">
+      {/* CATEGORY SECTIONS ------------------------------------------- */}
+      <section className="mx-auto max-w-6xl space-y-16 px-5 py-16">
         {categories.map((c, idx) => {
           const list = byCategory.get(c.id) ?? [];
           if (list.length === 0) return null;
@@ -214,12 +270,15 @@ function TownView({ data }: { data: TownPage }) {
         })}
       </section>
 
-      <footer className="max-w-5xl mx-auto px-4 py-10 text-center text-sm text-muted-foreground">
+      {/* WRONG TOWN PROMPT ------------------------------------------- */}
+      <section className="mx-auto max-w-6xl px-5 pb-12 text-center text-sm text-muted-foreground">
         Not the right town?{" "}
-        <Link to="/" className="text-primary underline">
+        <Link to="/" className="font-semibold text-primary underline">
           Pick another
         </Link>
-      </footer>
+      </section>
+
+      <SiteFooter />
     </div>
   );
 }
@@ -232,10 +291,11 @@ function CategoryNav({
   byCategory: Map<string, Business[]>;
 }) {
   const visible = categories.filter((c) => (byCategory.get(c.id) ?? []).length > 0);
-  const [active, setActive] = useState<string | null>(visible[0]?.id ?? null);
+  const [active, setActive] = useState<string | null>(
+    visible[0] ? `cat-${visible[0].id}` : null,
+  );
   const scrollerRef = useRef<HTMLDivElement>(null);
 
-  // Scroll-spy: track which section is currently most visible.
   useEffect(() => {
     if (typeof window === "undefined") return;
     const observer = new IntersectionObserver(
@@ -254,24 +314,19 @@ function CategoryNav({
     return () => observer.disconnect();
   }, [visible.map((c) => c.id).join(",")]);
 
-  // Keep the active chip in view as user scrolls.
   useEffect(() => {
     if (!active || !scrollerRef.current) return;
-    const chip = scrollerRef.current.querySelector<HTMLElement>(`[data-chip="${active}"]`);
+    const chip = scrollerRef.current.querySelector<HTMLElement>(
+      `[data-chip="${active}"]`,
+    );
     chip?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
   }, [active]);
 
   if (!visible.length) return null;
 
   return (
-    <div
-      className="sticky top-[57px] z-20 backdrop-blur-md border-y"
-      style={{
-        background: "color-mix(in oklab, var(--wi-cream) 78%, transparent)",
-        borderColor: "color-mix(in oklab, var(--wi-ink) 10%, transparent)",
-      }}
-    >
-      <div className="max-w-5xl mx-auto px-4">
+    <div className="sticky top-[73px] z-30 border-y border-border/60 bg-background/85 backdrop-blur-md">
+      <div className="mx-auto max-w-6xl px-5">
         <div
           ref={scrollerRef}
           className="flex gap-2 overflow-x-auto py-3 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
@@ -290,32 +345,31 @@ function CategoryNav({
                     .getElementById(`cat-${c.id}`)
                     ?.scrollIntoView({ behavior: "smooth", block: "start" });
                 }}
-                className="group shrink-0 inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-all duration-300 ease-out border-2 whitespace-nowrap"
+                className="group inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full border-2 px-4 py-2 text-sm font-medium transition-all duration-300 ease-out"
                 style={{
-                  background: isActive ? p.bg : "white",
-                  color: isActive ? p.fg : "var(--wi-ink)",
-                  borderColor: p.bg,
-                  transform: isActive ? "translateY(-2px) scale(1.04)" : "translateY(0) scale(1)",
+                  background: isActive ? "var(--background)" : "var(--card)",
+                  color: "var(--wi-ink)",
+                  borderColor: isActive ? "var(--primary)" : p.bg,
+                  transform: isActive
+                    ? "translateY(-2px) scale(1.04)"
+                    : "translateY(0) scale(1)",
                   boxShadow: isActive
-                    ? `0 8px 20px -8px ${p.bg}, 0 2px 0 0 ${p.bg}`
-                    : "0 1px 0 0 color-mix(in oklab, var(--wi-ink) 12%, transparent)",
+                    ? "0 0 0 4px color-mix(in oklab, var(--primary) 18%, transparent)"
+                    : "0 1px 0 0 color-mix(in oklab, var(--wi-ink) 10%, transparent)",
                 }}
               >
                 <span
-                  className="inline-flex items-center justify-center h-6 w-6 rounded-full transition-transform duration-300 group-hover:[animation:wi-wiggle_0.5s_ease-in-out]"
-                  style={{
-                    background: isActive ? "rgba(255,255,255,0.22)" : p.bg,
-                    color: isActive ? p.fg : p.fg,
-                  }}
+                  className="inline-flex h-6 w-6 items-center justify-center rounded-full transition-transform duration-300 group-hover:[animation:wi-wiggle_0.5s_ease-in-out]"
+                  style={{ background: p.bg, color: p.fg }}
                 >
                   <Icon className="h-3.5 w-3.5" />
                 </span>
                 <span>{c.name}</span>
                 <span
-                  className="text-[10px] font-bold px-1.5 py-0.5 rounded-full tabular-nums"
+                  className="rounded-full px-1.5 py-0.5 text-[10px] font-bold tabular-nums"
                   style={{
-                    background: isActive ? "rgba(255,255,255,0.22)" : "color-mix(in oklab, var(--wi-ink) 8%, transparent)",
-                    color: isActive ? p.fg : "var(--wi-ink)",
+                    background: "color-mix(in oklab, var(--wi-ink) 8%, transparent)",
+                    color: "var(--wi-ink)",
                   }}
                 >
                   {count}
@@ -326,43 +380,6 @@ function CategoryNav({
         </div>
       </div>
     </div>
-  );
-}
-
-function FeaturedCard({ b }: { b: Business }) {
-  return (
-    <Card className="overflow-hidden border-primary/20 shadow-md">
-      <CardContent className="p-5">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <Badge className="mb-2 bg-primary/10 text-primary border-primary/20">
-              Featured
-            </Badge>
-            <h3 className="font-semibold text-lg leading-tight">{b.name}</h3>
-            {b.subcategory && (
-              <p className="text-xs text-muted-foreground">{b.subcategory}</p>
-            )}
-          </div>
-          {b.logo_url && (
-            <img
-              src={b.logo_url}
-              alt={b.name}
-              className="h-12 w-12 rounded-lg object-cover bg-muted"
-            />
-          )}
-        </div>
-        {b.description && (
-          <p className="text-sm mt-3 text-foreground/80">{b.description}</p>
-        )}
-        {b.coupon_text && (
-          <div className="mt-3 inline-flex items-center gap-2 rounded-md bg-accent/10 text-accent-foreground border border-accent/30 px-3 py-1.5 text-sm">
-            <Tag className="h-4 w-4 text-accent" />
-            <span className="text-accent">{b.coupon_text}</span>
-          </div>
-        )}
-        <BusinessLinks b={b} />
-      </CardContent>
-    </Card>
   );
 }
 
@@ -382,96 +399,38 @@ function CategorySection({
       a.name.localeCompare(b.name),
   );
   return (
-    <div id={`cat-${category.id}`} className="scroll-mt-32">
-      <div className="flex items-center gap-3 mb-4">
+    <div id={`cat-${category.id}`} className="scroll-mt-40">
+      <div className="mb-6 flex items-center gap-4">
         <span
-          className="inline-flex h-10 w-10 items-center justify-center rounded-2xl shadow-sm"
-          style={{ background: palette.bg, color: palette.fg, transform: "rotate(-4deg)" }}
+          className="inline-flex h-12 w-12 items-center justify-center rounded-2xl shadow-[var(--shadow-soft)]"
+          style={{
+            background: palette.bg,
+            color: palette.fg,
+            transform: "rotate(-4deg)",
+          }}
         >
           <Icon className="h-5 w-5" />
         </span>
-        <h2 className="text-2xl font-semibold tracking-tight">{category.name}</h2>
+        <div className="flex-1">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-foreground/55">
+            // {category.slug}
+          </p>
+          <h2 className="font-display text-3xl font-extrabold uppercase tracking-tight sm:text-4xl">
+            {category.name}
+          </h2>
+        </div>
         <span
-          className="h-1 flex-1 rounded-full"
-          style={{ background: `color-mix(in oklab, ${palette.bg} 28%, transparent)` }}
+          className="hidden h-1 flex-1 rounded-full sm:block"
+          style={{
+            background: `color-mix(in oklab, ${palette.bg} 35%, transparent)`,
+          }}
         />
       </div>
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {sorted.map((b) => (
-          <Card key={b.id}>
-            <CardContent className="p-4">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <h3 className="font-medium leading-tight">{b.name}</h3>
-                  {b.subcategory && (
-                    <p className="text-xs text-muted-foreground">
-                      {b.subcategory}
-                    </p>
-                  )}
-                </div>
-                {b.sponsor_tier !== "none" && (
-                  <Badge variant="secondary" className="text-[10px]">
-                    Sponsor
-                  </Badge>
-                )}
-              </div>
-              {b.description && (
-                <p className="text-sm mt-2 text-foreground/80 line-clamp-2">
-                  {b.description}
-                </p>
-              )}
-              {b.coupon_text && (
-                <p className="mt-2 text-xs text-accent">🎟 {b.coupon_text}</p>
-              )}
-              <BusinessLinks b={b} />
-            </CardContent>
-          </Card>
+          <BusinessCard key={b.id} b={b} category={category} />
         ))}
       </div>
-    </div>
-  );
-}
-
-function BusinessLinks({ b }: { b: Business }) {
-  const items: React.ReactNode[] = [];
-  if (b.phone)
-    items.push(
-      <a
-        key="phone"
-        href={`tel:${b.phone}`}
-        className="inline-flex items-center gap-1 hover:text-primary"
-      >
-        <Phone className="h-3.5 w-3.5" /> {b.phone}
-      </a>,
-    );
-  if (b.address)
-    items.push(
-      <a
-        key="addr"
-        href={`https://maps.google.com/?q=${encodeURIComponent(b.address)}`}
-        target="_blank"
-        rel="noreferrer"
-        className="inline-flex items-center gap-1 hover:text-primary"
-      >
-        <MapPin className="h-3.5 w-3.5" /> Map
-      </a>,
-    );
-  if (b.website)
-    items.push(
-      <a
-        key="web"
-        href={b.website}
-        target="_blank"
-        rel="noreferrer"
-        className="inline-flex items-center gap-1 hover:text-primary"
-      >
-        <ExternalLink className="h-3.5 w-3.5" /> Website
-      </a>,
-    );
-  if (!items.length) return null;
-  return (
-    <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-      {items}
     </div>
   );
 }
