@@ -153,16 +153,27 @@ function TownView({ data }: { data: TownPage }) {
 
       {/* HERO --------------------------------------------------------- */}
       <section className="mx-auto grid max-w-6xl grid-cols-1 gap-8 px-5 pt-10 pb-12 md:grid-cols-[minmax(0,360px)_1fr] md:gap-12 md:pt-14">
-        <div className="relative overflow-hidden rounded-3xl border border-border shadow-[var(--shadow-soft)]">
-          <span className="absolute left-4 top-4 z-10 rounded-full bg-background/85 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-foreground/70 backdrop-blur">
-            // {town.county} County
-          </span>
-          <img
-            src={townHeroImage(town.slug, town.name)}
-            alt={`${town.name}, Wisconsin`}
-            className="h-[420px] w-full object-cover md:h-full"
-          />
-        </div>
+        {(() => {
+          const hero = townHeroImage(town.slug, town.name);
+          return (
+            <div
+              className="relative overflow-hidden rounded-3xl border border-border shadow-[var(--shadow-soft)]"
+              style={hero.fit === "contain" ? { background: "var(--card)" } : undefined}
+            >
+              <span className="absolute left-4 top-4 z-10 rounded-full bg-background/85 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-foreground/70 backdrop-blur">
+                // {town.county} County
+              </span>
+              <img
+                src={hero.src}
+                alt={`${town.name}, Wisconsin`}
+                className={
+                  "h-[420px] w-full md:h-full " +
+                  (hero.fit === "contain" ? "object-contain p-10" : "object-cover")
+                }
+              />
+            </div>
+          );
+        })()}
 
         <div className="flex flex-col justify-center">
           <Link
@@ -326,10 +337,18 @@ function CategoryNav({
 
   return (
     <div className="sticky top-[73px] z-30 border-y border-border/60 bg-background/85 backdrop-blur-md">
-      <div className="mx-auto max-w-6xl px-5">
+      <div
+        className="relative"
+        style={{
+          maskImage:
+            "linear-gradient(to right, transparent 0, black 24px, black calc(100% - 40px), transparent 100%)",
+          WebkitMaskImage:
+            "linear-gradient(to right, transparent 0, black 24px, black calc(100% - 40px), transparent 100%)",
+        }}
+      >
         <div
           ref={scrollerRef}
-          className="flex gap-2 overflow-x-auto py-3 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+          className="flex gap-2 overflow-x-auto px-5 py-3 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
         >
           {visible.map((c, idx) => {
             const Icon = iconFor(c);
@@ -377,6 +396,8 @@ function CategoryNav({
               </button>
             );
           })}
+          {/* trailing spacer so last chip can scroll past the right fade */}
+          <div className="shrink-0 pr-5" aria-hidden />
         </div>
       </div>
     </div>
