@@ -354,33 +354,15 @@ function TownView({ data }: { data: TownPage }) {
 function CategoryNav({
   categories,
   byCategory,
+  activeId,
 }: {
   categories: Category[];
   byCategory: Map<string, Business[]>;
+  activeId: string | null;
 }) {
   const visible = categories.filter((c) => (byCategory.get(c.id) ?? []).length > 0);
-  const [active, setActive] = useState<string | null>(
-    visible[0] ? `cat-${visible[0].id}` : null,
-  );
+  const active = activeId;
   const scrollerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const top = entries
-          .filter((e) => e.isIntersecting)
-          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
-        if (top) setActive(top.target.id);
-      },
-      { rootMargin: "-40% 0px -50% 0px", threshold: [0, 0.25, 0.5, 1] },
-    );
-    visible.forEach((c) => {
-      const el = document.getElementById(`cat-${c.id}`);
-      if (el) observer.observe(el);
-    });
-    return () => observer.disconnect();
-  }, [visible.map((c) => c.id).join(",")]);
 
   useEffect(() => {
     if (!active || !scrollerRef.current) return;
