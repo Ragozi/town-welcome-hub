@@ -10,7 +10,6 @@ import {
   renderToStream,
 } from "@react-pdf/renderer";
 import QRCode from "qrcode";
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { tierPriority, type Business, type Category, type Town } from "@/lib/towns";
 
 const styles = StyleSheet.create({
