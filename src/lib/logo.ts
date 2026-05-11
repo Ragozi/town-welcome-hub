@@ -41,9 +41,21 @@ export function businessImage(b: Business, c?: Category): string {
   return `https://source.unsplash.com/600x600/?${encodeURIComponent(kw)}&sig=${b.id.slice(0, 8)}`;
 }
 
-/** Town hero image fallback (Unsplash, keyed by slug). */
-export function townHeroImage(slug: string, name: string): string {
-  return `https://source.unsplash.com/1200x1600/?${encodeURIComponent(name + " wisconsin,small town")}&sig=${slug}`;
+/** Per-town hero image overrides (real town logos / crests). */
+export const TOWN_HERO_OVERRIDES: Record<string, { src: string; fit: "cover" | "contain" }> = {
+  grafton: {
+    src: "https://www.villageofgraftonwi.gov/ImageRepository/Document?documentID=18951",
+    fit: "contain",
+  },
+};
+
+/** Town hero image fallback. source.unsplash.com is deprecated, so we use
+ *  picsum (deterministic by slug) for a real photo when no override exists. */
+export function townHeroImage(slug: string, _name: string): { src: string; fit: "cover" | "contain" } {
+  const override = TOWN_HERO_OVERRIDES[slug];
+  if (override) return override;
+  // Deterministic seed → stable photo
+  return { src: `https://picsum.photos/seed/${encodeURIComponent(slug)}-wi/900/1200`, fit: "cover" };
 }
 
 /** Initials for a business — used as ultimate onError fallback. */
