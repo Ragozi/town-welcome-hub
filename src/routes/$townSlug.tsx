@@ -337,10 +337,18 @@ function CategoryNav({
 
   return (
     <div className="sticky top-[73px] z-30 border-y border-border/60 bg-background/85 backdrop-blur-md">
-      <div className="mx-auto max-w-6xl px-5">
+      <div
+        className="relative"
+        style={{
+          maskImage:
+            "linear-gradient(to right, transparent 0, black 24px, black calc(100% - 40px), transparent 100%)",
+          WebkitMaskImage:
+            "linear-gradient(to right, transparent 0, black 24px, black calc(100% - 40px), transparent 100%)",
+        }}
+      >
         <div
           ref={scrollerRef}
-          className="flex gap-2 overflow-x-auto py-3 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+          className="flex gap-2 overflow-x-auto px-5 py-3 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
         >
           {visible.map((c, idx) => {
             const Icon = iconFor(c);
@@ -388,6 +396,8 @@ function CategoryNav({
               </button>
             );
           })}
+          {/* trailing spacer so last chip can scroll past the right fade */}
+          <div className="shrink-0 pr-5" aria-hidden />
         </div>
       </div>
     </div>
