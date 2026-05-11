@@ -1,6 +1,6 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
   Download,
@@ -9,6 +9,18 @@ import {
   Phone,
   Sparkles,
   Tag,
+  Utensils,
+  Coffee,
+  ShoppingBag,
+  Wrench,
+  Trees,
+  Music,
+  Heart,
+  GraduationCap,
+  Building2,
+  Hammer,
+  Sparkle,
+  type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -20,6 +32,34 @@ import {
   type Category,
   type TownPage,
 } from "@/lib/towns";
+
+// Wisconsin landscape palette mapped to category chips.
+const WI_PALETTE = [
+  { bg: "var(--wi-lake)", fg: "white" },
+  { bg: "var(--wi-cranberry)", fg: "white" },
+  { bg: "var(--wi-pine)", fg: "white" },
+  { bg: "var(--wi-cheddar)", fg: "var(--wi-ink)" },
+  { bg: "var(--wi-sunset)", fg: "var(--wi-ink)" },
+  { bg: "var(--wi-barn)", fg: "white" },
+  { bg: "var(--wi-sky)", fg: "var(--wi-ink)" },
+  { bg: "var(--wi-corn)", fg: "var(--wi-ink)" },
+];
+
+const CATEGORY_ICONS: Record<string, LucideIcon> = {
+  food: Utensils, restaurants: Utensils, dining: Utensils,
+  coffee: Coffee, cafes: Coffee,
+  shopping: ShoppingBag, shops: ShoppingBag, retail: ShoppingBag,
+  services: Wrench,
+  outdoors: Trees, parks: Trees,
+  nightlife: Music, entertainment: Music,
+  health: Heart, wellness: Heart,
+  education: GraduationCap, schools: GraduationCap,
+  government: Building2, civic: Building2,
+  home: Hammer, trades: Hammer,
+};
+
+const iconFor = (c: Category): LucideIcon => CATEGORY_ICONS[c.slug] ?? Sparkle;
+const paletteFor = (i: number) => WI_PALETTE[i % WI_PALETTE.length];
 
 export const Route = createFileRoute("/$townSlug")({
   component: TownPage,
