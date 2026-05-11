@@ -369,18 +369,33 @@ function FeaturedCard({ b }: { b: Business }) {
 function CategorySection({
   category,
   businesses,
+  palette,
 }: {
   category: Category;
   businesses: Business[];
+  palette: { bg: string; fg: string };
 }) {
+  const Icon = iconFor(category);
   const sorted = [...businesses].sort(
     (a, b) =>
       tierPriority[b.sponsor_tier] - tierPriority[a.sponsor_tier] ||
       a.name.localeCompare(b.name),
   );
   return (
-    <div>
-      <h2 className="text-xl font-semibold mb-3">{category.name}</h2>
+    <div id={`cat-${category.id}`} className="scroll-mt-32">
+      <div className="flex items-center gap-3 mb-4">
+        <span
+          className="inline-flex h-10 w-10 items-center justify-center rounded-2xl shadow-sm"
+          style={{ background: palette.bg, color: palette.fg, transform: "rotate(-4deg)" }}
+        >
+          <Icon className="h-5 w-5" />
+        </span>
+        <h2 className="text-2xl font-semibold tracking-tight">{category.name}</h2>
+        <span
+          className="h-1 flex-1 rounded-full"
+          style={{ background: `color-mix(in oklab, ${palette.bg} 28%, transparent)` }}
+        />
+      </div>
       <div className="grid gap-3 sm:grid-cols-2">
         {sorted.map((b) => (
           <Card key={b.id}>
