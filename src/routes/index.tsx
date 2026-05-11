@@ -1,7 +1,16 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { MapPin, Loader2, Search } from "lucide-react";
+import {
+  MapPin,
+  Loader2,
+  Search,
+  ArrowRight,
+  Bird,
+  Utensils,
+  ShoppingBag,
+  Trees,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -13,6 +22,9 @@ import {
 } from "@/components/ui/select";
 import { listTowns, resolveTown } from "@/lib/towns";
 import { toast } from "sonner";
+import { SiteHeader } from "@/components/site-header";
+import { SiteFooter } from "@/components/site-footer";
+import { SectionDivider } from "@/components/section-divider";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -33,6 +45,33 @@ export const Route = createFileRoute("/")({
   }),
   component: Home,
 });
+
+const HERO_IMAGE =
+  "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80";
+
+const SHOWCASES = [
+  {
+    label: "Eat Local",
+    title: "BISTROS, DINERS & BREWERIES",
+    cta: "Find a table",
+    img: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1000&q=80",
+    icon: Utensils,
+  },
+  {
+    label: "Shop Main Street",
+    title: "BOUTIQUES & MAKERS",
+    cta: "Browse shops",
+    img: "https://images.unsplash.com/photo-1481437156560-3205f6a55735?auto=format&fit=crop&w=1000&q=80",
+    icon: ShoppingBag,
+  },
+  {
+    label: "Explore Outdoors",
+    title: "PARKS, LAKES & TRAILS",
+    cta: "Get outside",
+    img: "https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=1000&q=80",
+    icon: Trees,
+  },
+];
 
 function Home() {
   const navigate = useNavigate();
@@ -58,9 +97,8 @@ function Home() {
             lat: pos.coords.latitude,
             lng: pos.coords.longitude,
           });
-          if (match) {
-            goTo(match.slug);
-          } else {
+          if (match) goTo(match.slug);
+          else {
             toast.message("We couldn't find a TownWelcome page near you yet.", {
               description: "Pick a town below to keep exploring.",
             });
@@ -83,11 +121,6 @@ function Home() {
     );
   };
 
-  // Auto-prompt on first load? Keep manual to respect user choice.
-  useEffect(() => {
-    /* no-op */
-  }, []);
-
   const findByZip = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!/^\d{5}$/.test(zip)) {
@@ -100,50 +133,116 @@ function Home() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-b from-background via-background to-muted">
-      <header className="px-6 py-4 flex items-center justify-between">
-        <div className="font-semibold tracking-tight text-lg">
-          <span className="text-primary">Town</span>Welcome
-        </div>
-        <span className="text-xs text-muted-foreground hidden sm:block">
-          Wisconsin
-        </span>
-      </header>
+    <div className="min-h-screen bg-background">
+      <SiteHeader />
 
-      <main className="flex-1 flex items-center justify-center px-6">
-        <div className="max-w-xl w-full text-center space-y-8 py-12">
-          <div className="space-y-3">
-            <p className="text-sm uppercase tracking-widest text-primary/70">
-              Welcome home
-            </p>
-            <h1 className="text-4xl sm:text-5xl font-semibold tracking-tight text-foreground">
-              Discover everything your town has to offer.
-            </h1>
-            <p className="text-muted-foreground">
-              Tap below and we'll show you sponsored locals, restaurants,
-              services, and coupons near you.
+      {/* HERO --------------------------------------------------------- */}
+      <section className="mx-auto grid max-w-6xl grid-cols-1 gap-8 px-5 pt-10 pb-16 md:grid-cols-[minmax(0,360px)_1fr] md:gap-12 md:pt-14">
+        <div className="relative overflow-hidden rounded-3xl border border-border bg-secondary shadow-[var(--shadow-soft)]">
+          <span className="absolute left-4 top-4 z-10 rounded-full bg-background/85 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-foreground/70 backdrop-blur">
+            // Welcome
+          </span>
+          <img
+            src={HERO_IMAGE}
+            alt="A Wisconsin town in golden light"
+            className="h-[420px] w-full object-cover md:h-full"
+          />
+        </div>
+
+        <div className="flex flex-col justify-center">
+          <SectionDivider label="TownWelcome / WI" className="mb-6" />
+          <h1 className="font-display text-[44px] font-extrabold uppercase leading-[0.95] tracking-tight text-foreground sm:text-6xl">
+            Discover your town,
+            <br />
+            <span className="relative inline-block">
+              one local
+              <Bird className="absolute -right-12 -top-2 h-9 w-9 text-[color:var(--wi-cheddar)] animate-[wi-wiggle_2.4s_ease-in-out_infinite]" />
+            </span>{" "}
+            at a time.
+          </h1>
+          <p className="mt-5 max-w-md text-base text-foreground/70">
+            Restaurants, coffee, shops, parks, services and coupons — curated
+            for every Wisconsin town. Tap and we'll bring your local guide
+            right to you.
+          </p>
+
+          <div className="mt-8 flex flex-wrap items-center gap-3">
+            <Button
+              size="lg"
+              onClick={useMyLocation}
+              disabled={locating}
+              className="h-14 rounded-full bg-primary px-7 text-base font-semibold text-primary-foreground shadow-[var(--shadow-cta)] hover:bg-primary/90"
+            >
+              {locating ? (
+                <Loader2 className="mr-1 h-5 w-5 animate-spin" />
+              ) : (
+                <MapPin className="mr-1 h-5 w-5" />
+              )}
+              {locating ? "Finding your town…" : "Use my location"}
+            </Button>
+            <a
+              href="#towns"
+              className="inline-flex h-14 items-center gap-2 rounded-full border border-foreground/15 bg-background px-6 text-base font-medium text-foreground transition-colors hover:border-foreground/40"
+            >
+              Browse towns <ArrowRight className="h-4 w-4" />
+            </a>
+          </div>
+        </div>
+      </section>
+
+      {/* CATEGORY SHOWCASE ------------------------------------------- */}
+      <section className="mx-auto max-w-6xl px-5 pb-16">
+        <SectionDivider label="What's around the corner" className="mb-6" />
+        <div className="grid gap-4 md:grid-cols-3">
+          {SHOWCASES.map((s) => {
+            const Icon = s.icon;
+            return (
+              <a
+                key={s.label}
+                href="#towns"
+                className="group relative block overflow-hidden rounded-3xl border border-border shadow-[var(--shadow-soft)]"
+              >
+                <img
+                  src={s.img}
+                  alt={s.label}
+                  className="h-72 w-full object-cover transition-transform duration-700 group-hover:scale-[1.05]"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-foreground/85 via-foreground/10 to-transparent" />
+                <div className="absolute inset-x-0 bottom-0 p-5 text-background">
+                  <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-background/80">
+                    <Icon className="h-4 w-4 text-primary" /> {s.label}
+                  </div>
+                  <h3 className="font-display mt-2 text-2xl font-extrabold leading-tight">
+                    {s.title}
+                  </h3>
+                  <span className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-primary px-3.5 py-1.5 text-xs font-semibold text-primary-foreground">
+                    {s.cta} <ArrowRight className="h-3.5 w-3.5" />
+                  </span>
+                </div>
+              </a>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* TOWN PICKER -------------------------------------------------- */}
+      <section id="towns" className="mx-auto max-w-6xl px-5 pb-20">
+        <div className="grid gap-8 rounded-3xl border border-border bg-card p-8 shadow-[var(--shadow-soft)] md:grid-cols-[1.1fr_1fr] md:p-12">
+          <div>
+            <SectionDivider label="Find your town" className="mb-5" />
+            <h2 className="font-display text-3xl font-extrabold uppercase leading-tight tracking-tight sm:text-4xl">
+              Pick a town —<br />
+              we'll roll out the welcome mat.
+            </h2>
+            <p className="mt-4 max-w-md text-foreground/70">
+              We're starting in Ozaukee County (Grafton, Cedarburg, Mequon,
+              Port Washington, Thiensville). More Wisconsin towns coming soon.
             </p>
           </div>
 
-          <Button
-            size="lg"
-            onClick={useMyLocation}
-            disabled={locating}
-            className="h-14 px-8 text-base rounded-full shadow-lg"
-          >
-            {locating ? (
-              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-            ) : (
-              <MapPin className="mr-2 h-5 w-5" />
-            )}
-            {locating ? "Finding your town…" : "Use my location"}
-          </Button>
-
-          <div className="pt-6 space-y-4">
-            <div className="text-xs uppercase tracking-widest text-muted-foreground">
-              Or pick manually
-            </div>
-            <div className="grid sm:grid-cols-2 gap-3">
+          <div className="space-y-4">
+            <div>
+              <label className="eyebrow mb-2 block">Browse</label>
               <Select
                 value={manualSlug}
                 onValueChange={(v) => {
@@ -151,7 +250,7 @@ function Home() {
                   goTo(v);
                 }}
               >
-                <SelectTrigger className="h-12">
+                <SelectTrigger className="h-12 rounded-full border-foreground/15 bg-background px-5">
                   <SelectValue placeholder="Choose a town" />
                 </SelectTrigger>
                 <SelectContent>
@@ -162,31 +261,58 @@ function Home() {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
 
-              <form onSubmit={findByZip} className="flex gap-2">
+            <div>
+              <label className="eyebrow mb-2 block">Or enter ZIP</label>
+              <form
+                onSubmit={findByZip}
+                suppressHydrationWarning
+                className="flex gap-2"
+              >
                 <Input
                   inputMode="numeric"
                   maxLength={5}
-                  placeholder="ZIP code"
+                  placeholder="53024"
                   value={zip}
                   onChange={(e) => setZip(e.target.value.replace(/\D/g, ""))}
-                  className="h-12"
+                  className="h-12 rounded-full border-foreground/15 bg-background px-5"
+                  suppressHydrationWarning
                 />
-                <Button type="submit" variant="secondary" className="h-12">
+                <Button
+                  type="submit"
+                  className="h-12 rounded-full bg-foreground px-5 text-background hover:bg-foreground/90"
+                >
                   <Search className="h-4 w-4" />
                 </Button>
               </form>
             </div>
           </div>
         </div>
-      </main>
+      </section>
 
-      <footer className="px-6 py-6 text-center text-xs text-muted-foreground">
-        TownWelcome · Ozaukee County, Wisconsin ·{" "}
-        <Link to="/" className="underline">
-          Home
-        </Link>
-      </footer>
+      <section id="sponsor" className="mx-auto max-w-6xl px-5 pb-24">
+        <div className="overflow-hidden rounded-3xl bg-foreground p-10 text-background md:p-14">
+          <SectionDivider label="For local businesses" className="mb-5 [&_span]:text-background/60 [&_span:first-child]:text-background" />
+          <div className="flex flex-col items-start justify-between gap-6 md:flex-row md:items-end">
+            <h2 className="font-display max-w-xl text-3xl font-extrabold uppercase leading-tight tracking-tight sm:text-4xl">
+              Be the first business locals see
+              when they move to town.
+            </h2>
+            <a
+              href="mailto:hello@townwelcome.com"
+              className="inline-flex h-12 shrink-0 items-center gap-2 rounded-full bg-primary px-6 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
+            >
+              Get listed <ArrowRight className="h-4 w-4" />
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <SiteFooter />
     </div>
   );
 }
+
+// suppress unused-link warning while keeping import for future use
+void Link;
