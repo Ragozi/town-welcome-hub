@@ -95,6 +95,37 @@
   --sidebar-accent-foreground: oklch(0.208 0.042 265.755);
   --sidebar-border: oklch(0.929 0.013 255.508);
   --sidebar-ring: oklch(0.704 0.04 256.788);
+
+  /* Wisconsin landscape palette — fun, tactile, regional */
+  --wi-lake: oklch(0.62 0.13 230);        /* Lake Michigan */
+  --wi-pine: oklch(0.48 0.11 155);        /* North woods pine */
+  --wi-cheddar: oklch(0.82 0.17 85);      /* Sharp cheddar */
+  --wi-cranberry: oklch(0.58 0.20 25);    /* Cranberry bog */
+  --wi-sunset: oklch(0.74 0.15 55);       /* Lake sunset */
+  --wi-cream: oklch(0.96 0.04 90);        /* Dairy cream */
+  --wi-barn: oklch(0.50 0.16 30);         /* Barn red */
+  --wi-corn: oklch(0.86 0.14 105);        /* Cornfield */
+  --wi-sky: oklch(0.85 0.07 220);         /* Wisconsin sky */
+  --wi-ink: oklch(0.22 0.04 160);         /* Forest ink */
+}
+
+@theme inline {
+  --color-wi-lake: var(--wi-lake);
+  --color-wi-pine: var(--wi-pine);
+  --color-wi-cheddar: var(--wi-cheddar);
+  --color-wi-cranberry: var(--wi-cranberry);
+  --color-wi-sunset: var(--wi-sunset);
+  --color-wi-cream: var(--wi-cream);
+  --color-wi-barn: var(--wi-barn);
+  --color-wi-corn: var(--wi-corn);
+  --color-wi-sky: var(--wi-sky);
+  --color-wi-ink: var(--wi-ink);
+}
+
+@keyframes wi-wiggle {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-3deg); }
+  75% { transform: rotate(3deg); }
 }
 
 .dark {
