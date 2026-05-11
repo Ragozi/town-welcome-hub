@@ -59,6 +59,7 @@ export const Route = createFileRoute("/api/pdf/$townSlug")({
     handlers: {
       GET: async ({ params, request }) => {
         const slug = params.townSlug;
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const { data: town } = await supabaseAdmin
           .from("towns")
           .select("*")
