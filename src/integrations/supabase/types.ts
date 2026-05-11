@@ -14,16 +14,191 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      businesses: {
+        Row: {
+          address: string | null
+          category_id: string
+          coupon_expires: string | null
+          coupon_text: string | null
+          created_at: string
+          description: string | null
+          featured_order: number
+          id: string
+          last_scraped: string | null
+          logo_url: string | null
+          name: string
+          phone: string | null
+          scraped_from: string | null
+          sponsor_tier: Database["public"]["Enums"]["sponsor_tier"]
+          subcategory: string | null
+          town_id: string
+          website: string | null
+        }
+        Insert: {
+          address?: string | null
+          category_id: string
+          coupon_expires?: string | null
+          coupon_text?: string | null
+          created_at?: string
+          description?: string | null
+          featured_order?: number
+          id?: string
+          last_scraped?: string | null
+          logo_url?: string | null
+          name: string
+          phone?: string | null
+          scraped_from?: string | null
+          sponsor_tier?: Database["public"]["Enums"]["sponsor_tier"]
+          subcategory?: string | null
+          town_id: string
+          website?: string | null
+        }
+        Update: {
+          address?: string | null
+          category_id?: string
+          coupon_expires?: string | null
+          coupon_text?: string | null
+          created_at?: string
+          description?: string | null
+          featured_order?: number
+          id?: string
+          last_scraped?: string | null
+          logo_url?: string | null
+          name?: string
+          phone?: string | null
+          scraped_from?: string | null
+          sponsor_tier?: Database["public"]["Enums"]["sponsor_tier"]
+          subcategory?: string | null
+          town_id?: string
+          website?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "businesses_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "businesses_town_id_fkey"
+            columns: ["town_id"]
+            isOneToOne: false
+            referencedRelation: "towns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      categories: {
+        Row: {
+          display_order: number
+          icon: string | null
+          id: string
+          name: string
+          slug: string
+        }
+        Insert: {
+          display_order?: number
+          icon?: string | null
+          id?: string
+          name: string
+          slug: string
+        }
+        Update: {
+          display_order?: number
+          icon?: string | null
+          id?: string
+          name?: string
+          slug?: string
+        }
+        Relationships: []
+      }
+      sponsor_tiers: {
+        Row: {
+          display_priority: number
+          id: string
+          key: Database["public"]["Enums"]["sponsor_tier"]
+          name: string
+          price_monthly: number
+        }
+        Insert: {
+          display_priority?: number
+          id?: string
+          key: Database["public"]["Enums"]["sponsor_tier"]
+          name: string
+          price_monthly?: number
+        }
+        Update: {
+          display_priority?: number
+          id?: string
+          key?: Database["public"]["Enums"]["sponsor_tier"]
+          name?: string
+          price_monthly?: number
+        }
+        Relationships: []
+      }
+      towns: {
+        Row: {
+          county: string
+          created_at: string
+          hero_blurb: string | null
+          id: string
+          latitude: number
+          longitude: number
+          name: string
+          slug: string
+          state: string
+          zip_codes: string[]
+        }
+        Insert: {
+          county: string
+          created_at?: string
+          hero_blurb?: string | null
+          id?: string
+          latitude: number
+          longitude: number
+          name: string
+          slug: string
+          state?: string
+          zip_codes?: string[]
+        }
+        Update: {
+          county?: string
+          created_at?: string
+          hero_blurb?: string | null
+          id?: string
+          latitude?: number
+          longitude?: number
+          name?: string
+          slug?: string
+          state?: string
+          zip_codes?: string[]
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      nearest_town: {
+        Args: { lat: number; lng: number; max_km?: number }
+        Returns: {
+          distance_km: number
+          name: string
+          slug: string
+        }[]
+      }
+      town_by_zip: {
+        Args: { zip: string }
+        Returns: {
+          name: string
+          slug: string
+        }[]
+      }
     }
     Enums: {
-      [_ in never]: never
+      sponsor_tier: "none" | "bronze" | "silver" | "gold" | "s_tier"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +325,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      sponsor_tier: ["none", "bronze", "silver", "gold", "s_tier"],
+    },
   },
 } as const
