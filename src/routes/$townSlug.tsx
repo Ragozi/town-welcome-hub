@@ -363,13 +363,23 @@ function CategoryNav({
   const visible = categories.filter((c) => (byCategory.get(c.id) ?? []).length > 0);
   const active = activeId;
   const scrollerRef = useRef<HTMLDivElement>(null);
+  const lastActiveRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!active || !scrollerRef.current) return;
+    if (lastActiveRef.current === active) return;
+    lastActiveRef.current = active;
     const chip = scrollerRef.current.querySelector<HTMLElement>(
       `[data-chip="${active}"]`,
     );
-    chip?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+    if (!chip) return;
+    const container = scrollerRef.current;
+    const targetLeft =
+      chip.offsetLeft - container.clientWidth / 2 + chip.clientWidth / 2;
+    container.scrollTo({
+      left: Math.max(0, targetLeft),
+      behavior: "smooth",
+    });
   }, [active]);
 
   if (!visible.length) return null;
