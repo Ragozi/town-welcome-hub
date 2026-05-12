@@ -75,6 +75,52 @@ export const Route = createFileRoute("/p/$slug")({
 
 function BuyerLanding() {
   const { packet, realtor, town, categories, businesses } = Route.useLoaderData();
+  const log = useServerFn(logEvent);
+
+  // Fire landing_view + qr_scanned (if applicable) once on mount
+  useEffect(() => {
+    const session = getSessionId();
+    const source = detectSource();
+    const utm = readUtm();
+    const referrer = typeof document !== "undefined" ? document.referrer : "";
+    const dayKey = `wh_view_${packet.slug}_${new Date().toISOString().slice(0, 10)}`;
+    if (!sessionStorage.getItem(dayKey)) {
+      sessionStorage.setItem(dayKey, "1");
+      log({
+        data: {
+          packet_slug: packet.slug,
+          event_type: "landing_view",
+          source,
+          referrer,
+          session_id: session,
+          utm,
+        },
+      }).catch(() => {});
+      if (source === "qr") {
+        log({
+          data: {
+            packet_slug: packet.slug,
+            event_type: "qr_scanned",
+            source: "qr",
+            session_id: session,
+          },
+        }).catch(() => {});
+      }
+    }
+  }, [packet.slug, log]);
+
+  const track = (event_type: "business_click" | "referral_click" | "sponsor_click" | "share_click", metadata: Record<string, unknown> = {}) => {
+    const session = getSessionId();
+    log({
+      data: {
+        packet_slug: packet.slug,
+        event_type,
+        source: detectSource(),
+        session_id: session,
+        metadata,
+      },
+    }).catch(() => {});
+  };
 
   const allBiz = businesses as Business[];
   const allCats = categories as Category[];
