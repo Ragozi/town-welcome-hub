@@ -171,7 +171,7 @@ function BuyerLanding() {
               Hand-picked for you
             </h2>
             <div className="mt-6 grid gap-4 md:grid-cols-3">
-              {platinum.map((b) => (
+              {platinum.map((b: Business) => (
                 <FeaturedCard key={b.id} b={b} />
               ))}
             </div>
