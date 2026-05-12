@@ -15,6 +15,7 @@ import { Route as AboutRouteImport } from './routes/about'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as TownSlugRouteImport } from './routes/$townSlug'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as RReferralSlugRouteImport } from './routes/r.$referralSlug'
 import { Route as PSlugRouteImport } from './routes/p.$slug'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
@@ -50,6 +51,11 @@ const TownSlugRoute = TownSlugRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RReferralSlugRoute = RReferralSlugRouteImport.update({
+  id: '/r/$referralSlug',
+  path: '/r/$referralSlug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PSlugRoute = PSlugRouteImport.update({
@@ -98,6 +104,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/p/$slug': typeof PSlugRoute
+  '/r/$referralSlug': typeof RReferralSlugRoute
   '/packets/$id': typeof AuthenticatedPacketsIdRoute
   '/packets/new': typeof AuthenticatedPacketsNewRoute
   '/api/pdf/$townSlug': typeof ApiPdfTownSlugRoute
@@ -112,6 +119,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/p/$slug': typeof PSlugRoute
+  '/r/$referralSlug': typeof RReferralSlugRoute
   '/packets/$id': typeof AuthenticatedPacketsIdRoute
   '/packets/new': typeof AuthenticatedPacketsNewRoute
   '/api/pdf/$townSlug': typeof ApiPdfTownSlugRoute
@@ -128,6 +136,7 @@ export interface FileRoutesById {
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/p/$slug': typeof PSlugRoute
+  '/r/$referralSlug': typeof RReferralSlugRoute
   '/_authenticated/packets/$id': typeof AuthenticatedPacketsIdRoute
   '/_authenticated/packets/new': typeof AuthenticatedPacketsNewRoute
   '/api/pdf/$townSlug': typeof ApiPdfTownSlugRoute
@@ -144,6 +153,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/settings'
     | '/p/$slug'
+    | '/r/$referralSlug'
     | '/packets/$id'
     | '/packets/new'
     | '/api/pdf/$townSlug'
@@ -158,6 +168,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/settings'
     | '/p/$slug'
+    | '/r/$referralSlug'
     | '/packets/$id'
     | '/packets/new'
     | '/api/pdf/$townSlug'
@@ -173,6 +184,7 @@ export interface FileRouteTypes {
     | '/_authenticated/dashboard'
     | '/_authenticated/settings'
     | '/p/$slug'
+    | '/r/$referralSlug'
     | '/_authenticated/packets/$id'
     | '/_authenticated/packets/new'
     | '/api/pdf/$townSlug'
@@ -187,6 +199,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   TownsRoute: typeof TownsRoute
   PSlugRoute: typeof PSlugRoute
+  RReferralSlugRoute: typeof RReferralSlugRoute
   ApiPdfTownSlugRoute: typeof ApiPdfTownSlugRoute
 }
 
@@ -232,6 +245,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/r/$referralSlug': {
+      id: '/r/$referralSlug'
+      path: '/r/$referralSlug'
+      fullPath: '/r/$referralSlug'
+      preLoaderRoute: typeof RReferralSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/p/$slug': {
@@ -314,8 +334,19 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   TownsRoute: TownsRoute,
   PSlugRoute: PSlugRoute,
+  RReferralSlugRoute: RReferralSlugRoute,
   ApiPdfTownSlugRoute: ApiPdfTownSlugRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
