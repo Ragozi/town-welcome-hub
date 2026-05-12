@@ -1,107 +1,122 @@
-# Welcome Home — Realtor Backend & Packet Flow
 
-## Database: keep what we have, add on top
+# Welcome Home — Tracking, PDF, Admin & KPI Dashboard
 
-**Recommendation: KEEP the current schema and ADD packet/realtor tables.** The existing `towns`, `categories`, `businesses`, `sponsor_tiers` tables already model exactly what the spec calls "Buyer Landing Page" content (local restaurants, coffee, parks, sponsored businesses with tiers). Throwing them out means re-seeding Ozaukee data and rebuilding the public site.
+Five workstreams. Built in this order so each unlocks the next.
 
-| | Keep current + extend | Migrate to spec-only |
-|---|---|---|
-| Pros | Preserves Ozaukee seed data, working `/`, `/towns`, `/$townSlug`, sponsor tiers, PDF route. Lowest risk. | Clean slate matching spec wording exactly. |
-| Cons | Slight naming drift (sponsor_tier enum vs Platinum/Gold/Silver — easy rename). | Lose all current data + UI; rebuild landing pages and town directory; ~2x the work for the same end state. |
+---
 
-### New tables to add
+## 1. Real PDF Generation
 
-- **`profiles`** — `user_id` (FK auth.users), `full_name`, `headshot_url`, `phone`, `email_public`, `brokerage_name`, `brokerage_logo_url`, `social_links jsonb`, `default_town_id`.
-- **`user_roles`** — separate table per security best practices: `user_id`, `role` (`admin` | `realtor`). Drives admin UI access.
-- **`packets`** — `id`, `realtor_id`, `town_id`, `slug` (short public id e.g. `abc123` for `/p/abc123`), `buyer_first_name`, `buyer_last_name`, `buyer_email`, `address`, `closing_date`, `welcome_note`, `has_kids`, `has_pets`, `interests text[]`, `lifestyle_tags text[]`, `home_photo_url`, `status` (`draft`|`generated`), `pdf_url`, `created_at`.
-- **Sponsor tier rename**: extend `sponsor_tier` enum with `platinum`/`gold`/`silver` aliases (keep existing values for back-compat).
+**Endpoint**: `src/routes/api/packet-pdf.$slug.tsx` (server route).
 
-### Storage buckets
-- `headshots` (public) — realtor photos
-- `brokerage-logos` (public)
-- `home-photos` (public) — banner image per packet
-- `packet-pdfs` (public, signed URLs optional) — generated PDFs
+- Generate a branded PDF on-demand using `@react-pdf/renderer` (Worker-compatible, pure JS).
+- Pulls packet + realtor profile + town + featured local businesses + sponsors.
+- On first generation: upload to `packet-pdfs` storage bucket, save `pdf_url` on the packet, set `status = 'generated'`.
+- On subsequent hits: stream the cached file from storage.
+- Increments `pdf_download_count` and logs a `packet_event` row (see §2).
+- Sections: cover (buyer name + home photo + agent branding), welcome note, town guide, local businesses by category, sponsor highlights, agent contact + referral CTA, QR back to landing page.
 
-### RLS
-- `profiles`: realtor can read/update own row; admins read all.
-- `packets`: realtor can CRUD only their own; public SELECT by `slug` only (for `/p/:slug` landing).
-- `user_roles`: only admins write; users read own.
-- Use `has_role(uuid, app_role)` SECURITY DEFINER helper to avoid recursion.
+**Packet retention**: Packets live forever by default. Add `archived_at` column + a soft "Archive" action so realtors can hide old ones from their dashboard without breaking buyer QR codes (the public `/p/:slug` keeps working unless explicitly disabled).
 
-## Auth: invite-only realtor accounts
+---
 
-- Enable email/password auth, **disable public signup**.
-- Add `/login` route (email + password) — redirect to `/dashboard` on success.
-- Add `/accept-invite` route — admin emails an invite link via Supabase auth invite flow; realtor sets password and is auto-assigned `realtor` role via DB trigger on first login.
-- Admin UI has an "Invite Realtor" form (email + name) → calls a server fn using `supabaseAdmin.auth.admin.inviteUserByEmail()`.
-- Optional: Google sign-in for whitelisted invited emails.
+## 2. Tracking Infrastructure (the data layer for KPIs)
 
-## New routes
+New table `packet_events` — every meaningful interaction becomes a row.
 
-```
-src/routes/
-  login.tsx                       public
-  accept-invite.tsx               public, reads token from URL
-  _authenticated.tsx              guard layout
-  _authenticated/
-    dashboard.tsx                 cards + recent packets
-    packets.index.tsx             list
-    packets.new.tsx               4-step wizard
-    packets.$id.tsx               edit / regenerate / download
-    settings.tsx                  profile + branding
-  _authenticated/_admin/
-    admin.index.tsx               admin home
-    admin.realtors.tsx            invite + list
-    admin.sponsors.tsx            CRUD businesses + tier
-    admin.towns.tsx               CRUD towns + categories
-  p.$slug.tsx                     PUBLIC buyer landing page
-  marketing/                      restructure existing index.tsx into
-    (keep / as marketing site with new hero copy)
+```text
+packet_events
+  id            uuid pk
+  packet_id    uuid null   (null = unattached / nobody's packet)
+  realtor_id   uuid null
+  town_id      uuid null
+  event_type   enum: pdf_generated, pdf_downloaded, qr_scanned,
+                     landing_view, business_click, referral_click,
+                     sponsor_click, share_click
+  source       enum: qr, direct, referral, search, unknown
+  utm          jsonb   (utm_source/medium/campaign)
+  referrer     text
+  user_agent   text
+  ip_country   text    (from CF-IPCountry header — no PII)
+  ip_region    text
+  ip_city      text
+  device       enum: mobile, tablet, desktop
+  session_id   text    (anon cookie, 30-day rolling)
+  metadata     jsonb   (e.g. clicked business_id, target url)
+  created_at   timestamptz
 ```
 
-## Packet generation flow
+- `qr_scanned` is detected by appending `?s=qr` to the QR URL, then logged once per session.
+- `landing_view` fires on every public `/p/:slug` hit; deduped per `session_id` per day.
+- All click handlers on the landing page (`business_click`, `referral_click`, `sponsor_click`, `share_click`) post to a `logEvent` server function.
+- Geo + device parsed server-side from request headers — no third-party tracker, no cookies beyond anon `session_id`.
 
-1. **Wizard** (4 steps, single route, local state): Buyer Info → Personalization → Branding (pre-filled from profile) → Review.
-2. **"Generate Packet"** calls `createPacket` server fn → inserts row, generates short slug (nanoid 8 chars), returns id.
-3. **PDF generation**: extend the existing `src/routes/api/pdf.$townSlug.tsx` pattern → new `src/routes/api/pdf.packet.$slug.tsx` server route that renders a personalized PDF (buyer name, home photo, realtor branding, town highlights pulled from `businesses` for that `town_id`, sponsor cards by tier). Upload to `packet-pdfs` bucket, store URL on packet row.
-4. **QR code**: render client-side with `qrcode.react` pointing to `https://<domain>/p/<slug>`. No server work needed.
-5. **Email buyer**: optional button → uses Lovable Emails (transactional) to send the link; phase 2.
+**Realtor referral button**: each realtor profile gets a `referral_slug`. Landing page renders an "Work with {Agent}" CTA → `/r/{referral_slug}?from={packet_slug}` which logs `referral_click` then redirects to the realtor's contact form / phone / email.
 
-## Buyer landing page `/p/:slug`
+**RLS**: `packet_events` insertable by anyone (public landing page logs anon), readable only by admins + the owning realtor (their own packets).
 
-Server fn fetches packet by slug (public), joins town + categories + businesses + realtor profile. Renders:
-- Hero: home photo banner, "Welcome Home, {Buyer Name}", realtor mini-card.
-- Personal note section.
-- Sponsored businesses (Platinum top, Gold mid, Silver inline) — reuses existing `BusinessCard` styling.
-- Category sections (restaurants, coffee, parks, shopping, services, utilities, emergency).
-- Realtor thank-you + referral CTA + contact footer.
+---
 
-Re-uses the SNAPTURE warm cream + WI accent palette already in `styles.css`.
+## 3. Admin KPI Dashboard (`/admin`)
 
-## Marketing site updates
+New layout route `_authenticated/admin.tsx` — gated by `isAdmin`. Sub-routes:
 
-Refit current `/` with the spec's hero copy ("Turn Every Closing Into a Lasting Impression"), add Pricing, Sponsor, Testimonials placeholder sections. Keep `/towns` and `/$townSlug` as proof-of-concept town pages (they double as sponsor inventory marketing for now).
+### `/admin` — Overview (the screenshot inspo)
+Top row of stat cards (with trend % vs. previous period and sparkline):
+- Total packets created
+- PDFs downloaded
+- QR scans
+- Landing page views
+- Referral clicks (the ROI metric)
+- Avg. engagement per packet (events / packet)
 
-## Admin UI (minimal v1)
+Charts:
+- **Activity over time** — multi-line: PDF downloads, QR scans, landing views, referral clicks. Hover tooltip with exact counts per day.
+- **Funnel** — Packets created → PDFs downloaded → QR scanned → Landing viewed → Referral clicked. Conversion % between each step.
+- **Source breakdown donut** — qr / direct / referral / search.
+- **Geography** — top cities/regions table + Wisconsin map heatmap of scan locations.
+- **Device split** — mobile/tablet/desktop bar.
+- **Top businesses clicked** — leaderboard (helps justify sponsor pricing).
+- **Top realtors** — by packets, by referral clicks (ROI leaderboard).
+- **Top towns** — packets generated + landing views.
 
-Single `_admin` layout gated by `has_role(uid, 'admin')`. Tabs:
-- **Realtors** — invite form, list with last-login + packet count.
-- **Sponsors** — table of businesses with tier dropdown, coupon text/expiry inline edit.
-- **Towns / Categories** — CRUD basics; hero blurb editor.
+Controls: date range picker (7d / 30d / 90d / custom), compare-to-previous-period toggle, town filter, realtor filter. Every chart point has a hover tooltip; cards show ▲/▼ vs prior period.
 
-## Implementation order (suggested phases)
+### `/admin/packets` — All packets across all realtors (search, filter, open).
+### `/admin/realtors` — list, search, **provision new user** (email + role), reset password, assign roles (admin / realtor), deactivate. This replaces the manual script.
+### `/admin/businesses` — CRUD businesses + sponsors + tiers (currently DB-only).
+### `/admin/towns` — edit town hero blurbs, ZIPs.
+### `/admin/events` — raw event log with filters (debug + audit).
 
-1. Auth + roles + profiles + invite flow + protected dashboard shell.
-2. Packets table + wizard + list/edit + QR + buyer landing page.
-3. PDF generation server route for packets.
-4. Admin realtor + sponsor management.
-5. Marketing site refresh (hero copy, pricing, testimonials).
-6. Email buyer (Lovable Emails) + analytics.
+---
 
-## Open items before I build
+## 4. Realtor Stats (per-realtor, on their dashboard)
 
-- Confirm admin email so I can seed the first `admin` role in the migration (you?).
-- Domain for QR/landing URLs — keep `lovable.app` preview for now or wait for `welcomehome.com`?
-- Pricing tiers content — placeholder copy OK for v1?
+Add a "Stats" tab to the existing realtor dashboard:
+- Their own KPI cards (packets, PDF downloads, QR scans, landing views, referral clicks).
+- Per-packet drill-down: open any packet → see its event timeline + counts (how many times this buyer's QR was scanned, when, from where, what they clicked).
+- Helps the realtor have a real conversation: "Your buyer scanned the welcome packet 12 times and clicked the local hardware store."
 
-Once you give the green light (and answer the 3 above), I'll execute Phase 1 + 2 in the first build pass.
+---
+
+## 5. Tech Notes
+
+- **PDF lib**: `@react-pdf/renderer` — pure JS, runs fine in the Worker runtime; lets us reuse React for layout.
+- **Charts**: `recharts` (already in shadcn ecosystem). Tooltips, comparisons, hover all native.
+- **Geo**: read `cf-ipcountry`, `cf-region`, `cf-ipcity` headers in the event-logging server function — no external geo API.
+- **Aggregation**: a SQL view `packet_event_daily` (event_type, day, count, realtor_id, town_id) for fast dashboard queries; KPI server functions read from it with date filters.
+- **Hover/compare UX**: every card uses a shared `<KpiCard value, delta, sparkline />` component; charts share a `<CompareTooltip />`.
+
+---
+
+## Build Order
+
+1. `packet_events` table + RLS + `logEvent` server fn + session cookie.
+2. Wire tracking into `/p/:slug` (landing view, clicks, QR detection, referral redirect route).
+3. Real PDF endpoint + cache + download tracking.
+4. Realtor stats tab + per-packet timeline.
+5. Admin layout + user provisioning page (unblocks self-service).
+6. Admin KPI overview + charts + filters + compare mode.
+7. Admin packets / businesses / towns / events sub-pages.
+
+Ready to build when you approve.
