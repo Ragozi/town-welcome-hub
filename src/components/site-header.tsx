@@ -20,18 +20,31 @@ export function SiteHeader() {
             About
           </Link>
           <a href="/#sponsor" className="hover:text-foreground">Sponsor</a>
+          <Link to="/login" className="hover:text-foreground" activeProps={{ className: "text-foreground" }}>
+            Realtor Login
+          </Link>
         </nav>
 
-        <Button
-          asChild
-          size="sm"
-          className="h-10 rounded-full bg-foreground px-5 text-background hover:bg-foreground/90"
-        >
-          <a href="/#sponsor" className="inline-flex items-center gap-2">
-            Get Listed
-            <span className="inline-block h-2 w-2 rounded-full bg-primary" />
-          </a>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            asChild
+            variant="ghost"
+            size="sm"
+            className="hidden h-10 rounded-full px-4 text-foreground/75 hover:text-foreground md:inline-flex"
+          >
+            <Link to="/login">Sign in</Link>
+          </Button>
+          <Button
+            asChild
+            size="sm"
+            className="h-10 rounded-full bg-foreground px-5 text-background hover:bg-foreground/90"
+          >
+            <a href="/#sponsor" className="inline-flex items-center gap-2">
+              Get Listed
+              <span className="inline-block h-2 w-2 rounded-full bg-primary" />
+            </a>
+          </Button>
+        </div>
       </div>
     </header>
   );
