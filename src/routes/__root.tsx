@@ -117,6 +117,12 @@ function RootShell({ children }: { children: React.ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
+  useEffect(() => {
+    // Client-only: install fetch interceptor that attaches the Supabase
+    // bearer token to TanStack Start server-fn requests.
+    import("@/integrations/supabase/server-fn-fetch.client").catch(() => {});
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
