@@ -221,7 +221,7 @@ function BuyerLanding() {
             </h2>
             <div className="mt-6 grid gap-4 md:grid-cols-3">
               {platinum.map((b: Business) => (
-                <FeaturedCard key={b.id} b={b} />
+                <FeaturedCard key={b.id} b={b} onClick={() => track("sponsor_click", { business_id: b.id, name: b.name })} />
               ))}
             </div>
           </section>
