@@ -13,6 +13,7 @@ import QRCode from "qrcode";
 import { tierPriority, type Business, type Category, type Town } from "@/lib/towns";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import type { Packet } from "@/lib/packets";
+import { getPublicBaseUrl } from "@/lib/public-url";
 
 const styles = StyleSheet.create({
   page: { padding: 36, fontSize: 10, fontFamily: "Helvetica", color: "#1a1410", backgroundColor: "#F9F2E8" },
@@ -91,7 +92,7 @@ export const Route = createFileRoute("/api/packet-pdf/$slug")({
           businesses = (bizData ?? []) as Business[];
         }
 
-        const origin = new URL(request.url).origin;
+        const origin = getPublicBaseUrl(request);
         const liveUrl = `${origin}/p/${slug}?s=qr`;
         const qrDataUrl = await QRCode.toDataURL(liveUrl, { margin: 0, width: 320 });
 
@@ -132,11 +133,13 @@ export const Route = createFileRoute("/api/packet-pdf/$slug")({
           .then(() => {});
 
         const safeName = `${p.buyer_first_name}-welcome-${slug}`.replace(/[^a-zA-Z0-9-]/g, "");
+        const wantsDownload = new URL(request.url).searchParams.get("download") === "1";
+        const disposition = wantsDownload ? "attachment" : "inline";
         return new Response(stream as any, {
           status: 200,
           headers: {
             "Content-Type": "application/pdf",
-            "Content-Disposition": `inline; filename="${safeName}.pdf"`,
+            "Content-Disposition": `${disposition}; filename="${safeName}.pdf"`,
             "Cache-Control": "private, max-age=60",
           },
         });

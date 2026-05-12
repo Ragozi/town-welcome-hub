@@ -1,122 +1,76 @@
+## Goal
 
-# Welcome Home — Tracking, PDF, Admin & KPI Dashboard
+Fix broken QR/PDF links by routing every absolute URL through a configurable `PUBLIC_BASE_URL`, and elevate the buyer landing + realtor packet view to a premium, on-brand feel.
 
-Five workstreams. Built in this order so each unlocks the next.
+## 1. Configurable public base URL
 
----
+Add a single resolver used by every link/QR/PDF generator.
 
-## 1. Real PDF Generation
+**New file: `src/lib/public-url.ts`**
+- `export function getPublicBaseUrl(request?: Request): string`
+- Resolution order:
+  1. `process.env.PUBLIC_BASE_URL` (server) / `import.meta.env.VITE_PUBLIC_BASE_URL` (client) — trimmed of trailing `/`
+  2. If `request` provided: `new URL(request.url).origin`
+  3. If browser: `window.location.origin`
+  4. Fallback: current preview URL string
+- `export function packetUrl(slug, opts?: { source?: string })` returns `${base}/p/${slug}` with optional `?s=qr` etc.
 
-**Endpoint**: `src/routes/api/packet-pdf.$slug.tsx` (server route).
+**Add secret:** prompt user to add `PUBLIC_BASE_URL` runtime secret (defaults to preview URL). Also document `VITE_PUBLIC_BASE_URL` for client builds when domain is attached. (Will use `secrets--add_secret` during implementation.)
 
-- Generate a branded PDF on-demand using `@react-pdf/renderer` (Worker-compatible, pure JS).
-- Pulls packet + realtor profile + town + featured local businesses + sponsors.
-- On first generation: upload to `packet-pdfs` storage bucket, save `pdf_url` on the packet, set `status = 'generated'`.
-- On subsequent hits: stream the cached file from storage.
-- Increments `pdf_download_count` and logs a `packet_event` row (see §2).
-- Sections: cover (buyer name + home photo + agent branding), welcome note, town guide, local businesses by category, sponsor highlights, agent contact + referral CTA, QR back to landing page.
+## 2. Use it everywhere
 
-**Packet retention**: Packets live forever by default. Add `archived_at` column + a soft "Archive" action so realtors can hide old ones from their dashboard without breaking buyer QR codes (the public `/p/:slug` keeps working unless explicitly disabled).
+- `src/routes/api/packet-pdf.$slug.tsx`: replace `new URL(request.url).origin` with `getPublicBaseUrl(request)`. QR code + cover footer + thank-you all use this.
+- `src/routes/_authenticated/packets.$id.tsx`: derive `liveUrl` from `getPublicBaseUrl()` (client). Remove the `useState(origin)` dance. PDF download href stays relative (`/api/packet-pdf/...`) since it's same-origin from the realtor app, but show a separate "Public PDF link" using base URL for sharing.
+- `src/routes/p.$slug.tsx`: referral link + share buttons use `packetUrl`/base.
 
----
+## 3. Realtor packet view (`/packets/$id`)
 
-## 2. Tracking Infrastructure (the data layer for KPIs)
+- Replace mounted-origin pattern with `getPublicBaseUrl()` so QR renders on first paint (no flash).
+- Side panel becomes a stacked card:
+  - **QR card**: white rounded-3xl, larger 240px QR, copy-link + download-QR-PNG buttons (use `qrcode.react` ref → canvas).
+  - **PDF card**: dark card, "Preview" opens PDF inline in new tab, "Download" forces `?download=1` (handled in PDF route via `Content-Disposition: attachment`).
+  - **Share card**: copy link, mailto, sms.
+- Add a small inline preview thumbnail (`<iframe src={pdfUrl} />` at 320×420, lazy) so realtors see the PDF without leaving the page.
 
-New table `packet_events` — every meaningful interaction becomes a row.
+## 4. Buyer landing (`/p/$slug`) premium polish
 
-```text
-packet_events
-  id            uuid pk
-  packet_id    uuid null   (null = unattached / nobody's packet)
-  realtor_id   uuid null
-  town_id      uuid null
-  event_type   enum: pdf_generated, pdf_downloaded, qr_scanned,
-                     landing_view, business_click, referral_click,
-                     sponsor_click, share_click
-  source       enum: qr, direct, referral, search, unknown
-  utm          jsonb   (utm_source/medium/campaign)
-  referrer     text
-  user_agent   text
-  ip_country   text    (from CF-IPCountry header — no PII)
-  ip_region    text
-  ip_city      text
-  device       enum: mobile, tablet, desktop
-  session_id   text    (anon cookie, 30-day rolling)
-  metadata     jsonb   (e.g. clicked business_id, target url)
-  created_at   timestamptz
-```
+Keep all existing tracking. Visual changes only:
 
-- `qr_scanned` is detected by appending `?s=qr` to the QR URL, then logged once per session.
-- `landing_view` fires on every public `/p/:slug` hit; deduped per `session_id` per day.
-- All click handlers on the landing page (`business_click`, `referral_click`, `sponsor_click`, `share_click`) post to a `logEvent` server function.
-- Geo + device parsed server-side from request headers — no third-party tracker, no cookies beyond anon `session_id`.
+- **Softer palette**: shift hero overlay to warm cream gradient (`from-[--wi-cream] via-background/0`), reduce dark vignette intensity. Add fine grain texture (existing `--shadow-soft`).
+- **Realtor branding band — promoted to just under hero**, full-width on a tinted card:
+  - Larger headshot (96px), brokerage logo beside name, name in display font, contact chips with hover lift.
+  - "Your guide" eyebrow, soft divider.
+- **Welcome note** moved into its own quote-style block (serif accent, generous padding).
+- **Featured / Locals we love**: keep 3-up grid but add gentle hover scale, softer shadow, sponsor badge refined.
+- **Directory**: category headers get a hairline divider + count chip; cards get more whitespace, consistent radius (rounded-2xl), category icon (lucide) optional.
+- **Thank-you footer**: replace harsh `bg-foreground` with a warm gradient (`from-[--wi-pine] to-foreground`), heart icon animates on mount.
+- Generous `py-20` section spacing on md+; max-w-6xl for directory.
+- Add `aria-live` toast-free confirmation: tiny "Saved your visit ♥" pill bottom-right that fades after landing_view fires (subtle, dismissible).
 
-**Realtor referral button**: each realtor profile gets a `referral_slug`. Landing page renders an "Work with {Agent}" CTA → `/r/{referral_slug}?from={packet_slug}` which logs `referral_click` then redirects to the realtor's contact form / phone / email.
+No new dependencies required.
 
-**RLS**: `packet_events` insertable by anyone (public landing page logs anon), readable only by admins + the owning realtor (their own packets).
+## 5. PDF download mode
 
----
+Update `/api/packet-pdf/$slug` to read `?download=1` query and switch `Content-Disposition` between `inline` (default, for preview iframe) and `attachment`.
 
-## 3. Admin KPI Dashboard (`/admin`)
+## Test plan
 
-New layout route `_authenticated/admin.tsx` — gated by `isAdmin`. Sub-routes:
+1. Set `PUBLIC_BASE_URL` to current preview origin.
+2. Open existing test packet `/packets/{id}` → QR renders immediately, PDF preview iframe loads, download button forces save.
+3. Scan QR with phone → lands on `/p/$slug?s=qr` → `landing_view` + `qr_scanned` events written.
+4. Open generated PDF → cover QR + footer URL match `PUBLIC_BASE_URL`.
+5. Change `PUBLIC_BASE_URL` to a fake domain → regenerate PDF → links update; UI still works because client falls back to `window.location.origin` when env unset.
 
-### `/admin` — Overview (the screenshot inspo)
-Top row of stat cards (with trend % vs. previous period and sparkline):
-- Total packets created
-- PDFs downloaded
-- QR scans
-- Landing page views
-- Referral clicks (the ROI metric)
-- Avg. engagement per packet (events / packet)
+## Files touched
 
-Charts:
-- **Activity over time** — multi-line: PDF downloads, QR scans, landing views, referral clicks. Hover tooltip with exact counts per day.
-- **Funnel** — Packets created → PDFs downloaded → QR scanned → Landing viewed → Referral clicked. Conversion % between each step.
-- **Source breakdown donut** — qr / direct / referral / search.
-- **Geography** — top cities/regions table + Wisconsin map heatmap of scan locations.
-- **Device split** — mobile/tablet/desktop bar.
-- **Top businesses clicked** — leaderboard (helps justify sponsor pricing).
-- **Top realtors** — by packets, by referral clicks (ROI leaderboard).
-- **Top towns** — packets generated + landing views.
+- new: `src/lib/public-url.ts`
+- edit: `src/routes/api/packet-pdf.$slug.tsx`
+- edit: `src/routes/_authenticated/packets.$id.tsx`
+- edit: `src/routes/p.$slug.tsx`
+- secret: add `PUBLIC_BASE_URL`
 
-Controls: date range picker (7d / 30d / 90d / custom), compare-to-previous-period toggle, town filter, realtor filter. Every chart point has a hover tooltip; cards show ▲/▼ vs prior period.
+## Out of scope
 
-### `/admin/packets` — All packets across all realtors (search, filter, open).
-### `/admin/realtors` — list, search, **provision new user** (email + role), reset password, assign roles (admin / realtor), deactivate. This replaces the manual script.
-### `/admin/businesses` — CRUD businesses + sponsors + tiers (currently DB-only).
-### `/admin/towns` — edit town hero blurbs, ZIPs.
-### `/admin/events` — raw event log with filters (debug + audit).
-
----
-
-## 4. Realtor Stats (per-realtor, on their dashboard)
-
-Add a "Stats" tab to the existing realtor dashboard:
-- Their own KPI cards (packets, PDF downloads, QR scans, landing views, referral clicks).
-- Per-packet drill-down: open any packet → see its event timeline + counts (how many times this buyer's QR was scanned, when, from where, what they clicked).
-- Helps the realtor have a real conversation: "Your buyer scanned the welcome packet 12 times and clicked the local hardware store."
-
----
-
-## 5. Tech Notes
-
-- **PDF lib**: `@react-pdf/renderer` — pure JS, runs fine in the Worker runtime; lets us reuse React for layout.
-- **Charts**: `recharts` (already in shadcn ecosystem). Tooltips, comparisons, hover all native.
-- **Geo**: read `cf-ipcountry`, `cf-region`, `cf-ipcity` headers in the event-logging server function — no external geo API.
-- **Aggregation**: a SQL view `packet_event_daily` (event_type, day, count, realtor_id, town_id) for fast dashboard queries; KPI server functions read from it with date filters.
-- **Hover/compare UX**: every card uses a shared `<KpiCard value, delta, sparkline />` component; charts share a `<CompareTooltip />`.
-
----
-
-## Build Order
-
-1. `packet_events` table + RLS + `logEvent` server fn + session cookie.
-2. Wire tracking into `/p/:slug` (landing view, clicks, QR detection, referral redirect route).
-3. Real PDF endpoint + cache + download tracking.
-4. Realtor stats tab + per-packet timeline.
-5. Admin layout + user provisioning page (unblocks self-service).
-6. Admin KPI overview + charts + filters + compare mode.
-7. Admin packets / businesses / towns / events sub-pages.
-
-Ready to build when you approve.
+- Custom domain attachment (separate flow)
+- Email-to-buyer delivery
+- Stats wiring beyond what's already logged
