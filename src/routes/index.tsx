@@ -315,7 +315,7 @@ function Home() {
               when they move to town.
             </h2>
             <a
-              href="mailto:hello@townwelcome.com"
+              href="mailto:igor@halolabsai.com"
               className="inline-flex h-12 shrink-0 items-center gap-2 rounded-full bg-primary px-6 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
             >
               Get listed <ArrowRight className="h-4 w-4" />
