@@ -55,9 +55,38 @@ function NewPacket() {
   const [buyerFirst, setBuyerFirst] = useState("");
   const [buyerLast, setBuyerLast] = useState("");
   const [buyerEmail, setBuyerEmail] = useState("");
-  const [address, setAddress] = useState("");
+  const [street, setStreet] = useState("");
+  const [zip, setZip] = useState("");
+  const [state, setState] = useState("WI");
+  const [city, setCity] = useState("");
   const [closingDate, setClosingDate] = useState("");
   const [townId, setTownId] = useState<string>(profile?.default_town_id ?? "");
+  const [zipNotice, setZipNotice] = useState<string | null>(null);
+
+  const address = [street.trim(), [city, state].filter(Boolean).join(", "), zip.trim()]
+    .filter(Boolean)
+    .join(", ");
+
+  // ZIP -> town auto-detect (uses local towns list; covers Ozaukee County)
+  const onZipChange = (raw: string) => {
+    const z = raw.replace(/\D/g, "").slice(0, 5);
+    setZip(z);
+    if (z.length !== 5) {
+      setZipNotice(null);
+      return;
+    }
+    const match = (allTowns.data ?? []).find((t: { zip_codes?: string[] | null }) =>
+      (t.zip_codes ?? []).includes(z),
+    );
+    if (match) {
+      setCity(match.name);
+      setTownId(match.id);
+      setState("WI");
+      setZipNotice(`Matched ${match.name}, WI`);
+    } else {
+      setZipNotice("No matching town/village in our guide for that ZIP — pick a city manually.");
+    }
+  };
   const [welcomeNote, setWelcomeNote] = useState(
     profile?.thank_you_message ??
       "Welcome home! It's been a privilege helping you find this place. Here's a little guide to make settling in feel like a celebration."
