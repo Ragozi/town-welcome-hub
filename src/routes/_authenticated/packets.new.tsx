@@ -177,16 +177,64 @@ function NewPacket() {
             <Field label="Buyer email">
               <Input type="email" value={buyerEmail} onChange={(e) => setBuyerEmail(e.target.value)} />
             </Field>
-            <Field label="Property address *">
-              <Input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="123 Main St, Cedarburg, WI" required />
+            <Field label="Street address *">
+              <Input
+                value={street}
+                onChange={(e) => setStreet(e.target.value)}
+                placeholder="189 Mulberry Ln"
+                required
+              />
             </Field>
+            <div className="grid gap-4 md:grid-cols-3">
+              <Field label="ZIP code *">
+                <Input
+                  inputMode="numeric"
+                  maxLength={5}
+                  value={zip}
+                  onChange={(e) => onZipChange(e.target.value)}
+                  placeholder="53024"
+                  required
+                />
+              </Field>
+              <Field label="State *">
+                <Select value={state} onValueChange={setState}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="WI">Wisconsin</SelectItem>
+                    <SelectItem value="IL">Illinois</SelectItem>
+                    <SelectItem value="MN">Minnesota</SelectItem>
+                    <SelectItem value="MI">Michigan</SelectItem>
+                  </SelectContent>
+                </Select>
+              </Field>
+              <Field label="City / village *">
+                <Select
+                  value={city}
+                  onValueChange={(v) => {
+                    setCity(v);
+                    const t = (allTowns.data ?? []).find((x) => x.name === v);
+                    if (t) setTownId(t.id);
+                  }}
+                >
+                  <SelectTrigger><SelectValue placeholder="Select city" /></SelectTrigger>
+                  <SelectContent>
+                    {(allTowns.data ?? []).map((t) => (
+                      <SelectItem key={t.id} value={t.name}>{t.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
+            </div>
+            {zipNotice && (
+              <p className="text-xs text-muted-foreground">{zipNotice}</p>
+            )}
             <div className="grid gap-4 md:grid-cols-2">
               <Field label="Closing date">
                 <Input type="date" value={closingDate} onChange={(e) => setClosingDate(e.target.value)} />
               </Field>
               <Field label="Town (for local guide)">
                 <Select value={townId} onValueChange={setTownId}>
-                  <SelectTrigger><SelectValue placeholder="Select town" /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder="Auto-set from ZIP" /></SelectTrigger>
                   <SelectContent>
                     {(allTowns.data ?? []).map((t) => (
                       <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
