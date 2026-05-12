@@ -9,10 +9,16 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TownsRouteImport } from './routes/towns'
 import { Route as TownSlugRouteImport } from './routes/$townSlug'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiPdfTownSlugRouteImport } from './routes/api/pdf.$townSlug'
 
+const TownsRoute = TownsRouteImport.update({
+  id: '/towns',
+  path: '/towns',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TownSlugRoute = TownSlugRouteImport.update({
   id: '/$townSlug',
   path: '/$townSlug',
@@ -32,35 +38,46 @@ const ApiPdfTownSlugRoute = ApiPdfTownSlugRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/$townSlug': typeof TownSlugRoute
+  '/towns': typeof TownsRoute
   '/api/pdf/$townSlug': typeof ApiPdfTownSlugRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/$townSlug': typeof TownSlugRoute
+  '/towns': typeof TownsRoute
   '/api/pdf/$townSlug': typeof ApiPdfTownSlugRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/$townSlug': typeof TownSlugRoute
+  '/towns': typeof TownsRoute
   '/api/pdf/$townSlug': typeof ApiPdfTownSlugRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/$townSlug' | '/api/pdf/$townSlug'
+  fullPaths: '/' | '/$townSlug' | '/towns' | '/api/pdf/$townSlug'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/$townSlug' | '/api/pdf/$townSlug'
-  id: '__root__' | '/' | '/$townSlug' | '/api/pdf/$townSlug'
+  to: '/' | '/$townSlug' | '/towns' | '/api/pdf/$townSlug'
+  id: '__root__' | '/' | '/$townSlug' | '/towns' | '/api/pdf/$townSlug'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   TownSlugRoute: typeof TownSlugRoute
+  TownsRoute: typeof TownsRoute
   ApiPdfTownSlugRoute: typeof ApiPdfTownSlugRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/towns': {
+      id: '/towns'
+      path: '/towns'
+      fullPath: '/towns'
+      preLoaderRoute: typeof TownsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/$townSlug': {
       id: '/$townSlug'
       path: '/$townSlug'
@@ -88,8 +105,19 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   TownSlugRoute: TownSlugRoute,
+  TownsRoute: TownsRoute,
   ApiPdfTownSlugRoute: ApiPdfTownSlugRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
