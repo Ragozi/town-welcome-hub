@@ -189,13 +189,13 @@ function BuyerLanding() {
               {town.hero_blurb && <p className="mt-3 max-w-2xl text-foreground/70">{town.hero_blurb}</p>}
             </div>
 
-            {cats.map((c) => (
+            {cats.map((c: Category) => (
               <div key={c.id}>
                 <h3 className="font-display mb-4 text-lg font-extrabold uppercase tracking-tight">{c.name}</h3>
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   {(byCategory.get(c.id) ?? [])
-                    .sort((a, b) => tierPriority[b.sponsor_tier] - tierPriority[a.sponsor_tier])
-                    .map((b) => (
+                    .sort((a: Business, b: Business) => tierPriority[b.sponsor_tier] - tierPriority[a.sponsor_tier])
+                    .map((b: Business) => (
                       <BusinessRow key={b.id} b={b} />
                     ))}
                 </div>
