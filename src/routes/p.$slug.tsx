@@ -275,13 +275,22 @@ function BuyerLanding() {
               about a move, I'd love to help them too.
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
+              {realtor.referral_slug && (
+                <a
+                  href={`/r/${realtor.referral_slug}?from=${packet.slug}`}
+                  onClick={() => track("referral_click", { referral_slug: realtor.referral_slug })}
+                  className="inline-flex h-11 items-center gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
+                >
+                  <Heart className="h-4 w-4" /> Refer a friend to {realtor.full_name?.split(" ")[0] ?? "us"}
+                </a>
+              )}
               {realtor.email_public && (
-                <a href={`mailto:${realtor.email_public}`} className="inline-flex h-11 items-center gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground hover:bg-primary/90">
-                  <Mail className="h-4 w-4" /> Refer a friend
+                <a href={`mailto:${realtor.email_public}`} onClick={() => track("referral_click", { method: "email" })} className="inline-flex h-11 items-center gap-2 rounded-full border border-background/20 px-5 text-sm font-semibold hover:bg-background/10">
+                  <Mail className="h-4 w-4" /> Email {realtor.full_name?.split(" ")[0] ?? "agent"}
                 </a>
               )}
               {realtor.phone && (
-                <a href={`tel:${realtor.phone}`} className="inline-flex h-11 items-center gap-2 rounded-full border border-background/20 px-5 text-sm font-semibold hover:bg-background/10">
+                <a href={`tel:${realtor.phone}`} onClick={() => track("referral_click", { method: "phone" })} className="inline-flex h-11 items-center gap-2 rounded-full border border-background/20 px-5 text-sm font-semibold hover:bg-background/10">
                   <Phone className="h-4 w-4" /> Call {realtor.full_name?.split(" ")[0]}
                 </a>
               )}
