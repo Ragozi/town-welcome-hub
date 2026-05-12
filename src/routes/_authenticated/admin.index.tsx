@@ -260,6 +260,22 @@ function KpiCard({
   );
 }
 
+function EmptyState({
+  icon: Icon, title, body, action,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  title: string; body: string; action?: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-3xl border border-border bg-card p-10 text-center shadow-[var(--shadow-soft)]">
+      <Icon className="mx-auto h-8 w-8 text-muted-foreground" />
+      <h3 className="font-display mt-3 text-xl font-extrabold uppercase tracking-tight">{title}</h3>
+      <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">{body}</p>
+      {action && <div className="mt-5 flex justify-center">{action}</div>}
+    </div>
+  );
+}
+
 function Leaderboard({
   title,
   rows,
