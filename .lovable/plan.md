@@ -1,131 +1,107 @@
+# Welcome Home — Realtor Backend & Packet Flow
 
-# TownWelcome — Design Overhaul + Featured Grouping + Logo Fallbacks
+## Database: keep what we have, add on top
 
-A full visual rebuild inspired by SNAPTURE's warm, editorial aesthetic, plus two structural improvements: featured businesses grouped by category (no auto-care-next-to-bistro), and category-themed image fallbacks for businesses that haven't uploaded a logo yet.
+**Recommendation: KEEP the current schema and ADD packet/realtor tables.** The existing `towns`, `categories`, `businesses`, `sponsor_tiers` tables already model exactly what the spec calls "Buyer Landing Page" content (local restaurants, coffee, parks, sponsored businesses with tiers). Throwing them out means re-seeding Ozaukee data and rebuilding the public site.
 
----
+| | Keep current + extend | Migrate to spec-only |
+|---|---|---|
+| Pros | Preserves Ozaukee seed data, working `/`, `/towns`, `/$townSlug`, sponsor tiers, PDF route. Lowest risk. | Clean slate matching spec wording exactly. |
+| Cons | Slight naming drift (sponsor_tier enum vs Platinum/Gold/Silver — easy rename). | Lose all current data + UI; rebuild landing pages and town directory; ~2x the work for the same end state. |
 
-## 1. Design system overhaul (`src/styles.css`)
+### New tables to add
 
-New "Snapture shell + WI accent" palette, defined in oklch tokens:
+- **`profiles`** — `user_id` (FK auth.users), `full_name`, `headshot_url`, `phone`, `email_public`, `brokerage_name`, `brokerage_logo_url`, `social_links jsonb`, `default_town_id`.
+- **`user_roles`** — separate table per security best practices: `user_id`, `role` (`admin` | `realtor`). Drives admin UI access.
+- **`packets`** — `id`, `realtor_id`, `town_id`, `slug` (short public id e.g. `abc123` for `/p/abc123`), `buyer_first_name`, `buyer_last_name`, `buyer_email`, `address`, `closing_date`, `welcome_note`, `has_kids`, `has_pets`, `interests text[]`, `lifestyle_tags text[]`, `home_photo_url`, `status` (`draft`|`generated`), `pdf_url`, `created_at`.
+- **Sponsor tier rename**: extend `sponsor_tier` enum with `platinum`/`gold`/`silver` aliases (keep existing values for back-compat).
 
-- `--background` — warm cream (#F9F5F0-ish)
-- `--foreground` — deep charcoal (near-black, slightly warm)
-- `--primary` — vibrant orange (#FF6B00-ish) for CTAs, pills, links
-- `--primary-foreground` — cream
-- `--card` — pure cream / off-white
-- `--muted` — soft taupe
-- `--border` — warm sand
-- Keep existing `--wi-lake / --wi-pine / --wi-cheddar / --wi-cranberry / --wi-sunset / --wi-corn / --wi-sky / --wi-barn` tokens — used ONLY on category chips, section badges, and category icon tiles for personality.
-- New gradients: `--gradient-warm`, `--gradient-orange-glow`
-- New shadows: `--shadow-soft` (cream cards), `--shadow-cta` (orange glow)
-- Typography scale: bold uppercase display, clean body. Use `font-display` (e.g. Bricolage Grotesque or Fraunces via Google Fonts `<link>` in `__root.tsx`) for headings; system sans for body. Set tracking-tight + uppercase utilities for hero headlines.
-- Dark mode kept consistent (deeper warm-charcoal bg, orange unchanged).
+### Storage buckets
+- `headshots` (public) — realtor photos
+- `brokerage-logos` (public)
+- `home-photos` (public) — banner image per packet
+- `packet-pdfs` (public, signed URLs optional) — generated PDFs
 
-## 2. Shared layout pieces
+### RLS
+- `profiles`: realtor can read/update own row; admins read all.
+- `packets`: realtor can CRUD only their own; public SELECT by `slug` only (for `/p/:slug` landing).
+- `user_roles`: only admins write; users read own.
+- Use `has_role(uuid, app_role)` SECURITY DEFINER helper to avoid recursion.
 
-- **`src/components/site-header.tsx`** — sticky top bar: left "TOWNWELCOME." wordmark; center nav (Home, Towns, Sponsor, About); right black pill "Get Listed" button with small orange dot. Cream bg, dark text. Reused on every route.
-- **`src/components/site-footer.tsx`** — dark charcoal footer with cream text, contact + nav columns, "List your business" orange button, social row. Reused.
-- **`src/components/section-divider.tsx`** — small uppercase eyebrow + thin rule (matches Snapture's `// PHOTOGRAPHY` markers) — `// RESTAURANTS`, `// FEATURED`, etc.
+## Auth: invite-only realtor accounts
 
-## 3. Home page (`/` — `src/routes/index.tsx`)
+- Enable email/password auth, **disable public signup**.
+- Add `/login` route (email + password) — redirect to `/dashboard` on success.
+- Add `/accept-invite` route — admin emails an invite link via Supabase auth invite flow; realtor sets password and is auto-assigned `realtor` role via DB trigger on first login.
+- Admin UI has an "Invite Realtor" form (email + name) → calls a server fn using `supabaseAdmin.auth.admin.inviteUserByEmail()`.
+- Optional: Google sign-in for whitelisted invited emails.
 
-Snapture-style split hero:
-- Left: tall hero image (Wisconsin landscape — lake/forest/farm, Unsplash) with small "// WELCOME" eyebrow.
-- Right: massive uppercase headline "DISCOVER YOUR TOWN, ONE LOCAL AT A TIME." with small bird/leaf illustration accent (lucide `Bird` tinted in WI cheddar). Subhead. Big orange "Use my location" pill button + secondary "Browse towns" ghost button.
-- Below hero: 3 horizontal "category showcase" cards (Snapture-style) — "EAT LOCAL", "SHOP MAIN STREET", "EXPLORE OUTDOORS" with photo + arrow CTA, each linking to a filter on a town page.
-- Town picker section (existing `<Select>` + ZIP form) restyled into Snapture cream card with orange accents.
-- **Hydration fix**: wrap the ZIP `<form>` so LastPass extension injection on `<input type="text">` doesn't mismatch — use `suppressHydrationWarning` on the form and ensure consistent SSR markup. (Also resolves the current runtime hydration error.)
+## New routes
 
-## 4. Town page (`/$townSlug` — `src/routes/$townSlug.tsx`)
-
-Major restructure:
-
-### Hero
-Snapture split hero adapted to a town: photo of the town on the left (Unsplash by town name), big uppercase "WELCOME TO {TOWN}." + hero blurb on the right, orange "Download Welcome PDF" CTA + ghost "Share" button with small QR preview.
-
-### Sticky category nav
-Keep current scroll-spy chip bar but restyled: cream bg with subtle blur, chips use WI palette colors (lake, pine, cheddar, etc.) — active chip lifts with orange ring instead of full color flip. Sits below site header.
-
-### Featured — grouped by category (NEW behavior)
-A "// FEATURED LOCALS" section at the top. Inside it, render **one mini-row per category that has any sponsored business**, ordered by category display order. Each row:
-- Small WI-colored category badge + category name ("FEATURED RESTAURANTS")
-- Horizontal scroll of premium sponsor cards (sorted by `sponsor_tier` priority then `featured_order`)
-- Each card: large business image (logo or fallback), "FEATURED" pill, name, 1-line description, coupon badge if present, phone + website
-This guarantees no auto-care card next to a bistro card.
-
-### Category sections
-Then the full categorized list as today, but each section restyled as a Snapture "module": large uppercase section title, WI-color icon tile, business cards in a 2–3 column grid with cream bg, generous whitespace, thin borders, hover lift.
-
-### Business card
-- Square image area (logo if present, else fallback — see §5)
-- Name (bold uppercase), subcategory (small caps, muted)
-- Description (2 lines clamped)
-- Coupon as orange pill with expiry
-- Phone (tel:) + Website (new tab) + Map link as small icon-buttons row
-
-### Footer block
-"Not the right town?" → back to `/`. Then full site footer.
-
-## 5. Logo fallback system
-
-New helper `src/lib/logo.ts`:
-
-```ts
-businessImage(business, category) -> string
+```
+src/routes/
+  login.tsx                       public
+  accept-invite.tsx               public, reads token from URL
+  _authenticated.tsx              guard layout
+  _authenticated/
+    dashboard.tsx                 cards + recent packets
+    packets.index.tsx             list
+    packets.new.tsx               4-step wizard
+    packets.$id.tsx               edit / regenerate / download
+    settings.tsx                  profile + branding
+  _authenticated/_admin/
+    admin.index.tsx               admin home
+    admin.realtors.tsx            invite + list
+    admin.sponsors.tsx            CRUD businesses + tier
+    admin.towns.tsx               CRUD towns + categories
+  p.$slug.tsx                     PUBLIC buyer landing page
+  marketing/                      restructure existing index.tsx into
+    (keep / as marketing site with new hero copy)
 ```
 
-Logic:
-1. If `business.logo_url` exists → return it.
-2. Otherwise return a stable Unsplash Source URL keyed by `category.slug` — e.g.
-   - `restaurants` → `https://source.unsplash.com/600x600/?restaurant,food`
-   - `coffee` → `?coffee,cafe`
-   - `shopping` → `?boutique,storefront`
-   - `services` → `?storefront,smalltown`
-   - `health` → `?wellness,clinic`
-   - `parks` → `?park,wisconsin`
-   - `schools` → `?school,classroom`
-   - `city` → `?cityhall,townhall`
-   Append `&sig=${business.id}` so each business gets a stable, unique image.
-3. As an extra-safe fallback (if image fails to load), client-side `onError` swaps to an initials tile generated from the business name on a WI-palette color picked from `business.id`.
+## Packet generation flow
 
-No DB change required — `logo_url` already exists. Admin/scrape work stays deferred.
+1. **Wizard** (4 steps, single route, local state): Buyer Info → Personalization → Branding (pre-filled from profile) → Review.
+2. **"Generate Packet"** calls `createPacket` server fn → inserts row, generates short slug (nanoid 8 chars), returns id.
+3. **PDF generation**: extend the existing `src/routes/api/pdf.$townSlug.tsx` pattern → new `src/routes/api/pdf.packet.$slug.tsx` server route that renders a personalized PDF (buyer name, home photo, realtor branding, town highlights pulled from `businesses` for that `town_id`, sponsor cards by tier). Upload to `packet-pdfs` bucket, store URL on packet row.
+4. **QR code**: render client-side with `qrcode.react` pointing to `https://<domain>/p/<slug>`. No server work needed.
+5. **Email buyer**: optional button → uses Lovable Emails (transactional) to send the link; phase 2.
 
-## 6. PDF redesign (`src/routes/api/pdf.$townSlug.tsx`)
+## Buyer landing page `/p/:slug`
 
-Match new aesthetic in `@react-pdf/renderer`:
-- Cream page bg, charcoal text, orange accent rules
-- Header: "TOWNWELCOME · {TOWN}, WI" wordmark + QR top-right
-- "FEATURED LOCALS" section grouped by category (mirrors web)
-- Two-column compact category lists below
-- Footer line: "Scan to view live → townwelcome.com/{slug}"
+Server fn fetches packet by slug (public), joins town + categories + businesses + realtor profile. Renders:
+- Hero: home photo banner, "Welcome Home, {Buyer Name}", realtor mini-card.
+- Personal note section.
+- Sponsored businesses (Platinum top, Gold mid, Silver inline) — reuses existing `BusinessCard` styling.
+- Category sections (restaurants, coffee, parks, shopping, services, utilities, emergency).
+- Realtor thank-you + referral CTA + contact footer.
 
-## 7. Out of scope (still deferred)
+Re-uses the SNAPTURE warm cream + WI accent palette already in `styles.css`.
 
-- Real logo scraping (Firecrawl/OG-image) — flagged for next iteration
-- Admin CRUD / business self-serve upload portal
-- Stripe billing for sponsor tiers
+## Marketing site updates
 
-## Technical notes
+Refit current `/` with the spec's hero copy ("Turn Every Closing Into a Lasting Impression"), add Pricing, Sponsor, Testimonials placeholder sections. Keep `/towns` and `/$townSlug` as proof-of-concept town pages (they double as sponsor inventory marketing for now).
 
-- Add Google Fonts link in `__root.tsx` `<head>`: Bricolage Grotesque (700/800) for display, Inter for body.
-- Featured grouping is a pure client-side derivation from existing `businesses` query: `groupBy(category_id).filter(g => g.some(b => b.sponsor_tier !== 'none')).sort(category.display_order)`. Inside each group, sort by `tierPriority[sponsor_tier]` desc then `featured_order` asc. No new server function needed.
-- Unsplash Source URLs (`source.unsplash.com`) require no API key; cache-friendly. If they ever rate-limit we can swap to a curated `src/assets/category-fallbacks/*.jpg` set without changing call sites.
-- Hydration mismatch on `/`: the LastPass injection happens on visible `<input>` siblings of the submit button. Fix by adding `suppressHydrationWarning` on the form wrapper and ensuring no `Date.now()`/random IDs in rendered markup.
-- All color usage in components must reference semantic tokens (`bg-background`, `text-primary`, `border-border`) plus the `--wi-*` tokens via small utility classes (e.g. `bg-[hsl(var(--wi-cheddar))]`-style — actually `oklch` via `bg-[var(--wi-cheddar)]`). Document in `src/styles.css` comments.
-- Mobile-first: hero stacks, featured rows become horizontal-snap carousels, category nav stays sticky and horizontally scrollable.
+## Admin UI (minimal v1)
 
-## Files touched
+Single `_admin` layout gated by `has_role(uid, 'admin')`. Tabs:
+- **Realtors** — invite form, list with last-login + packet count.
+- **Sponsors** — table of businesses with tier dropdown, coupon text/expiry inline edit.
+- **Towns / Categories** — CRUD basics; hero blurb editor.
 
-- `src/styles.css` — palette + typography + gradients/shadows
-- `src/routes/__root.tsx` — Google Fonts, site header/footer wrappers
-- `src/routes/index.tsx` — Snapture hero, showcase row, restyled picker, hydration fix
-- `src/routes/$townSlug.tsx` — new hero, grouped featured, restyled sections/cards, fallback images
-- `src/routes/api/pdf.$townSlug.tsx` — restyled PDF
-- `src/components/site-header.tsx` (new)
-- `src/components/site-footer.tsx` (new)
-- `src/components/section-divider.tsx` (new)
-- `src/components/business-card.tsx` (new — extracted, uses fallback)
-- `src/lib/logo.ts` (new)
+## Implementation order (suggested phases)
 
-No DB migration. No new packages required.
+1. Auth + roles + profiles + invite flow + protected dashboard shell.
+2. Packets table + wizard + list/edit + QR + buyer landing page.
+3. PDF generation server route for packets.
+4. Admin realtor + sponsor management.
+5. Marketing site refresh (hero copy, pricing, testimonials).
+6. Email buyer (Lovable Emails) + analytics.
+
+## Open items before I build
+
+- Confirm admin email so I can seed the first `admin` role in the migration (you?).
+- Domain for QR/landing URLs — keep `lovable.app` preview for now or wait for `welcomehome.com`?
+- Pricing tiers content — placeholder copy OK for v1?
+
+Once you give the green light (and answer the 3 above), I'll execute Phase 1 + 2 in the first build pass.

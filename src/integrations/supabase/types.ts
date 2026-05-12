@@ -113,6 +113,139 @@ export type Database = {
         }
         Relationships: []
       }
+      packets: {
+        Row: {
+          address: string
+          buyer_email: string | null
+          buyer_first_name: string
+          buyer_last_name: string | null
+          closing_date: string | null
+          created_at: string
+          has_kids: boolean
+          has_pets: boolean
+          home_photo_url: string | null
+          id: string
+          interests: string[]
+          lifestyle_tags: string[]
+          pdf_download_count: number
+          pdf_url: string | null
+          realtor_id: string
+          slug: string
+          status: Database["public"]["Enums"]["packet_status"]
+          town_id: string | null
+          updated_at: string
+          welcome_note: string | null
+        }
+        Insert: {
+          address: string
+          buyer_email?: string | null
+          buyer_first_name: string
+          buyer_last_name?: string | null
+          closing_date?: string | null
+          created_at?: string
+          has_kids?: boolean
+          has_pets?: boolean
+          home_photo_url?: string | null
+          id?: string
+          interests?: string[]
+          lifestyle_tags?: string[]
+          pdf_download_count?: number
+          pdf_url?: string | null
+          realtor_id: string
+          slug: string
+          status?: Database["public"]["Enums"]["packet_status"]
+          town_id?: string | null
+          updated_at?: string
+          welcome_note?: string | null
+        }
+        Update: {
+          address?: string
+          buyer_email?: string | null
+          buyer_first_name?: string
+          buyer_last_name?: string | null
+          closing_date?: string | null
+          created_at?: string
+          has_kids?: boolean
+          has_pets?: boolean
+          home_photo_url?: string | null
+          id?: string
+          interests?: string[]
+          lifestyle_tags?: string[]
+          pdf_download_count?: number
+          pdf_url?: string | null
+          realtor_id?: string
+          slug?: string
+          status?: Database["public"]["Enums"]["packet_status"]
+          town_id?: string | null
+          updated_at?: string
+          welcome_note?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "packets_town_id_fkey"
+            columns: ["town_id"]
+            isOneToOne: false
+            referencedRelation: "towns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          brokerage_logo_url: string | null
+          brokerage_name: string | null
+          created_at: string
+          default_town_id: string | null
+          email_public: string | null
+          full_name: string | null
+          headshot_url: string | null
+          id: string
+          phone: string | null
+          social_links: Json
+          thank_you_message: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          brokerage_logo_url?: string | null
+          brokerage_name?: string | null
+          created_at?: string
+          default_town_id?: string | null
+          email_public?: string | null
+          full_name?: string | null
+          headshot_url?: string | null
+          id?: string
+          phone?: string | null
+          social_links?: Json
+          thank_you_message?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          brokerage_logo_url?: string | null
+          brokerage_name?: string | null
+          created_at?: string
+          default_town_id?: string | null
+          email_public?: string | null
+          full_name?: string | null
+          headshot_url?: string | null
+          id?: string
+          phone?: string | null
+          social_links?: Json
+          thank_you_message?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_default_town_id_fkey"
+            columns: ["default_town_id"]
+            isOneToOne: false
+            referencedRelation: "towns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sponsor_tiers: {
         Row: {
           display_priority: number
@@ -176,11 +309,39 @@ export type Database = {
         }
         Relationships: []
       }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
       nearest_town: {
         Args: { lat: number; lng: number; max_km?: number }
         Returns: {
@@ -198,6 +359,8 @@ export type Database = {
       }
     }
     Enums: {
+      app_role: "admin" | "realtor"
+      packet_status: "draft" | "generated"
       sponsor_tier: "none" | "bronze" | "silver" | "gold" | "s_tier"
     }
     CompositeTypes: {
@@ -326,6 +489,8 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      app_role: ["admin", "realtor"],
+      packet_status: ["draft", "generated"],
       sponsor_tier: ["none", "bronze", "silver", "gold", "s_tier"],
     },
   },
