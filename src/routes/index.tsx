@@ -195,12 +195,12 @@ function Home() {
               )}
               {locating ? "Finding your town…" : "Use my location"}
             </Button>
-            <a
-              href="#towns"
+            <Link
+              to="/towns"
               className="inline-flex h-14 items-center gap-2 rounded-full border border-foreground/15 bg-background px-6 text-base font-medium text-foreground transition-colors hover:border-foreground/40"
             >
               Browse towns <ArrowRight className="h-4 w-4" />
-            </a>
+            </Link>
           </div>
         </div>
       </section>
