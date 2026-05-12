@@ -44,35 +44,37 @@ export function businessImage(b: Business, c?: Category): string {
 /** Per-town hero image overrides (real town logos / crests / photography). */
 export const TOWN_HERO_OVERRIDES: Record<string, { src: string; fit: "cover" | "contain" }> = {
   grafton: {
-    src: "https://www.villageofgraftonwi.gov/ImageRepository/Document?documentID=18951",
-    fit: "contain",
+    src: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1600&q=85",
+    fit: "cover",
   },
   cedarburg: {
-    src: "https://images.unsplash.com/photo-1518173946687-a4c8892bbd9f?auto=format&fit=crop&w=900&q=80",
+    src: "https://images.unsplash.com/photo-1518173946687-a4c8892bbd9f?auto=format&fit=crop&w=1600&q=85",
     fit: "cover",
   },
   mequon: {
-    src: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=900&q=80",
+    src: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1600&q=85",
     fit: "cover",
   },
   "port-washington": {
-    src: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=900&q=80",
+    src: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1600&q=85",
     fit: "cover",
   },
   thiensville: {
-    src: "https://images.unsplash.com/photo-1502082553048-f009c37129b9?auto=format&fit=crop&w=900&q=80",
+    src: "https://images.unsplash.com/photo-1502082553048-f009c37129b9?auto=format&fit=crop&w=1600&q=85",
     fit: "cover",
   },
   saukville: {
-    src: "https://images.unsplash.com/photo-1465146344425-f00d5f5c8f07?auto=format&fit=crop&w=900&q=80",
+    src: "https://images.unsplash.com/photo-1465146344425-f00d5f5c8f07?auto=format&fit=crop&w=1600&q=85",
     fit: "cover",
   },
   fredonia: {
-    src: "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=900&q=80",
+    // Rolling farmland / countryside — no mountains
+    src: "https://images.unsplash.com/photo-1500595046743-cd271d694d30?auto=format&fit=crop&w=1600&q=85",
     fit: "cover",
   },
   belgium: {
-    src: "https://images.unsplash.com/photo-1490806843957-31f4c9a91c65?auto=format&fit=crop&w=900&q=80",
+    // Lake Michigan shoreline — no mountains
+    src: "https://images.unsplash.com/photo-1505159940484-eb2b9f2588e2?auto=format&fit=crop&w=1600&q=85",
     fit: "cover",
   },
 };
