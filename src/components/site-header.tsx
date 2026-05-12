@@ -10,12 +10,16 @@ export function SiteHeader() {
         </Link>
 
         <nav className="hidden items-center gap-7 text-[13px] font-medium uppercase tracking-wider text-foreground/75 md:flex">
-          <Link to="/" className="hover:text-foreground" activeProps={{ className: "text-foreground" }}>
+          <Link to="/" className="hover:text-foreground" activeProps={{ className: "text-foreground" }} activeOptions={{ exact: true }}>
             Home
           </Link>
-          <a href="#towns" className="hover:text-foreground">Towns</a>
-          <a href="#sponsor" className="hover:text-foreground">Sponsor</a>
-          <a href="#about" className="hover:text-foreground">About</a>
+          <Link to="/towns" className="hover:text-foreground" activeProps={{ className: "text-foreground" }}>
+            Towns
+          </Link>
+          <Link to="/about" className="hover:text-foreground" activeProps={{ className: "text-foreground" }}>
+            About
+          </Link>
+          <a href="/#sponsor" className="hover:text-foreground">Sponsor</a>
         </nav>
 
         <Button
@@ -23,7 +27,7 @@ export function SiteHeader() {
           size="sm"
           className="h-10 rounded-full bg-foreground px-5 text-background hover:bg-foreground/90"
         >
-          <a href="#sponsor" className="inline-flex items-center gap-2">
+          <a href="/#sponsor" className="inline-flex items-center gap-2">
             Get Listed
             <span className="inline-block h-2 w-2 rounded-full bg-primary" />
           </a>
