@@ -41,20 +41,46 @@ export function businessImage(b: Business, c?: Category): string {
   return `https://source.unsplash.com/600x600/?${encodeURIComponent(kw)}&sig=${b.id.slice(0, 8)}`;
 }
 
-/** Per-town hero image overrides (real town logos / crests). */
+/** Per-town hero image overrides (real town logos / crests / photography). */
 export const TOWN_HERO_OVERRIDES: Record<string, { src: string; fit: "cover" | "contain" }> = {
   grafton: {
     src: "https://www.villageofgraftonwi.gov/ImageRepository/Document?documentID=18951",
     fit: "contain",
   },
+  cedarburg: {
+    src: "https://images.unsplash.com/photo-1518173946687-a4c8892bbd9f?auto=format&fit=crop&w=900&q=80",
+    fit: "cover",
+  },
+  mequon: {
+    src: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=900&q=80",
+    fit: "cover",
+  },
+  "port-washington": {
+    src: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=900&q=80",
+    fit: "cover",
+  },
+  thiensville: {
+    src: "https://images.unsplash.com/photo-1502082553048-f009c37129b9?auto=format&fit=crop&w=900&q=80",
+    fit: "cover",
+  },
+  saukville: {
+    src: "https://images.unsplash.com/photo-1465146344425-f00d5f5c8f07?auto=format&fit=crop&w=900&q=80",
+    fit: "cover",
+  },
+  fredonia: {
+    src: "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=900&q=80",
+    fit: "cover",
+  },
+  belgium: {
+    src: "https://images.unsplash.com/photo-1490806843957-31f4c9a91c65?auto=format&fit=crop&w=900&q=80",
+    fit: "cover",
+  },
 };
 
-/** Town hero image fallback. source.unsplash.com is deprecated, so we use
- *  picsum (deterministic by slug) for a real photo when no override exists. */
+/** Town hero image fallback. */
 export function townHeroImage(slug: string, _name: string): { src: string; fit: "cover" | "contain" } {
   const override = TOWN_HERO_OVERRIDES[slug];
   if (override) return override;
-  // Deterministic seed → stable photo
   return { src: `https://picsum.photos/seed/${encodeURIComponent(slug)}-wi/900/1200`, fit: "cover" };
 }
 
