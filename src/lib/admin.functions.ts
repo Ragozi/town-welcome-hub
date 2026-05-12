@@ -109,7 +109,7 @@ export const adminCreateUser = createServerFn({ method: "POST" })
 
 const SetRoleSchema = z.object({
   user_id: z.string().uuid(),
-  role: z.enum(["admin", "moderator", "user", "realtor"]),
+  role: z.enum(["admin", "realtor"]),
   enable: z.boolean(),
 });
 
