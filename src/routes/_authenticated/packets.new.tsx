@@ -43,7 +43,7 @@ function NewPacket() {
   const allTowns = useQuery({
     queryKey: ["towns-full"],
     queryFn: async () => {
-      const { data } = await supabase.from("towns").select("id, name, slug").order("name");
+      const { data } = await supabase.from("towns").select("id, name, slug, zip_codes").order("name");
       return data ?? [];
     },
   });
