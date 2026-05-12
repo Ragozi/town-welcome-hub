@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TownsRouteImport } from './routes/towns'
+import { Route as AboutRouteImport } from './routes/about'
 import { Route as TownSlugRouteImport } from './routes/$townSlug'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiPdfTownSlugRouteImport } from './routes/api/pdf.$townSlug'
@@ -17,6 +18,11 @@ import { Route as ApiPdfTownSlugRouteImport } from './routes/api/pdf.$townSlug'
 const TownsRoute = TownsRouteImport.update({
   id: '/towns',
   path: '/towns',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AboutRoute = AboutRouteImport.update({
+  id: '/about',
+  path: '/about',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TownSlugRoute = TownSlugRouteImport.update({
@@ -38,12 +44,14 @@ const ApiPdfTownSlugRoute = ApiPdfTownSlugRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/$townSlug': typeof TownSlugRoute
+  '/about': typeof AboutRoute
   '/towns': typeof TownsRoute
   '/api/pdf/$townSlug': typeof ApiPdfTownSlugRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/$townSlug': typeof TownSlugRoute
+  '/about': typeof AboutRoute
   '/towns': typeof TownsRoute
   '/api/pdf/$townSlug': typeof ApiPdfTownSlugRoute
 }
@@ -51,20 +59,28 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/$townSlug': typeof TownSlugRoute
+  '/about': typeof AboutRoute
   '/towns': typeof TownsRoute
   '/api/pdf/$townSlug': typeof ApiPdfTownSlugRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/$townSlug' | '/towns' | '/api/pdf/$townSlug'
+  fullPaths: '/' | '/$townSlug' | '/about' | '/towns' | '/api/pdf/$townSlug'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/$townSlug' | '/towns' | '/api/pdf/$townSlug'
-  id: '__root__' | '/' | '/$townSlug' | '/towns' | '/api/pdf/$townSlug'
+  to: '/' | '/$townSlug' | '/about' | '/towns' | '/api/pdf/$townSlug'
+  id:
+    | '__root__'
+    | '/'
+    | '/$townSlug'
+    | '/about'
+    | '/towns'
+    | '/api/pdf/$townSlug'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   TownSlugRoute: typeof TownSlugRoute
+  AboutRoute: typeof AboutRoute
   TownsRoute: typeof TownsRoute
   ApiPdfTownSlugRoute: typeof ApiPdfTownSlugRoute
 }
@@ -76,6 +92,13 @@ declare module '@tanstack/react-router' {
       path: '/towns'
       fullPath: '/towns'
       preLoaderRoute: typeof TownsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/about': {
+      id: '/about'
+      path: '/about'
+      fullPath: '/about'
+      preLoaderRoute: typeof AboutRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/$townSlug': {
@@ -105,6 +128,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   TownSlugRoute: TownSlugRoute,
+  AboutRoute: AboutRoute,
   TownsRoute: TownsRoute,
   ApiPdfTownSlugRoute: ApiPdfTownSlugRoute,
 }
