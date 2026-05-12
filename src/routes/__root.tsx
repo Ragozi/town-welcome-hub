@@ -118,11 +118,10 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
   useEffect(() => {
-    // Client-only: install fetch interceptor that attaches the Supabase
-    // bearer token to TanStack Start server-fn requests.
-    // Use a variable to evade static import-protection analysis.
-    const mod = "@/integrations/supabase/server-fn-fetch.client";
-    (0, eval)(`import(${JSON.stringify(mod)})`)?.catch?.(() => {});
+    // Client-only: install fetch interceptor that attaches Supabase bearer
+    // token to TanStack Start server-fn requests. Loaded async so the
+    // .client module is never statically reachable from server code.
+    void import("@/integrations/supabase/server-fn-fetch.client").catch(() => {});
   }, []);
 
   return (
