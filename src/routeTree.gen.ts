@@ -21,6 +21,7 @@ import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedPacketsIndexRouteImport } from './routes/_authenticated/packets.index'
 import { Route as ApiPdfTownSlugRouteImport } from './routes/api/pdf.$townSlug'
+import { Route as ApiPacketPdfSlugRouteImport } from './routes/api/packet-pdf.$slug'
 import { Route as AuthenticatedPacketsNewRouteImport } from './routes/_authenticated/packets.new'
 import { Route as AuthenticatedPacketsIdRouteImport } from './routes/_authenticated/packets.$id'
 
@@ -84,6 +85,11 @@ const ApiPdfTownSlugRoute = ApiPdfTownSlugRouteImport.update({
   path: '/api/pdf/$townSlug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPacketPdfSlugRoute = ApiPacketPdfSlugRouteImport.update({
+  id: '/api/packet-pdf/$slug',
+  path: '/api/packet-pdf/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedPacketsNewRoute = AuthenticatedPacketsNewRouteImport.update({
   id: '/packets/new',
   path: '/packets/new',
@@ -107,6 +113,7 @@ export interface FileRoutesByFullPath {
   '/r/$referralSlug': typeof RReferralSlugRoute
   '/packets/$id': typeof AuthenticatedPacketsIdRoute
   '/packets/new': typeof AuthenticatedPacketsNewRoute
+  '/api/packet-pdf/$slug': typeof ApiPacketPdfSlugRoute
   '/api/pdf/$townSlug': typeof ApiPdfTownSlugRoute
   '/packets/': typeof AuthenticatedPacketsIndexRoute
 }
@@ -122,6 +129,7 @@ export interface FileRoutesByTo {
   '/r/$referralSlug': typeof RReferralSlugRoute
   '/packets/$id': typeof AuthenticatedPacketsIdRoute
   '/packets/new': typeof AuthenticatedPacketsNewRoute
+  '/api/packet-pdf/$slug': typeof ApiPacketPdfSlugRoute
   '/api/pdf/$townSlug': typeof ApiPdfTownSlugRoute
   '/packets': typeof AuthenticatedPacketsIndexRoute
 }
@@ -139,6 +147,7 @@ export interface FileRoutesById {
   '/r/$referralSlug': typeof RReferralSlugRoute
   '/_authenticated/packets/$id': typeof AuthenticatedPacketsIdRoute
   '/_authenticated/packets/new': typeof AuthenticatedPacketsNewRoute
+  '/api/packet-pdf/$slug': typeof ApiPacketPdfSlugRoute
   '/api/pdf/$townSlug': typeof ApiPdfTownSlugRoute
   '/_authenticated/packets/': typeof AuthenticatedPacketsIndexRoute
 }
@@ -156,6 +165,7 @@ export interface FileRouteTypes {
     | '/r/$referralSlug'
     | '/packets/$id'
     | '/packets/new'
+    | '/api/packet-pdf/$slug'
     | '/api/pdf/$townSlug'
     | '/packets/'
   fileRoutesByTo: FileRoutesByTo
@@ -171,6 +181,7 @@ export interface FileRouteTypes {
     | '/r/$referralSlug'
     | '/packets/$id'
     | '/packets/new'
+    | '/api/packet-pdf/$slug'
     | '/api/pdf/$townSlug'
     | '/packets'
   id:
@@ -187,6 +198,7 @@ export interface FileRouteTypes {
     | '/r/$referralSlug'
     | '/_authenticated/packets/$id'
     | '/_authenticated/packets/new'
+    | '/api/packet-pdf/$slug'
     | '/api/pdf/$townSlug'
     | '/_authenticated/packets/'
   fileRoutesById: FileRoutesById
@@ -200,6 +212,7 @@ export interface RootRouteChildren {
   TownsRoute: typeof TownsRoute
   PSlugRoute: typeof PSlugRoute
   RReferralSlugRoute: typeof RReferralSlugRoute
+  ApiPacketPdfSlugRoute: typeof ApiPacketPdfSlugRoute
   ApiPdfTownSlugRoute: typeof ApiPdfTownSlugRoute
 }
 
@@ -289,6 +302,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPdfTownSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/packet-pdf/$slug': {
+      id: '/api/packet-pdf/$slug'
+      path: '/api/packet-pdf/$slug'
+      fullPath: '/api/packet-pdf/$slug'
+      preLoaderRoute: typeof ApiPacketPdfSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/packets/new': {
       id: '/_authenticated/packets/new'
       path: '/packets/new'
@@ -335,8 +355,19 @@ const rootRouteChildren: RootRouteChildren = {
   TownsRoute: TownsRoute,
   PSlugRoute: PSlugRoute,
   RReferralSlugRoute: RReferralSlugRoute,
+  ApiPacketPdfSlugRoute: ApiPacketPdfSlugRoute,
   ApiPdfTownSlugRoute: ApiPdfTownSlugRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
