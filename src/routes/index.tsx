@@ -212,9 +212,9 @@ function Home() {
           {SHOWCASES.map((s) => {
             const Icon = s.icon;
             return (
-              <a
+              <Link
                 key={s.label}
-                href="#towns"
+                to="/towns"
                 className="group relative block overflow-hidden rounded-3xl border border-border shadow-[var(--shadow-soft)]"
               >
                 <img
@@ -234,7 +234,7 @@ function Home() {
                     {s.cta} <ArrowRight className="h-3.5 w-3.5" />
                   </span>
                 </div>
-              </a>
+              </Link>
             );
           })}
         </div>
