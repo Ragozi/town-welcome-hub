@@ -73,22 +73,27 @@ export const Route = createFileRoute("/p/$slug")({
 function BuyerLanding() {
   const { packet, realtor, town, categories, businesses } = Route.useLoaderData();
 
-  const featured = businesses
-    .filter((b) => b.sponsor_tier !== "none")
+  const allBiz = businesses as Business[];
+  const allCats = categories as Category[];
+
+  const featured = allBiz
+    .filter((b: Business) => b.sponsor_tier !== "none")
     .sort(
-      (a, b) => tierPriority[b.sponsor_tier] - tierPriority[a.sponsor_tier] || a.featured_order - b.featured_order,
+      (a: Business, b: Business) =>
+        tierPriority[b.sponsor_tier] - tierPriority[a.sponsor_tier] ||
+        a.featured_order - b.featured_order,
     );
 
-  const platinum = featured.filter((b) => b.sponsor_tier === "s_tier" || b.sponsor_tier === "gold").slice(0, 3);
-  const gold = featured.filter((b) => b.sponsor_tier === "silver" || b.sponsor_tier === "bronze");
+  const platinum = featured.filter((b: Business) => b.sponsor_tier === "s_tier" || b.sponsor_tier === "gold").slice(0, 3);
+  const gold = featured.filter((b: Business) => b.sponsor_tier === "silver" || b.sponsor_tier === "bronze");
 
   const byCategory = new Map<string, Business[]>();
-  for (const b of businesses) {
+  for (const b of allBiz) {
     const arr = byCategory.get(b.category_id) ?? [];
     arr.push(b);
     byCategory.set(b.category_id, arr);
   }
-  const cats = categories.filter((c) => (byCategory.get(c.id)?.length ?? 0) > 0);
+  const cats = allCats.filter((c: Category) => (byCategory.get(c.id)?.length ?? 0) > 0);
 
   return (
     <div className="min-h-screen bg-background">
@@ -166,7 +171,7 @@ function BuyerLanding() {
               Hand-picked for you
             </h2>
             <div className="mt-6 grid gap-4 md:grid-cols-3">
-              {platinum.map((b) => (
+              {platinum.map((b: Business) => (
                 <FeaturedCard key={b.id} b={b} />
               ))}
             </div>
@@ -184,13 +189,13 @@ function BuyerLanding() {
               {town.hero_blurb && <p className="mt-3 max-w-2xl text-foreground/70">{town.hero_blurb}</p>}
             </div>
 
-            {cats.map((c) => (
+            {cats.map((c: Category) => (
               <div key={c.id}>
                 <h3 className="font-display mb-4 text-lg font-extrabold uppercase tracking-tight">{c.name}</h3>
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   {(byCategory.get(c.id) ?? [])
-                    .sort((a, b) => tierPriority[b.sponsor_tier] - tierPriority[a.sponsor_tier])
-                    .map((b) => (
+                    .sort((a: Business, b: Business) => tierPriority[b.sponsor_tier] - tierPriority[a.sponsor_tier])
+                    .map((b: Business) => (
                       <BusinessRow key={b.id} b={b} />
                     ))}
                 </div>
@@ -204,7 +209,7 @@ function BuyerLanding() {
           <section className="mt-12">
             <p className="eyebrow">// Also recommended</p>
             <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              {gold.slice(0, 8).map((b) => <BusinessRow key={b.id} b={b} />)}
+              {gold.slice(0, 8).map((b: Business) => <BusinessRow key={b.id} b={b} />)}
             </div>
           </section>
         )}
