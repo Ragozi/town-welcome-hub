@@ -297,9 +297,9 @@ function BuyerLanding() {
   );
 }
 
-function FeaturedCard({ b }: { b: Business }) {
+function FeaturedCard({ b, onClick }: { b: Business; onClick?: () => void }) {
   return (
-    <div className="group relative overflow-hidden rounded-3xl border border-border bg-card p-6 shadow-[var(--shadow-soft)]">
+    <div onClick={onClick} className="group relative overflow-hidden rounded-3xl border border-border bg-card p-6 shadow-[var(--shadow-soft)]">
       <div className="absolute right-4 top-4 inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-primary">
         <Star className="h-3 w-3" /> Featured
       </div>
@@ -315,15 +315,15 @@ function FeaturedCard({ b }: { b: Business }) {
       <div className="mt-4 space-y-1.5 text-xs text-muted-foreground">
         {b.address && <p className="inline-flex items-center gap-1.5"><MapPin className="h-3 w-3" /> {b.address}</p>}
         {b.phone && <p><a href={`tel:${b.phone}`} className="inline-flex items-center gap-1.5 hover:text-foreground"><Phone className="h-3 w-3" /> {b.phone}</a></p>}
-        {b.website && <p><a href={b.website} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 hover:text-foreground"><Globe className="h-3 w-3" /> Visit</a></p>}
+        {b.website && <p><a href={b.website} target="_blank" rel="noreferrer" onClick={onClick} className="inline-flex items-center gap-1.5 hover:text-foreground"><Globe className="h-3 w-3" /> Visit</a></p>}
       </div>
     </div>
   );
 }
 
-function BusinessRow({ b }: { b: Business }) {
+function BusinessRow({ b, onClick }: { b: Business; onClick?: () => void }) {
   return (
-    <div className="rounded-2xl border border-border bg-card p-4">
+    <div onClick={onClick} className="rounded-2xl border border-border bg-card p-4">
       <div className="flex items-start justify-between gap-2">
         <h4 className="font-semibold leading-tight">{b.name}</h4>
         {b.sponsor_tier !== "none" && (
@@ -333,7 +333,7 @@ function BusinessRow({ b }: { b: Business }) {
       {b.subcategory && <p className="text-xs text-muted-foreground">{b.subcategory}</p>}
       <div className="mt-2 space-y-1 text-xs text-muted-foreground">
         {b.address && <p>{b.address}</p>}
-        {b.phone && <a href={`tel:${b.phone}`} className="block hover:text-foreground">{b.phone}</a>}
+        {b.phone && <a href={`tel:${b.phone}`} onClick={onClick} className="block hover:text-foreground">{b.phone}</a>}
       </div>
       {b.coupon_text && (
         <div className="mt-2 text-[11px] font-semibold text-primary">🎟 {b.coupon_text}</div>
