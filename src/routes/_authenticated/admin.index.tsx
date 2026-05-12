@@ -1,13 +1,14 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { adminGetMetrics } from "@/lib/admin.functions";
+import { useAuth } from "@/lib/auth";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
   PieChart, Pie, Cell, BarChart, Bar,
 } from "recharts";
-import { ArrowDown, ArrowUp, Download, FileText, MapPin, MousePointerClick, QrCode, Users2, Loader2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Download, FileText, MapPin, MousePointerClick, QrCode, Users2, Loader2, ShieldAlert, LogIn } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/admin/")({
   component: AdminOverview,
@@ -23,15 +24,66 @@ const COLORS = ["#FF6B00", "#7C9885", "#C73E3A", "#E8B14F", "#6a5a48", "#a99580"
 
 function AdminOverview() {
   const [days, setDays] = useState(30);
+  const { session, isAdmin, loading: authLoading } = useAuth();
   const fetchMetrics = useServerFn(adminGetMetrics);
-  const { data, isLoading } = useQuery({
-    queryKey: ["admin-metrics", days],
+  const { data, isLoading, error, refetch, isFetching } = useQuery({
+    queryKey: ["admin-metrics", days, session?.user.id],
+    enabled: !!session && isAdmin,
+    retry: false,
     queryFn: () => fetchMetrics({ data: { days, scope: "admin" } }),
   });
+
+  if (authLoading) {
+    return <div className="flex justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
+  }
+
+  if (!session) {
+    return (
+      <EmptyState
+        icon={LogIn}
+        title="Sign in required"
+        body="Your session has expired or you're not signed in. Please sign in again to view admin metrics."
+        action={<Link to="/login" className="inline-flex items-center gap-2 rounded-full bg-foreground px-4 py-2 text-sm font-semibold text-background hover:opacity-90"><LogIn className="h-4 w-4" /> Go to sign in</Link>}
+      />
+    );
+  }
+
+  if (!isAdmin) {
+    return (
+      <EmptyState
+        icon={ShieldAlert}
+        title="Admin access only"
+        body="This page is restricted to administrators."
+      />
+    );
+  }
+
+  if (error) {
+    const status = (error as any)?.status;
+    const msg = status === 401
+      ? "Your session expired. Please sign in again."
+      : status === 403
+      ? "You don't have permission to view these metrics."
+      : "We couldn't load metrics. The backend returned an error.";
+    return (
+      <EmptyState
+        icon={ShieldAlert}
+        title="Couldn't load metrics"
+        body={msg}
+        action={
+          <div className="flex gap-2">
+            <button onClick={() => refetch()} className="rounded-full border border-border px-4 py-2 text-sm font-semibold hover:bg-foreground/5">Try again</button>
+            {status === 401 && <Link to="/login" className="rounded-full bg-foreground px-4 py-2 text-sm font-semibold text-background">Sign in</Link>}
+          </div>
+        }
+      />
+    );
+  }
 
   if (isLoading || !data) {
     return <div className="flex justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
   }
+
 
   return (
     <div className="space-y-6">
