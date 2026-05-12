@@ -276,7 +276,7 @@ function AboutPage() {
               href="mailto:igor@halolabsai.com"
               className="inline-flex h-12 shrink-0 items-center gap-2 rounded-full bg-primary px-6 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
             >
-              igor@halolabsai.com <ArrowRight className="h-4 w-4" />
+              <span>igor@halolabsai.com</span> <ArrowRight className="h-4 w-4" />
             </a>
           </div>
         </div>

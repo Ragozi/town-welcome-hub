@@ -1,9 +1,12 @@
 import { createFileRoute, notFound } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { type Business, type Category, type Town, tierPriority } from "@/lib/towns";
 import type { Packet } from "@/lib/packets";
 import { Phone, Globe, MapPin, Mail, Star, Heart } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { logEvent } from "@/lib/tracking.functions";
+import { detectSource, getSessionId, readUtm } from "@/lib/tracking";
 
 type LoaderData = {
   packet: Packet;
@@ -72,6 +75,52 @@ export const Route = createFileRoute("/p/$slug")({
 
 function BuyerLanding() {
   const { packet, realtor, town, categories, businesses } = Route.useLoaderData();
+  const log = useServerFn(logEvent);
+
+  // Fire landing_view + qr_scanned (if applicable) once on mount
+  useEffect(() => {
+    const session = getSessionId();
+    const source = detectSource();
+    const utm = readUtm();
+    const referrer = typeof document !== "undefined" ? document.referrer : "";
+    const dayKey = `wh_view_${packet.slug}_${new Date().toISOString().slice(0, 10)}`;
+    if (!sessionStorage.getItem(dayKey)) {
+      sessionStorage.setItem(dayKey, "1");
+      log({
+        data: {
+          packet_slug: packet.slug,
+          event_type: "landing_view",
+          source,
+          referrer,
+          session_id: session,
+          utm,
+        },
+      }).catch(() => {});
+      if (source === "qr") {
+        log({
+          data: {
+            packet_slug: packet.slug,
+            event_type: "qr_scanned",
+            source: "qr",
+            session_id: session,
+          },
+        }).catch(() => {});
+      }
+    }
+  }, [packet.slug, log]);
+
+  const track = (event_type: "business_click" | "referral_click" | "sponsor_click" | "share_click", metadata: Record<string, unknown> = {}) => {
+    const session = getSessionId();
+    log({
+      data: {
+        packet_slug: packet.slug,
+        event_type,
+        source: detectSource(),
+        session_id: session,
+        metadata,
+      },
+    }).catch(() => {});
+  };
 
   const allBiz = businesses as Business[];
   const allCats = categories as Category[];
@@ -172,7 +221,7 @@ function BuyerLanding() {
             </h2>
             <div className="mt-6 grid gap-4 md:grid-cols-3">
               {platinum.map((b: Business) => (
-                <FeaturedCard key={b.id} b={b} />
+                <FeaturedCard key={b.id} b={b} onClick={() => track("sponsor_click", { business_id: b.id, name: b.name })} />
               ))}
             </div>
           </section>
@@ -196,7 +245,7 @@ function BuyerLanding() {
                   {(byCategory.get(c.id) ?? [])
                     .sort((a: Business, b: Business) => tierPriority[b.sponsor_tier] - tierPriority[a.sponsor_tier])
                     .map((b: Business) => (
-                      <BusinessRow key={b.id} b={b} />
+                      <BusinessRow key={b.id} b={b} onClick={() => track("business_click", { business_id: b.id, name: b.name, category: c.name })} />
                     ))}
                 </div>
               </div>
@@ -209,7 +258,7 @@ function BuyerLanding() {
           <section className="mt-12">
             <p className="eyebrow">// Also recommended</p>
             <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              {gold.slice(0, 8).map((b: Business) => <BusinessRow key={b.id} b={b} />)}
+              {gold.slice(0, 8).map((b: Business) => <BusinessRow key={b.id} b={b} onClick={() => track("sponsor_click", { business_id: b.id, name: b.name })} />)}
             </div>
           </section>
         )}
@@ -226,13 +275,22 @@ function BuyerLanding() {
               about a move, I'd love to help them too.
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
+              {realtor.referral_slug && (
+                <a
+                  href={`/r/${realtor.referral_slug}?from=${packet.slug}`}
+                  onClick={() => track("referral_click", { referral_slug: realtor.referral_slug })}
+                  className="inline-flex h-11 items-center gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
+                >
+                  <Heart className="h-4 w-4" /> Refer a friend to {realtor.full_name?.split(" ")[0] ?? "us"}
+                </a>
+              )}
               {realtor.email_public && (
-                <a href={`mailto:${realtor.email_public}`} className="inline-flex h-11 items-center gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground hover:bg-primary/90">
-                  <Mail className="h-4 w-4" /> Refer a friend
+                <a href={`mailto:${realtor.email_public}`} onClick={() => track("referral_click", { method: "email" })} className="inline-flex h-11 items-center gap-2 rounded-full border border-background/20 px-5 text-sm font-semibold hover:bg-background/10">
+                  <Mail className="h-4 w-4" /> Email {realtor.full_name?.split(" ")[0] ?? "agent"}
                 </a>
               )}
               {realtor.phone && (
-                <a href={`tel:${realtor.phone}`} className="inline-flex h-11 items-center gap-2 rounded-full border border-background/20 px-5 text-sm font-semibold hover:bg-background/10">
+                <a href={`tel:${realtor.phone}`} onClick={() => track("referral_click", { method: "phone" })} className="inline-flex h-11 items-center gap-2 rounded-full border border-background/20 px-5 text-sm font-semibold hover:bg-background/10">
                   <Phone className="h-4 w-4" /> Call {realtor.full_name?.split(" ")[0]}
                 </a>
               )}
@@ -248,9 +306,9 @@ function BuyerLanding() {
   );
 }
 
-function FeaturedCard({ b }: { b: Business }) {
+function FeaturedCard({ b, onClick }: { b: Business; onClick?: () => void }) {
   return (
-    <div className="group relative overflow-hidden rounded-3xl border border-border bg-card p-6 shadow-[var(--shadow-soft)]">
+    <div onClick={onClick} className="group relative overflow-hidden rounded-3xl border border-border bg-card p-6 shadow-[var(--shadow-soft)]">
       <div className="absolute right-4 top-4 inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-primary">
         <Star className="h-3 w-3" /> Featured
       </div>
@@ -266,15 +324,15 @@ function FeaturedCard({ b }: { b: Business }) {
       <div className="mt-4 space-y-1.5 text-xs text-muted-foreground">
         {b.address && <p className="inline-flex items-center gap-1.5"><MapPin className="h-3 w-3" /> {b.address}</p>}
         {b.phone && <p><a href={`tel:${b.phone}`} className="inline-flex items-center gap-1.5 hover:text-foreground"><Phone className="h-3 w-3" /> {b.phone}</a></p>}
-        {b.website && <p><a href={b.website} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 hover:text-foreground"><Globe className="h-3 w-3" /> Visit</a></p>}
+        {b.website && <p><a href={b.website} target="_blank" rel="noreferrer" onClick={onClick} className="inline-flex items-center gap-1.5 hover:text-foreground"><Globe className="h-3 w-3" /> Visit</a></p>}
       </div>
     </div>
   );
 }
 
-function BusinessRow({ b }: { b: Business }) {
+function BusinessRow({ b, onClick }: { b: Business; onClick?: () => void }) {
   return (
-    <div className="rounded-2xl border border-border bg-card p-4">
+    <div onClick={onClick} className="rounded-2xl border border-border bg-card p-4">
       <div className="flex items-start justify-between gap-2">
         <h4 className="font-semibold leading-tight">{b.name}</h4>
         {b.sponsor_tier !== "none" && (
@@ -284,7 +342,7 @@ function BusinessRow({ b }: { b: Business }) {
       {b.subcategory && <p className="text-xs text-muted-foreground">{b.subcategory}</p>}
       <div className="mt-2 space-y-1 text-xs text-muted-foreground">
         {b.address && <p>{b.address}</p>}
-        {b.phone && <a href={`tel:${b.phone}`} className="block hover:text-foreground">{b.phone}</a>}
+        {b.phone && <a href={`tel:${b.phone}`} onClick={onClick} className="block hover:text-foreground">{b.phone}</a>}
       </div>
       {b.coupon_text && (
         <div className="mt-2 text-[11px] font-semibold text-primary">🎟 {b.coupon_text}</div>

@@ -113,9 +113,82 @@ export type Database = {
         }
         Relationships: []
       }
+      packet_events: {
+        Row: {
+          created_at: string
+          device: Database["public"]["Enums"]["packet_event_device"]
+          event_type: Database["public"]["Enums"]["packet_event_type"]
+          id: string
+          ip_city: string | null
+          ip_country: string | null
+          ip_region: string | null
+          metadata: Json
+          packet_id: string | null
+          realtor_id: string | null
+          referrer: string | null
+          session_id: string | null
+          source: Database["public"]["Enums"]["packet_event_source"]
+          town_id: string | null
+          user_agent: string | null
+          utm: Json
+        }
+        Insert: {
+          created_at?: string
+          device?: Database["public"]["Enums"]["packet_event_device"]
+          event_type: Database["public"]["Enums"]["packet_event_type"]
+          id?: string
+          ip_city?: string | null
+          ip_country?: string | null
+          ip_region?: string | null
+          metadata?: Json
+          packet_id?: string | null
+          realtor_id?: string | null
+          referrer?: string | null
+          session_id?: string | null
+          source?: Database["public"]["Enums"]["packet_event_source"]
+          town_id?: string | null
+          user_agent?: string | null
+          utm?: Json
+        }
+        Update: {
+          created_at?: string
+          device?: Database["public"]["Enums"]["packet_event_device"]
+          event_type?: Database["public"]["Enums"]["packet_event_type"]
+          id?: string
+          ip_city?: string | null
+          ip_country?: string | null
+          ip_region?: string | null
+          metadata?: Json
+          packet_id?: string | null
+          realtor_id?: string | null
+          referrer?: string | null
+          session_id?: string | null
+          source?: Database["public"]["Enums"]["packet_event_source"]
+          town_id?: string | null
+          user_agent?: string | null
+          utm?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "packet_events_packet_id_fkey"
+            columns: ["packet_id"]
+            isOneToOne: false
+            referencedRelation: "packets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "packet_events_town_id_fkey"
+            columns: ["town_id"]
+            isOneToOne: false
+            referencedRelation: "towns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       packets: {
         Row: {
           address: string
+          archived_at: string | null
           buyer_email: string | null
           buyer_first_name: string
           buyer_last_name: string | null
@@ -138,6 +211,7 @@ export type Database = {
         }
         Insert: {
           address: string
+          archived_at?: string | null
           buyer_email?: string | null
           buyer_first_name: string
           buyer_last_name?: string | null
@@ -160,6 +234,7 @@ export type Database = {
         }
         Update: {
           address?: string
+          archived_at?: string | null
           buyer_email?: string | null
           buyer_first_name?: string
           buyer_last_name?: string | null
@@ -201,6 +276,7 @@ export type Database = {
           headshot_url: string | null
           id: string
           phone: string | null
+          referral_slug: string | null
           social_links: Json
           thank_you_message: string | null
           updated_at: string
@@ -216,6 +292,7 @@ export type Database = {
           headshot_url?: string | null
           id?: string
           phone?: string | null
+          referral_slug?: string | null
           social_links?: Json
           thank_you_message?: string | null
           updated_at?: string
@@ -231,6 +308,7 @@ export type Database = {
           headshot_url?: string | null
           id?: string
           phone?: string | null
+          referral_slug?: string | null
           social_links?: Json
           thank_you_message?: string | null
           updated_at?: string
@@ -332,7 +410,26 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      packet_event_daily: {
+        Row: {
+          count: number | null
+          day: string | null
+          device: Database["public"]["Enums"]["packet_event_device"] | null
+          event_type: Database["public"]["Enums"]["packet_event_type"] | null
+          realtor_id: string | null
+          source: Database["public"]["Enums"]["packet_event_source"] | null
+          town_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "packet_events_town_id_fkey"
+            columns: ["town_id"]
+            isOneToOne: false
+            referencedRelation: "towns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       has_role: {
@@ -360,6 +457,17 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "realtor"
+      packet_event_device: "mobile" | "tablet" | "desktop" | "unknown"
+      packet_event_source: "qr" | "direct" | "referral" | "search" | "unknown"
+      packet_event_type:
+        | "pdf_generated"
+        | "pdf_downloaded"
+        | "qr_scanned"
+        | "landing_view"
+        | "business_click"
+        | "referral_click"
+        | "sponsor_click"
+        | "share_click"
       packet_status: "draft" | "generated"
       sponsor_tier: "none" | "bronze" | "silver" | "gold" | "s_tier"
     }
@@ -490,6 +598,18 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "realtor"],
+      packet_event_device: ["mobile", "tablet", "desktop", "unknown"],
+      packet_event_source: ["qr", "direct", "referral", "search", "unknown"],
+      packet_event_type: [
+        "pdf_generated",
+        "pdf_downloaded",
+        "qr_scanned",
+        "landing_view",
+        "business_click",
+        "referral_click",
+        "sponsor_click",
+        "share_click",
+      ],
       packet_status: ["draft", "generated"],
       sponsor_tier: ["none", "bronze", "silver", "gold", "s_tier"],
     },

@@ -50,7 +50,7 @@ function AuthLayout() {
                 <span className="inline-flex items-center gap-1.5"><Settings className="h-4 w-4" /> Branding</span>
               </Link>
               {isAdmin && (
-                <Link to="/dashboard" className="hover:text-foreground">
+                <Link to="/admin" className="hover:text-foreground" activeProps={{ className: "text-foreground" }}>
                   <span className="inline-flex items-center gap-1.5 text-[color:var(--wi-cranberry)]"><Shield className="h-4 w-4" /> Admin</span>
                 </Link>
               )}

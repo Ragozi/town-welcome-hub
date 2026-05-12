@@ -15,13 +15,19 @@ import { Route as AboutRouteImport } from './routes/about'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as TownSlugRouteImport } from './routes/$townSlug'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as RReferralSlugRouteImport } from './routes/r.$referralSlug'
 import { Route as PSlugRouteImport } from './routes/p.$slug'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedPacketsIndexRouteImport } from './routes/_authenticated/packets.index'
+import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin.index'
 import { Route as ApiPdfTownSlugRouteImport } from './routes/api/pdf.$townSlug'
+import { Route as ApiPacketPdfSlugRouteImport } from './routes/api/packet-pdf.$slug'
 import { Route as AuthenticatedPacketsNewRouteImport } from './routes/_authenticated/packets.new'
 import { Route as AuthenticatedPacketsIdRouteImport } from './routes/_authenticated/packets.$id'
+import { Route as AuthenticatedAdminRealtorsRouteImport } from './routes/_authenticated/admin.realtors'
+import { Route as AuthenticatedAdminEventsRouteImport } from './routes/_authenticated/admin.events'
 
 const TownsRoute = TownsRouteImport.update({
   id: '/towns',
@@ -52,6 +58,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RReferralSlugRoute = RReferralSlugRouteImport.update({
+  id: '/r/$referralSlug',
+  path: '/r/$referralSlug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PSlugRoute = PSlugRouteImport.update({
   id: '/p/$slug',
   path: '/p/$slug',
@@ -67,15 +78,30 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedPacketsIndexRoute =
   AuthenticatedPacketsIndexRouteImport.update({
     id: '/packets/',
     path: '/packets/',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedAdminIndexRoute = AuthenticatedAdminIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AuthenticatedAdminRoute,
+} as any)
 const ApiPdfTownSlugRoute = ApiPdfTownSlugRouteImport.update({
   id: '/api/pdf/$townSlug',
   path: '/api/pdf/$townSlug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPacketPdfSlugRoute = ApiPacketPdfSlugRouteImport.update({
+  id: '/api/packet-pdf/$slug',
+  path: '/api/packet-pdf/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedPacketsNewRoute = AuthenticatedPacketsNewRouteImport.update({
@@ -88,6 +114,18 @@ const AuthenticatedPacketsIdRoute = AuthenticatedPacketsIdRouteImport.update({
   path: '/packets/$id',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedAdminRealtorsRoute =
+  AuthenticatedAdminRealtorsRouteImport.update({
+    id: '/realtors',
+    path: '/realtors',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminEventsRoute =
+  AuthenticatedAdminEventsRouteImport.update({
+    id: '/events',
+    path: '/events',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -95,12 +133,18 @@ export interface FileRoutesByFullPath {
   '/about': typeof AboutRoute
   '/login': typeof LoginRoute
   '/towns': typeof TownsRoute
+  '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/p/$slug': typeof PSlugRoute
+  '/r/$referralSlug': typeof RReferralSlugRoute
+  '/admin/events': typeof AuthenticatedAdminEventsRoute
+  '/admin/realtors': typeof AuthenticatedAdminRealtorsRoute
   '/packets/$id': typeof AuthenticatedPacketsIdRoute
   '/packets/new': typeof AuthenticatedPacketsNewRoute
+  '/api/packet-pdf/$slug': typeof ApiPacketPdfSlugRoute
   '/api/pdf/$townSlug': typeof ApiPdfTownSlugRoute
+  '/admin/': typeof AuthenticatedAdminIndexRoute
   '/packets/': typeof AuthenticatedPacketsIndexRoute
 }
 export interface FileRoutesByTo {
@@ -112,9 +156,14 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/p/$slug': typeof PSlugRoute
+  '/r/$referralSlug': typeof RReferralSlugRoute
+  '/admin/events': typeof AuthenticatedAdminEventsRoute
+  '/admin/realtors': typeof AuthenticatedAdminRealtorsRoute
   '/packets/$id': typeof AuthenticatedPacketsIdRoute
   '/packets/new': typeof AuthenticatedPacketsNewRoute
+  '/api/packet-pdf/$slug': typeof ApiPacketPdfSlugRoute
   '/api/pdf/$townSlug': typeof ApiPdfTownSlugRoute
+  '/admin': typeof AuthenticatedAdminIndexRoute
   '/packets': typeof AuthenticatedPacketsIndexRoute
 }
 export interface FileRoutesById {
@@ -125,12 +174,18 @@ export interface FileRoutesById {
   '/about': typeof AboutRoute
   '/login': typeof LoginRoute
   '/towns': typeof TownsRoute
+  '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/p/$slug': typeof PSlugRoute
+  '/r/$referralSlug': typeof RReferralSlugRoute
+  '/_authenticated/admin/events': typeof AuthenticatedAdminEventsRoute
+  '/_authenticated/admin/realtors': typeof AuthenticatedAdminRealtorsRoute
   '/_authenticated/packets/$id': typeof AuthenticatedPacketsIdRoute
   '/_authenticated/packets/new': typeof AuthenticatedPacketsNewRoute
+  '/api/packet-pdf/$slug': typeof ApiPacketPdfSlugRoute
   '/api/pdf/$townSlug': typeof ApiPdfTownSlugRoute
+  '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
   '/_authenticated/packets/': typeof AuthenticatedPacketsIndexRoute
 }
 export interface FileRouteTypes {
@@ -141,12 +196,18 @@ export interface FileRouteTypes {
     | '/about'
     | '/login'
     | '/towns'
+    | '/admin'
     | '/dashboard'
     | '/settings'
     | '/p/$slug'
+    | '/r/$referralSlug'
+    | '/admin/events'
+    | '/admin/realtors'
     | '/packets/$id'
     | '/packets/new'
+    | '/api/packet-pdf/$slug'
     | '/api/pdf/$townSlug'
+    | '/admin/'
     | '/packets/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -158,9 +219,14 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/settings'
     | '/p/$slug'
+    | '/r/$referralSlug'
+    | '/admin/events'
+    | '/admin/realtors'
     | '/packets/$id'
     | '/packets/new'
+    | '/api/packet-pdf/$slug'
     | '/api/pdf/$townSlug'
+    | '/admin'
     | '/packets'
   id:
     | '__root__'
@@ -170,12 +236,18 @@ export interface FileRouteTypes {
     | '/about'
     | '/login'
     | '/towns'
+    | '/_authenticated/admin'
     | '/_authenticated/dashboard'
     | '/_authenticated/settings'
     | '/p/$slug'
+    | '/r/$referralSlug'
+    | '/_authenticated/admin/events'
+    | '/_authenticated/admin/realtors'
     | '/_authenticated/packets/$id'
     | '/_authenticated/packets/new'
+    | '/api/packet-pdf/$slug'
     | '/api/pdf/$townSlug'
+    | '/_authenticated/admin/'
     | '/_authenticated/packets/'
   fileRoutesById: FileRoutesById
 }
@@ -187,6 +259,8 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   TownsRoute: typeof TownsRoute
   PSlugRoute: typeof PSlugRoute
+  RReferralSlugRoute: typeof RReferralSlugRoute
+  ApiPacketPdfSlugRoute: typeof ApiPacketPdfSlugRoute
   ApiPdfTownSlugRoute: typeof ApiPdfTownSlugRoute
 }
 
@@ -234,6 +308,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/r/$referralSlug': {
+      id: '/r/$referralSlug'
+      path: '/r/$referralSlug'
+      fullPath: '/r/$referralSlug'
+      preLoaderRoute: typeof RReferralSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/p/$slug': {
       id: '/p/$slug'
       path: '/p/$slug'
@@ -255,6 +336,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/admin': {
+      id: '/_authenticated/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AuthenticatedAdminRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/packets/': {
       id: '/_authenticated/packets/'
       path: '/packets'
@@ -262,11 +350,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPacketsIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/admin/': {
+      id: '/_authenticated/admin/'
+      path: '/'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AuthenticatedAdminIndexRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/api/pdf/$townSlug': {
       id: '/api/pdf/$townSlug'
       path: '/api/pdf/$townSlug'
       fullPath: '/api/pdf/$townSlug'
       preLoaderRoute: typeof ApiPdfTownSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/packet-pdf/$slug': {
+      id: '/api/packet-pdf/$slug'
+      path: '/api/packet-pdf/$slug'
+      fullPath: '/api/packet-pdf/$slug'
+      preLoaderRoute: typeof ApiPacketPdfSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/packets/new': {
@@ -283,10 +385,40 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPacketsIdRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/admin/realtors': {
+      id: '/_authenticated/admin/realtors'
+      path: '/realtors'
+      fullPath: '/admin/realtors'
+      preLoaderRoute: typeof AuthenticatedAdminRealtorsRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/events': {
+      id: '/_authenticated/admin/events'
+      path: '/events'
+      fullPath: '/admin/events'
+      preLoaderRoute: typeof AuthenticatedAdminEventsRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
   }
 }
 
+interface AuthenticatedAdminRouteChildren {
+  AuthenticatedAdminEventsRoute: typeof AuthenticatedAdminEventsRoute
+  AuthenticatedAdminRealtorsRoute: typeof AuthenticatedAdminRealtorsRoute
+  AuthenticatedAdminIndexRoute: typeof AuthenticatedAdminIndexRoute
+}
+
+const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
+  AuthenticatedAdminEventsRoute: AuthenticatedAdminEventsRoute,
+  AuthenticatedAdminRealtorsRoute: AuthenticatedAdminRealtorsRoute,
+  AuthenticatedAdminIndexRoute: AuthenticatedAdminIndexRoute,
+}
+
+const AuthenticatedAdminRouteWithChildren =
+  AuthenticatedAdminRoute._addFileChildren(AuthenticatedAdminRouteChildren)
+
 interface AuthenticatedRouteChildren {
+  AuthenticatedAdminRoute: typeof AuthenticatedAdminRouteWithChildren
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedPacketsIdRoute: typeof AuthenticatedPacketsIdRoute
@@ -295,6 +427,7 @@ interface AuthenticatedRouteChildren {
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedAdminRoute: AuthenticatedAdminRouteWithChildren,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedPacketsIdRoute: AuthenticatedPacketsIdRoute,
@@ -314,6 +447,8 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   TownsRoute: TownsRoute,
   PSlugRoute: PSlugRoute,
+  RReferralSlugRoute: RReferralSlugRoute,
+  ApiPacketPdfSlugRoute: ApiPacketPdfSlugRoute,
   ApiPdfTownSlugRoute: ApiPdfTownSlugRoute,
 }
 export const routeTree = rootRouteImport
