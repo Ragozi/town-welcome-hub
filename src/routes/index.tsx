@@ -251,7 +251,8 @@ function Home() {
             </h2>
             <p className="mt-4 max-w-md text-foreground/70">
               We're starting in Ozaukee County (Grafton, Cedarburg, Mequon,
-              Port Washington, Thiensville). More Wisconsin towns coming soon.
+              Port Washington, Thiensville, Saukville, Fredonia, Belgium).
+              More Wisconsin towns coming soon.
             </p>
           </div>
 
