@@ -119,8 +119,40 @@ function RootComponent() {
 
   useEffect(() => {
     // Client-only: install fetch interceptor that attaches the Supabase
-    // bearer token to TanStack Start server-fn requests.
-    import("@/integrations/supabase/server-fn-fetch.client").catch(() => {});
+    // bearer token to TanStack Start server-fn requests (paths under
+    // /_serverFn/). Inlined here to avoid a client-only module import
+    // from this file (server-reachable via the route tree).
+    if (typeof window === "undefined") return;
+    if ((window as any).__serverFnFetchPatched) return;
+    (window as any).__serverFnFetchPatched = true;
+
+    import("@/integrations/supabase/client").then(({ supabase }) => {
+      const origFetch = window.fetch.bind(window);
+      window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+        try {
+          const url =
+            typeof input === "string"
+              ? input
+              : input instanceof URL
+                ? input.toString()
+                : input.url;
+          if (url && url.includes("/_serverFn/")) {
+            const headers = new Headers(
+              init?.headers ?? (input instanceof Request ? input.headers : undefined),
+            );
+            if (!headers.has("authorization")) {
+              const { data } = await supabase.auth.getSession();
+              const token = data.session?.access_token;
+              if (token) headers.set("authorization", `Bearer ${token}`);
+            }
+            return origFetch(input, { ...init, headers });
+          }
+        } catch (e) {
+          console.error("[server-fn-fetch] interceptor error", e);
+        }
+        return origFetch(input, init);
+      };
+    });
   }, []);
 
   return (
