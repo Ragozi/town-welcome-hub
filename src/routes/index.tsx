@@ -93,14 +93,29 @@ function Home() {
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         try {
-          const match = await resolveTown({
-            lat: pos.coords.latitude,
-            lng: pos.coords.longitude,
-          });
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+          // 1) Try direct lat/lng nearest-town RPC
+          let match = await resolveTown({ lat, lng });
+          // 2) Fallback to BigDataCloud reverse geocode → ZIP
+          if (!match) {
+            try {
+              const r = await fetch(
+                `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`,
+              );
+              const j = await r.json();
+              const zipFromBDC: string | undefined = j?.postcode;
+              if (zipFromBDC && /^\d{5}/.test(zipFromBDC)) {
+                match = await resolveTown({ zip: zipFromBDC.slice(0, 5) });
+              }
+            } catch {
+              /* ignore */
+            }
+          }
           if (match) goTo(match.slug);
           else {
             toast.message("We couldn't find a TownWelcome page near you yet.", {
-              description: "Pick a town below to keep exploring.",
+              description: "Browse all towns or enter a ZIP below.",
             });
             setLocating(false);
           }
