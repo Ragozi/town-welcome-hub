@@ -1,9 +1,12 @@
 import { createFileRoute, notFound } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { type Business, type Category, type Town, tierPriority } from "@/lib/towns";
 import type { Packet } from "@/lib/packets";
 import { Phone, Globe, MapPin, Mail, Star, Heart } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { logEvent } from "@/lib/tracking.functions";
+import { detectSource, getSessionId, readUtm } from "@/lib/tracking";
 
 type LoaderData = {
   packet: Packet;
