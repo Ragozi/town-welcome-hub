@@ -10,19 +10,36 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TownsRouteImport } from './routes/towns'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as AboutRouteImport } from './routes/about'
+import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as TownSlugRouteImport } from './routes/$townSlug'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as PSlugRouteImport } from './routes/p.$slug'
+import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
+import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedPacketsIndexRouteImport } from './routes/_authenticated/packets.index'
 import { Route as ApiPdfTownSlugRouteImport } from './routes/api/pdf.$townSlug'
+import { Route as AuthenticatedPacketsNewRouteImport } from './routes/_authenticated/packets.new'
+import { Route as AuthenticatedPacketsIdRouteImport } from './routes/_authenticated/packets.$id'
 
 const TownsRoute = TownsRouteImport.update({
   id: '/towns',
   path: '/towns',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AboutRoute = AboutRouteImport.update({
   id: '/about',
   path: '/about',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedRoute = AuthenticatedRouteImport.update({
+  id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TownSlugRoute = TownSlugRouteImport.update({
@@ -35,53 +52,141 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PSlugRoute = PSlugRouteImport.update({
+  id: '/p/$slug',
+  path: '/p/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedPacketsIndexRoute =
+  AuthenticatedPacketsIndexRouteImport.update({
+    id: '/packets/',
+    path: '/packets/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const ApiPdfTownSlugRoute = ApiPdfTownSlugRouteImport.update({
   id: '/api/pdf/$townSlug',
   path: '/api/pdf/$townSlug',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedPacketsNewRoute = AuthenticatedPacketsNewRouteImport.update({
+  id: '/packets/new',
+  path: '/packets/new',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedPacketsIdRoute = AuthenticatedPacketsIdRouteImport.update({
+  id: '/packets/$id',
+  path: '/packets/$id',
+  getParentRoute: () => AuthenticatedRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/$townSlug': typeof TownSlugRoute
   '/about': typeof AboutRoute
+  '/login': typeof LoginRoute
   '/towns': typeof TownsRoute
+  '/dashboard': typeof AuthenticatedDashboardRoute
+  '/settings': typeof AuthenticatedSettingsRoute
+  '/p/$slug': typeof PSlugRoute
+  '/packets/$id': typeof AuthenticatedPacketsIdRoute
+  '/packets/new': typeof AuthenticatedPacketsNewRoute
   '/api/pdf/$townSlug': typeof ApiPdfTownSlugRoute
+  '/packets/': typeof AuthenticatedPacketsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/$townSlug': typeof TownSlugRoute
   '/about': typeof AboutRoute
+  '/login': typeof LoginRoute
   '/towns': typeof TownsRoute
+  '/dashboard': typeof AuthenticatedDashboardRoute
+  '/settings': typeof AuthenticatedSettingsRoute
+  '/p/$slug': typeof PSlugRoute
+  '/packets/$id': typeof AuthenticatedPacketsIdRoute
+  '/packets/new': typeof AuthenticatedPacketsNewRoute
   '/api/pdf/$townSlug': typeof ApiPdfTownSlugRoute
+  '/packets': typeof AuthenticatedPacketsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/$townSlug': typeof TownSlugRoute
+  '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/about': typeof AboutRoute
+  '/login': typeof LoginRoute
   '/towns': typeof TownsRoute
+  '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/settings': typeof AuthenticatedSettingsRoute
+  '/p/$slug': typeof PSlugRoute
+  '/_authenticated/packets/$id': typeof AuthenticatedPacketsIdRoute
+  '/_authenticated/packets/new': typeof AuthenticatedPacketsNewRoute
   '/api/pdf/$townSlug': typeof ApiPdfTownSlugRoute
+  '/_authenticated/packets/': typeof AuthenticatedPacketsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/$townSlug' | '/about' | '/towns' | '/api/pdf/$townSlug'
+  fullPaths:
+    | '/'
+    | '/$townSlug'
+    | '/about'
+    | '/login'
+    | '/towns'
+    | '/dashboard'
+    | '/settings'
+    | '/p/$slug'
+    | '/packets/$id'
+    | '/packets/new'
+    | '/api/pdf/$townSlug'
+    | '/packets/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/$townSlug' | '/about' | '/towns' | '/api/pdf/$townSlug'
+  to:
+    | '/'
+    | '/$townSlug'
+    | '/about'
+    | '/login'
+    | '/towns'
+    | '/dashboard'
+    | '/settings'
+    | '/p/$slug'
+    | '/packets/$id'
+    | '/packets/new'
+    | '/api/pdf/$townSlug'
+    | '/packets'
   id:
     | '__root__'
     | '/'
     | '/$townSlug'
+    | '/_authenticated'
     | '/about'
+    | '/login'
     | '/towns'
+    | '/_authenticated/dashboard'
+    | '/_authenticated/settings'
+    | '/p/$slug'
+    | '/_authenticated/packets/$id'
+    | '/_authenticated/packets/new'
     | '/api/pdf/$townSlug'
+    | '/_authenticated/packets/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   TownSlugRoute: typeof TownSlugRoute
+  AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   AboutRoute: typeof AboutRoute
+  LoginRoute: typeof LoginRoute
   TownsRoute: typeof TownsRoute
+  PSlugRoute: typeof PSlugRoute
   ApiPdfTownSlugRoute: typeof ApiPdfTownSlugRoute
 }
 
@@ -94,11 +199,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TownsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/about': {
       id: '/about'
       path: '/about'
       fullPath: '/about'
       preLoaderRoute: typeof AboutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/$townSlug': {
@@ -115,6 +234,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/p/$slug': {
+      id: '/p/$slug'
+      path: '/p/$slug'
+      fullPath: '/p/$slug'
+      preLoaderRoute: typeof PSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/settings': {
+      id: '/_authenticated/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AuthenticatedSettingsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/dashboard': {
+      id: '/_authenticated/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof AuthenticatedDashboardRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/packets/': {
+      id: '/_authenticated/packets/'
+      path: '/packets'
+      fullPath: '/packets/'
+      preLoaderRoute: typeof AuthenticatedPacketsIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/api/pdf/$townSlug': {
       id: '/api/pdf/$townSlug'
       path: '/api/pdf/$townSlug'
@@ -122,26 +269,53 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPdfTownSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/packets/new': {
+      id: '/_authenticated/packets/new'
+      path: '/packets/new'
+      fullPath: '/packets/new'
+      preLoaderRoute: typeof AuthenticatedPacketsNewRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/packets/$id': {
+      id: '/_authenticated/packets/$id'
+      path: '/packets/$id'
+      fullPath: '/packets/$id'
+      preLoaderRoute: typeof AuthenticatedPacketsIdRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
   }
 }
+
+interface AuthenticatedRouteChildren {
+  AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
+  AuthenticatedPacketsIdRoute: typeof AuthenticatedPacketsIdRoute
+  AuthenticatedPacketsNewRoute: typeof AuthenticatedPacketsNewRoute
+  AuthenticatedPacketsIndexRoute: typeof AuthenticatedPacketsIndexRoute
+}
+
+const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
+  AuthenticatedPacketsIdRoute: AuthenticatedPacketsIdRoute,
+  AuthenticatedPacketsNewRoute: AuthenticatedPacketsNewRoute,
+  AuthenticatedPacketsIndexRoute: AuthenticatedPacketsIndexRoute,
+}
+
+const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
+  AuthenticatedRouteChildren,
+)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   TownSlugRoute: TownSlugRoute,
+  AuthenticatedRoute: AuthenticatedRouteWithChildren,
   AboutRoute: AboutRoute,
+  LoginRoute: LoginRoute,
   TownsRoute: TownsRoute,
+  PSlugRoute: PSlugRoute,
   ApiPdfTownSlugRoute: ApiPdfTownSlugRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

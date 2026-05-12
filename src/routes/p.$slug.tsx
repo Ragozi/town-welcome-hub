@@ -5,30 +5,41 @@ import { type Business, type Category, type Town, tierPriority } from "@/lib/tow
 import type { Packet } from "@/lib/packets";
 import { Phone, Globe, MapPin, Mail, Star, Heart } from "lucide-react";
 
+type LoaderData = {
+  packet: Packet;
+  realtor: any;
+  town: Town | null;
+  categories: Category[];
+  businesses: Business[];
+};
+
 export const Route = createFileRoute("/p/$slug")({
-  loader: async ({ params }) => {
+  loader: async ({ params }): Promise<LoaderData> => {
     const { data: packet } = await supabase
       .from("packets")
       .select("*")
       .eq("slug", params.slug)
       .maybeSingle();
     if (!packet) throw notFound();
+    const p = packet as Packet;
 
     const [profileRes, townRes, catRes] = await Promise.all([
-      supabase.from("profiles").select("*").eq("user_id", (packet as Packet).realtor_id).maybeSingle(),
-      (packet as Packet).town_id
-        ? supabase.from("towns").select("*").eq("id", (packet as Packet).town_id!).maybeSingle()
+      supabase.from("profiles").select("*").eq("user_id", p.realtor_id).maybeSingle(),
+      p.town_id
+        ? supabase.from("towns").select("*").eq("id", p.town_id).maybeSingle()
         : Promise.resolve({ data: null }),
       supabase.from("categories").select("*").order("display_order"),
     ]);
 
-    const town = townRes.data as Town | null;
-    const businesses: Business[] = town
-      ? ((await supabase.from("businesses").select("*").eq("town_id", town.id)).data ?? []) as Business[]
-      : [];
+    const town = (townRes.data ?? null) as Town | null;
+    let businesses: Business[] = [];
+    if (town) {
+      const { data: bizData } = await supabase.from("businesses").select("*").eq("town_id", town.id);
+      businesses = (bizData ?? []) as Business[];
+    }
 
     return {
-      packet: packet as Packet,
+      packet: p,
       realtor: profileRes.data,
       town,
       categories: (catRes.data ?? []) as Category[],
