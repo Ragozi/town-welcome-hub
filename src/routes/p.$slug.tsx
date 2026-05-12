@@ -77,6 +77,7 @@ export const Route = createFileRoute("/p/$slug")({
 function BuyerLanding() {
   const { packet, realtor, town, categories, businesses } = Route.useLoaderData();
   const log = useServerFn(logEvent);
+  const [viewSaved, setViewSaved] = useState(false);
 
   // Fire landing_view + qr_scanned (if applicable) once on mount
   useEffect(() => {
@@ -96,7 +97,12 @@ function BuyerLanding() {
           session_id: session,
           utm,
         },
-      }).catch(() => {});
+      })
+        .then(() => {
+          setViewSaved(true);
+          setTimeout(() => setViewSaved(false), 3500);
+        })
+        .catch(() => {});
       if (source === "qr") {
         log({
           data: {
