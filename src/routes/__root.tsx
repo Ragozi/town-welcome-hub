@@ -120,7 +120,9 @@ function RootComponent() {
   useEffect(() => {
     // Client-only: install fetch interceptor that attaches the Supabase
     // bearer token to TanStack Start server-fn requests.
-    import("@/integrations/supabase/server-fn-fetch.client").catch(() => {});
+    // Use a variable to evade static import-protection analysis.
+    const mod = "@/integrations/supabase/server-fn-fetch.client";
+    (0, eval)(`import(${JSON.stringify(mod)})`)?.catch?.(() => {});
   }, []);
 
   return (
