@@ -93,14 +93,29 @@ function Home() {
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         try {
-          const match = await resolveTown({
-            lat: pos.coords.latitude,
-            lng: pos.coords.longitude,
-          });
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+          // 1) Try direct lat/lng nearest-town RPC
+          let match = await resolveTown({ lat, lng });
+          // 2) Fallback to BigDataCloud reverse geocode → ZIP
+          if (!match) {
+            try {
+              const r = await fetch(
+                `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`,
+              );
+              const j = await r.json();
+              const zipFromBDC: string | undefined = j?.postcode;
+              if (zipFromBDC && /^\d{5}/.test(zipFromBDC)) {
+                match = await resolveTown({ zip: zipFromBDC.slice(0, 5) });
+              }
+            } catch {
+              /* ignore */
+            }
+          }
           if (match) goTo(match.slug);
           else {
             toast.message("We couldn't find a TownWelcome page near you yet.", {
-              description: "Pick a town below to keep exploring.",
+              description: "Browse all towns or enter a ZIP below.",
             });
             setLocating(false);
           }
@@ -180,12 +195,12 @@ function Home() {
               )}
               {locating ? "Finding your town…" : "Use my location"}
             </Button>
-            <a
-              href="#towns"
+            <Link
+              to="/towns"
               className="inline-flex h-14 items-center gap-2 rounded-full border border-foreground/15 bg-background px-6 text-base font-medium text-foreground transition-colors hover:border-foreground/40"
             >
               Browse towns <ArrowRight className="h-4 w-4" />
-            </a>
+            </Link>
           </div>
         </div>
       </section>
@@ -197,9 +212,9 @@ function Home() {
           {SHOWCASES.map((s) => {
             const Icon = s.icon;
             return (
-              <a
+              <Link
                 key={s.label}
-                href="#towns"
+                to="/towns"
                 className="group relative block overflow-hidden rounded-3xl border border-border shadow-[var(--shadow-soft)]"
               >
                 <img
@@ -219,7 +234,7 @@ function Home() {
                     {s.cta} <ArrowRight className="h-3.5 w-3.5" />
                   </span>
                 </div>
-              </a>
+              </Link>
             );
           })}
         </div>
@@ -236,7 +251,8 @@ function Home() {
             </h2>
             <p className="mt-4 max-w-md text-foreground/70">
               We're starting in Ozaukee County (Grafton, Cedarburg, Mequon,
-              Port Washington, Thiensville). More Wisconsin towns coming soon.
+              Port Washington, Thiensville, Saukville, Fredonia, Belgium).
+              More Wisconsin towns coming soon.
             </p>
           </div>
 
@@ -300,7 +316,7 @@ function Home() {
               when they move to town.
             </h2>
             <a
-              href="mailto:hello@townwelcome.com"
+              href="mailto:igor@halolabsai.com"
               className="inline-flex h-12 shrink-0 items-center gap-2 rounded-full bg-primary px-6 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
             >
               Get listed <ArrowRight className="h-4 w-4" />
@@ -314,5 +330,3 @@ function Home() {
   );
 }
 
-// suppress unused-link warning while keeping import for future use
-void Link;

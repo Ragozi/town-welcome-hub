@@ -178,7 +178,7 @@ function TownView({ data }: { data: TownPage }) {
   const activeLabel = activeCategory ? activeCategory.slug : "welcome";
 
   return (
-    <div className="min-h-screen bg-[color:var(--wi-pine)]">
+    <div className="min-h-screen bg-foreground">
       <SiteHeader />
 
       {/* OUTER FRAME (the dark "Snapture" mat) ------------------------ */}

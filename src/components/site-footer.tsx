@@ -29,9 +29,9 @@ export function SiteFooter() {
                 Explore
               </div>
               <ul className="space-y-2 text-white/85">
-                <li><Link to="/" className="hover:text-primary">All towns</Link></li>
-                <li><a href="#sponsor" className="hover:text-primary">Sponsor tiers</a></li>
-                <li><a href="#about" className="hover:text-primary">About</a></li>
+                <li><Link to="/towns" className="hover:text-primary">All towns</Link></li>
+                <li><a href="/#sponsor" className="hover:text-primary">Sponsor tiers</a></li>
+                <li><Link to="/about" className="hover:text-primary">About</Link></li>
               </ul>
             </div>
             <div>
@@ -49,12 +49,12 @@ export function SiteFooter() {
                 Contact
               </div>
               <ul className="space-y-2 text-white/85">
-                <li>hello@townwelcome.com</li>
+                <li>igor@halolabsai.com</li>
                 <li>Ozaukee County, WI</li>
                 <li className="flex gap-3 pt-1">
                   <a href="#" aria-label="Instagram" className="hover:text-primary"><Instagram className="h-4 w-4" /></a>
                   <a href="#" aria-label="Facebook" className="hover:text-primary"><Facebook className="h-4 w-4" /></a>
-                  <a href="mailto:hello@townwelcome.com" aria-label="Email" className="hover:text-primary"><Mail className="h-4 w-4" /></a>
+                  <a href="mailto:igor@halolabsai.com" aria-label="Email" className="hover:text-primary"><Mail className="h-4 w-4" /></a>
                 </li>
               </ul>
             </div>
