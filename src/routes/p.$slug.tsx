@@ -73,22 +73,27 @@ export const Route = createFileRoute("/p/$slug")({
 function BuyerLanding() {
   const { packet, realtor, town, categories, businesses } = Route.useLoaderData();
 
-  const featured = businesses
-    .filter((b) => b.sponsor_tier !== "none")
+  const allBiz = businesses as Business[];
+  const allCats = categories as Category[];
+
+  const featured = allBiz
+    .filter((b: Business) => b.sponsor_tier !== "none")
     .sort(
-      (a, b) => tierPriority[b.sponsor_tier] - tierPriority[a.sponsor_tier] || a.featured_order - b.featured_order,
+      (a: Business, b: Business) =>
+        tierPriority[b.sponsor_tier] - tierPriority[a.sponsor_tier] ||
+        a.featured_order - b.featured_order,
     );
 
-  const platinum = featured.filter((b) => b.sponsor_tier === "s_tier" || b.sponsor_tier === "gold").slice(0, 3);
-  const gold = featured.filter((b) => b.sponsor_tier === "silver" || b.sponsor_tier === "bronze");
+  const platinum = featured.filter((b: Business) => b.sponsor_tier === "s_tier" || b.sponsor_tier === "gold").slice(0, 3);
+  const gold = featured.filter((b: Business) => b.sponsor_tier === "silver" || b.sponsor_tier === "bronze");
 
   const byCategory = new Map<string, Business[]>();
-  for (const b of businesses) {
+  for (const b of allBiz) {
     const arr = byCategory.get(b.category_id) ?? [];
     arr.push(b);
     byCategory.set(b.category_id, arr);
   }
-  const cats = categories.filter((c) => (byCategory.get(c.id)?.length ?? 0) > 0);
+  const cats = allCats.filter((c: Category) => (byCategory.get(c.id)?.length ?? 0) > 0);
 
   return (
     <div className="min-h-screen bg-background">
