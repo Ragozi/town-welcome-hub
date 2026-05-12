@@ -209,7 +209,7 @@ function BuyerLanding() {
           <section className="mt-12">
             <p className="eyebrow">// Also recommended</p>
             <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              {gold.slice(0, 8).map((b) => <BusinessRow key={b.id} b={b} />)}
+              {gold.slice(0, 8).map((b: Business) => <BusinessRow key={b.id} b={b} />)}
             </div>
           </section>
         )}
