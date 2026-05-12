@@ -100,7 +100,7 @@ function NewPacket() {
     arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v];
 
   const canNext = (() => {
-    if (step === 1) return buyerFirst.trim() && address.trim();
+    if (step === 1) return !!(buyerFirst.trim() && street.trim() && city.trim() && state && zip.length === 5);
     return true;
   })();
 
