@@ -330,5 +330,3 @@ function Home() {
   );
 }
 
-// suppress unused-link warning while keeping import for future use
-void Link;
