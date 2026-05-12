@@ -245,7 +245,7 @@ function BuyerLanding() {
                   {(byCategory.get(c.id) ?? [])
                     .sort((a: Business, b: Business) => tierPriority[b.sponsor_tier] - tierPriority[a.sponsor_tier])
                     .map((b: Business) => (
-                      <BusinessRow key={b.id} b={b} />
+                      <BusinessRow key={b.id} b={b} onClick={() => track("business_click", { business_id: b.id, name: b.name, category: c.name })} />
                     ))}
                 </div>
               </div>
@@ -258,7 +258,7 @@ function BuyerLanding() {
           <section className="mt-12">
             <p className="eyebrow">// Also recommended</p>
             <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              {gold.slice(0, 8).map((b: Business) => <BusinessRow key={b.id} b={b} />)}
+              {gold.slice(0, 8).map((b: Business) => <BusinessRow key={b.id} b={b} onClick={() => track("sponsor_click", { business_id: b.id, name: b.name })} />)}
             </div>
           </section>
         )}
