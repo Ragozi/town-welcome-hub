@@ -29,9 +29,9 @@ export function SiteFooter() {
                 Explore
               </div>
               <ul className="space-y-2 text-white/85">
-                <li><Link to="/" className="hover:text-primary">All towns</Link></li>
-                <li><a href="#sponsor" className="hover:text-primary">Sponsor tiers</a></li>
-                <li><a href="#about" className="hover:text-primary">About</a></li>
+                <li><Link to="/towns" className="hover:text-primary">All towns</Link></li>
+                <li><a href="/#sponsor" className="hover:text-primary">Sponsor tiers</a></li>
+                <li><Link to="/about" className="hover:text-primary">About</Link></li>
               </ul>
             </div>
             <div>
