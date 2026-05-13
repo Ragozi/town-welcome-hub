@@ -35,7 +35,7 @@ function PrivacyPage() {
         <li>Track your precise GPS location (we only use your IP-derived town)</li>
       </ul>
       <h2>Your rights</h2>
-      <p>You can edit your preferences, change your home town, opt out of any email topic, or delete your account entirely from <Link to="/me/settings" className="underline">Preferences</Link>. Deletion is permanent and immediate.</p>
+      <p>Realtors can update their profile, branding, and account from the dashboard. To delete your account or request data removal, email <a href="mailto:info@hearthhandbook.com" className="underline">info@hearthhandbook.com</a>.</p>
       <h2>Contact</h2>
       <p>Questions? Email info@hearthhandbook.com.</p>
     </div>

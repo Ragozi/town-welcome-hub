@@ -19,19 +19,13 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as RReferralSlugRouteImport } from './routes/r.$referralSlug'
 import { Route as PSlugRouteImport } from './routes/p.$slug'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
-import { Route as AuthenticatedMeRouteImport } from './routes/_authenticated/me'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedPacketsIndexRouteImport } from './routes/_authenticated/packets.index'
-import { Route as AuthenticatedMeIndexRouteImport } from './routes/_authenticated/me.index'
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin.index'
 import { Route as ApiPacketPdfSlugRouteImport } from './routes/api/packet-pdf.$slug'
 import { Route as AuthenticatedPacketsNewRouteImport } from './routes/_authenticated/packets.new'
 import { Route as AuthenticatedPacketsIdRouteImport } from './routes/_authenticated/packets.$id'
-import { Route as AuthenticatedMeWelcomeRouteImport } from './routes/_authenticated/me.welcome'
-import { Route as AuthenticatedMeSettingsRouteImport } from './routes/_authenticated/me.settings'
-import { Route as AuthenticatedMeSavedRouteImport } from './routes/_authenticated/me.saved'
-import { Route as AuthenticatedAdminSubscribersRouteImport } from './routes/_authenticated/admin.subscribers'
 import { Route as AuthenticatedAdminRealtorsRouteImport } from './routes/_authenticated/admin.realtors'
 import { Route as AuthenticatedAdminInviteCodesRouteImport } from './routes/_authenticated/admin.invite-codes'
 import { Route as AuthenticatedAdminEventsRouteImport } from './routes/_authenticated/admin.events'
@@ -85,11 +79,6 @@ const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
-const AuthenticatedMeRoute = AuthenticatedMeRouteImport.update({
-  id: '/me',
-  path: '/me',
-  getParentRoute: () => AuthenticatedRoute,
-} as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -106,11 +95,6 @@ const AuthenticatedPacketsIndexRoute =
     path: '/packets/',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
-const AuthenticatedMeIndexRoute = AuthenticatedMeIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => AuthenticatedMeRoute,
-} as any)
 const AuthenticatedAdminIndexRoute = AuthenticatedAdminIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -131,27 +115,6 @@ const AuthenticatedPacketsIdRoute = AuthenticatedPacketsIdRouteImport.update({
   path: '/packets/$id',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
-const AuthenticatedMeWelcomeRoute = AuthenticatedMeWelcomeRouteImport.update({
-  id: '/welcome',
-  path: '/welcome',
-  getParentRoute: () => AuthenticatedMeRoute,
-} as any)
-const AuthenticatedMeSettingsRoute = AuthenticatedMeSettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
-  getParentRoute: () => AuthenticatedMeRoute,
-} as any)
-const AuthenticatedMeSavedRoute = AuthenticatedMeSavedRouteImport.update({
-  id: '/saved',
-  path: '/saved',
-  getParentRoute: () => AuthenticatedMeRoute,
-} as any)
-const AuthenticatedAdminSubscribersRoute =
-  AuthenticatedAdminSubscribersRouteImport.update({
-    id: '/subscribers',
-    path: '/subscribers',
-    getParentRoute: () => AuthenticatedAdminRoute,
-  } as any)
 const AuthenticatedAdminRealtorsRoute =
   AuthenticatedAdminRealtorsRouteImport.update({
     id: '/realtors',
@@ -180,22 +143,16 @@ export interface FileRoutesByFullPath {
   '/terms': typeof TermsRoute
   '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/dashboard': typeof AuthenticatedDashboardRoute
-  '/me': typeof AuthenticatedMeRouteWithChildren
   '/settings': typeof AuthenticatedSettingsRoute
   '/p/$slug': typeof PSlugRoute
   '/r/$referralSlug': typeof RReferralSlugRoute
   '/admin/events': typeof AuthenticatedAdminEventsRoute
   '/admin/invite-codes': typeof AuthenticatedAdminInviteCodesRoute
   '/admin/realtors': typeof AuthenticatedAdminRealtorsRoute
-  '/admin/subscribers': typeof AuthenticatedAdminSubscribersRoute
-  '/me/saved': typeof AuthenticatedMeSavedRoute
-  '/me/settings': typeof AuthenticatedMeSettingsRoute
-  '/me/welcome': typeof AuthenticatedMeWelcomeRoute
   '/packets/$id': typeof AuthenticatedPacketsIdRoute
   '/packets/new': typeof AuthenticatedPacketsNewRoute
   '/api/packet-pdf/$slug': typeof ApiPacketPdfSlugRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
-  '/me/': typeof AuthenticatedMeIndexRoute
   '/packets/': typeof AuthenticatedPacketsIndexRoute
 }
 export interface FileRoutesByTo {
@@ -212,15 +169,10 @@ export interface FileRoutesByTo {
   '/admin/events': typeof AuthenticatedAdminEventsRoute
   '/admin/invite-codes': typeof AuthenticatedAdminInviteCodesRoute
   '/admin/realtors': typeof AuthenticatedAdminRealtorsRoute
-  '/admin/subscribers': typeof AuthenticatedAdminSubscribersRoute
-  '/me/saved': typeof AuthenticatedMeSavedRoute
-  '/me/settings': typeof AuthenticatedMeSettingsRoute
-  '/me/welcome': typeof AuthenticatedMeWelcomeRoute
   '/packets/$id': typeof AuthenticatedPacketsIdRoute
   '/packets/new': typeof AuthenticatedPacketsNewRoute
   '/api/packet-pdf/$slug': typeof ApiPacketPdfSlugRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
-  '/me': typeof AuthenticatedMeIndexRoute
   '/packets': typeof AuthenticatedPacketsIndexRoute
 }
 export interface FileRoutesById {
@@ -234,22 +186,16 @@ export interface FileRoutesById {
   '/terms': typeof TermsRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
-  '/_authenticated/me': typeof AuthenticatedMeRouteWithChildren
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/p/$slug': typeof PSlugRoute
   '/r/$referralSlug': typeof RReferralSlugRoute
   '/_authenticated/admin/events': typeof AuthenticatedAdminEventsRoute
   '/_authenticated/admin/invite-codes': typeof AuthenticatedAdminInviteCodesRoute
   '/_authenticated/admin/realtors': typeof AuthenticatedAdminRealtorsRoute
-  '/_authenticated/admin/subscribers': typeof AuthenticatedAdminSubscribersRoute
-  '/_authenticated/me/saved': typeof AuthenticatedMeSavedRoute
-  '/_authenticated/me/settings': typeof AuthenticatedMeSettingsRoute
-  '/_authenticated/me/welcome': typeof AuthenticatedMeWelcomeRoute
   '/_authenticated/packets/$id': typeof AuthenticatedPacketsIdRoute
   '/_authenticated/packets/new': typeof AuthenticatedPacketsNewRoute
   '/api/packet-pdf/$slug': typeof ApiPacketPdfSlugRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
-  '/_authenticated/me/': typeof AuthenticatedMeIndexRoute
   '/_authenticated/packets/': typeof AuthenticatedPacketsIndexRoute
 }
 export interface FileRouteTypes {
@@ -263,22 +209,16 @@ export interface FileRouteTypes {
     | '/terms'
     | '/admin'
     | '/dashboard'
-    | '/me'
     | '/settings'
     | '/p/$slug'
     | '/r/$referralSlug'
     | '/admin/events'
     | '/admin/invite-codes'
     | '/admin/realtors'
-    | '/admin/subscribers'
-    | '/me/saved'
-    | '/me/settings'
-    | '/me/welcome'
     | '/packets/$id'
     | '/packets/new'
     | '/api/packet-pdf/$slug'
     | '/admin/'
-    | '/me/'
     | '/packets/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -295,15 +235,10 @@ export interface FileRouteTypes {
     | '/admin/events'
     | '/admin/invite-codes'
     | '/admin/realtors'
-    | '/admin/subscribers'
-    | '/me/saved'
-    | '/me/settings'
-    | '/me/welcome'
     | '/packets/$id'
     | '/packets/new'
     | '/api/packet-pdf/$slug'
     | '/admin'
-    | '/me'
     | '/packets'
   id:
     | '__root__'
@@ -316,22 +251,16 @@ export interface FileRouteTypes {
     | '/terms'
     | '/_authenticated/admin'
     | '/_authenticated/dashboard'
-    | '/_authenticated/me'
     | '/_authenticated/settings'
     | '/p/$slug'
     | '/r/$referralSlug'
     | '/_authenticated/admin/events'
     | '/_authenticated/admin/invite-codes'
     | '/_authenticated/admin/realtors'
-    | '/_authenticated/admin/subscribers'
-    | '/_authenticated/me/saved'
-    | '/_authenticated/me/settings'
-    | '/_authenticated/me/welcome'
     | '/_authenticated/packets/$id'
     | '/_authenticated/packets/new'
     | '/api/packet-pdf/$slug'
     | '/_authenticated/admin/'
-    | '/_authenticated/me/'
     | '/_authenticated/packets/'
   fileRoutesById: FileRoutesById
 }
@@ -420,13 +349,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/me': {
-      id: '/_authenticated/me'
-      path: '/me'
-      fullPath: '/me'
-      preLoaderRoute: typeof AuthenticatedMeRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
     '/_authenticated/dashboard': {
       id: '/_authenticated/dashboard'
       path: '/dashboard'
@@ -447,13 +369,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/packets/'
       preLoaderRoute: typeof AuthenticatedPacketsIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/me/': {
-      id: '/_authenticated/me/'
-      path: '/'
-      fullPath: '/me/'
-      preLoaderRoute: typeof AuthenticatedMeIndexRouteImport
-      parentRoute: typeof AuthenticatedMeRoute
     }
     '/_authenticated/admin/': {
       id: '/_authenticated/admin/'
@@ -483,34 +398,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPacketsIdRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/me/welcome': {
-      id: '/_authenticated/me/welcome'
-      path: '/welcome'
-      fullPath: '/me/welcome'
-      preLoaderRoute: typeof AuthenticatedMeWelcomeRouteImport
-      parentRoute: typeof AuthenticatedMeRoute
-    }
-    '/_authenticated/me/settings': {
-      id: '/_authenticated/me/settings'
-      path: '/settings'
-      fullPath: '/me/settings'
-      preLoaderRoute: typeof AuthenticatedMeSettingsRouteImport
-      parentRoute: typeof AuthenticatedMeRoute
-    }
-    '/_authenticated/me/saved': {
-      id: '/_authenticated/me/saved'
-      path: '/saved'
-      fullPath: '/me/saved'
-      preLoaderRoute: typeof AuthenticatedMeSavedRouteImport
-      parentRoute: typeof AuthenticatedMeRoute
-    }
-    '/_authenticated/admin/subscribers': {
-      id: '/_authenticated/admin/subscribers'
-      path: '/subscribers'
-      fullPath: '/admin/subscribers'
-      preLoaderRoute: typeof AuthenticatedAdminSubscribersRouteImport
-      parentRoute: typeof AuthenticatedAdminRoute
-    }
     '/_authenticated/admin/realtors': {
       id: '/_authenticated/admin/realtors'
       path: '/realtors'
@@ -539,7 +426,6 @@ interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminEventsRoute: typeof AuthenticatedAdminEventsRoute
   AuthenticatedAdminInviteCodesRoute: typeof AuthenticatedAdminInviteCodesRoute
   AuthenticatedAdminRealtorsRoute: typeof AuthenticatedAdminRealtorsRoute
-  AuthenticatedAdminSubscribersRoute: typeof AuthenticatedAdminSubscribersRoute
   AuthenticatedAdminIndexRoute: typeof AuthenticatedAdminIndexRoute
 }
 
@@ -547,35 +433,15 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminEventsRoute: AuthenticatedAdminEventsRoute,
   AuthenticatedAdminInviteCodesRoute: AuthenticatedAdminInviteCodesRoute,
   AuthenticatedAdminRealtorsRoute: AuthenticatedAdminRealtorsRoute,
-  AuthenticatedAdminSubscribersRoute: AuthenticatedAdminSubscribersRoute,
   AuthenticatedAdminIndexRoute: AuthenticatedAdminIndexRoute,
 }
 
 const AuthenticatedAdminRouteWithChildren =
   AuthenticatedAdminRoute._addFileChildren(AuthenticatedAdminRouteChildren)
 
-interface AuthenticatedMeRouteChildren {
-  AuthenticatedMeSavedRoute: typeof AuthenticatedMeSavedRoute
-  AuthenticatedMeSettingsRoute: typeof AuthenticatedMeSettingsRoute
-  AuthenticatedMeWelcomeRoute: typeof AuthenticatedMeWelcomeRoute
-  AuthenticatedMeIndexRoute: typeof AuthenticatedMeIndexRoute
-}
-
-const AuthenticatedMeRouteChildren: AuthenticatedMeRouteChildren = {
-  AuthenticatedMeSavedRoute: AuthenticatedMeSavedRoute,
-  AuthenticatedMeSettingsRoute: AuthenticatedMeSettingsRoute,
-  AuthenticatedMeWelcomeRoute: AuthenticatedMeWelcomeRoute,
-  AuthenticatedMeIndexRoute: AuthenticatedMeIndexRoute,
-}
-
-const AuthenticatedMeRouteWithChildren = AuthenticatedMeRoute._addFileChildren(
-  AuthenticatedMeRouteChildren,
-)
-
 interface AuthenticatedRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRouteWithChildren
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
-  AuthenticatedMeRoute: typeof AuthenticatedMeRouteWithChildren
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedPacketsIdRoute: typeof AuthenticatedPacketsIdRoute
   AuthenticatedPacketsNewRoute: typeof AuthenticatedPacketsNewRoute
@@ -585,7 +451,6 @@ interface AuthenticatedRouteChildren {
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRouteWithChildren,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
-  AuthenticatedMeRoute: AuthenticatedMeRouteWithChildren,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedPacketsIdRoute: AuthenticatedPacketsIdRoute,
   AuthenticatedPacketsNewRoute: AuthenticatedPacketsNewRoute,
@@ -611,3 +476,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
