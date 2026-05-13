@@ -1,7 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/terms")({
-  head: () => ({ meta: [{ title: "Terms of Service — Welcome Home" }] }),
+  head: () => ({
+    meta: [
+      { title: "Terms of Service — Hearth Handbook" },
+      { name: "description", content: "The terms governing your use of Hearth Handbook's town guides, accounts, and sponsor listings." },
+      { property: "og:title", content: "Terms of Service — Hearth Handbook" },
+      { property: "og:description", content: "The terms governing your use of Hearth Handbook." },
+      { property: "og:url", content: "https://hearthhandbook.com/terms" },
+    ],
+    links: [{ rel: "canonical", href: "https://hearthhandbook.com/terms" }],
+  }),
   component: TermsPage,
 });
 

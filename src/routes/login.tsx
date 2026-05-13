@@ -16,9 +16,13 @@ export const Route = createFileRoute("/login")({
   }),
   head: () => ({
     meta: [
-      { title: "Sign in — Welcome Home" },
-      { name: "description", content: "Sign in to Welcome Home for personalized local business picks, coupons, and town updates." },
+      { title: "Sign in — Hearth Handbook" },
+      { name: "description", content: "Sign in to Hearth Handbook for personalized local business picks, coupons, and town updates from your Wisconsin community." },
+      { property: "og:title", content: "Sign in — Hearth Handbook" },
+      { property: "og:description", content: "Sign in for personalized local picks and coupons." },
+      { property: "og:url", content: "https://hearthhandbook.com/login" },
     ],
+    links: [{ rel: "canonical", href: "https://hearthhandbook.com/login" }],
   }),
   component: LoginPage,
 });
