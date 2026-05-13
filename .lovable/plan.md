@@ -1,45 +1,62 @@
-## Goal
+## 1. Remove subscriber accounts (consumer side)
 
-Reposition Hearth Handbook as a B2B product for realtors. Stop giving the local guide away for free. The only way a buyer sees town content is by scanning the QR code on a packet their realtor made (`/p/{slug}`).
+Delete consumer-only routes and code. Realtors and admins remain.
 
-## 1. New landing page (`src/routes/index.tsx`)
+**Delete files**
+- `src/routes/_authenticated/me.tsx`
+- `src/routes/_authenticated/me.index.tsx`
+- `src/routes/_authenticated/me.welcome.tsx`
+- `src/routes/_authenticated/me.saved.tsx`
+- `src/routes/_authenticated/me.settings.tsx`
+- `src/routes/_authenticated/admin.subscribers.tsx` (admin view of subscribers)
+- `src/lib/subscriber.functions.ts`
 
-Full rewrite. Realtor-first, buyer-secondary. No geolocation, no ZIP search, no town picker.
+**Edit `src/routes/_authenticated.tsx`**: drop the subscriber branch — no `/me` redirect, no `/me/welcome` onboarding gate, no subscriber nav (Saved / Settings). Header collapses to realtor + admin links only. `homeLink` becomes `/dashboard`.
 
-Sections:
-1. **Hero** — "Give every buyer a handcrafted welcome to their new town." Subhead about closing-gift packets + QR code. Primary CTA "Start free" → `/login`. Secondary "See a sample packet" → links to a demo `/p/{slug}` (we'll hardcode one existing slug, or fall back to `/login` if none).
-2. **What it is** — 3-up: (1) Pick a town, (2) Personalize the packet (buyer name, kids/pets, interests), (3) Print the QR card / share the link. Lifted visual style from current Showcase grid.
-3. **Sample preview** — single screenshot/illustration of a packet page with the QR.
-4. **For buyers (small)** — one short band: "Got a QR code from your realtor? Scan it — your handbook is waiting." No link to browse anything.
-5. **Sponsor band** — keep the existing `#sponsor` "Get listed" CTA (local businesses are still a revenue lever).
-6. Footer unchanged.
+**Edit `src/lib/auth.tsx`**: remove `subscriber` from `Role`, drop `subscriberProfile` state and its fetch, drop `isSubscriber`. Keep `admin` + `realtor`.
 
-Remove: `useMyLocation`, `findByZip`, town `Select`, `listTowns`/`resolveTown` imports, `MapPin`/`Search`/`Loader2` imports that become unused.
+**Edit `src/routes/_authenticated/admin.tsx`**: remove the "Subscribers" tab link.
 
-## 2. Remove public town surface
+**Database migration** — update `handle_new_user()` so signups WITHOUT an invite code are rejected (rather than silently becoming a subscriber). New behavior: trigger raises an exception unless a valid invite code is present in `raw_user_meta_data`. The `subscriber` enum value, `subscriber_profiles`, `marketing_subscriptions`, and `saved_items` tables stay in place (data preservation, no destructive drops in this pass) but are no longer written to from app code. Flag: if you'd rather hard-drop those tables, say so and I'll add it.
 
-- **Delete** `src/routes/$townSlug.tsx` (publicly browsable town directory). The packet page `/p/$slug` already renders the same town content scoped to a realtor's buyer — that's the only place it should live.
-- **Delete** `src/routes/towns.tsx` (public towns directory).
-- **Delete** `src/routes/api/pdf.$townSlug.tsx` (public per-town PDF — bypasses gating). Realtors still get packet PDFs via `src/routes/api/packet-pdf.$slug.tsx`.
-- **Update `src/components/site-header.tsx`**: remove "Towns" link. Nav becomes Home / About / Sponsor / Realtor Login. "Get Listed" CTA stays.
-- **Update `src/components/site-footer.tsx`**: remove any `/towns` or town-slug links.
-- **Update `src/routes/sitemap[.]xml.ts`**: stop emitting `/towns` and per-town URLs. Keep `/`, `/about`, `/login`, `/privacy`, `/terms`, and per-packet `/p/{slug}` entries (packets are realtor-shared, OK to leave indexable as today — flag in note below).
-- **Update `public/robots.txt`** and `public/llms.txt` if they reference `/towns` or town slugs.
-- **Update `src/routes/about.tsx`** copy if it links to `/towns` or describes browsing towns directly.
+## 2. Drop Google sign-in
 
-## 3. Leave alone (already gated correctly)
+**Edit `src/routes/login.tsx`**: remove the "Continue with Google" button, the `onGoogle` handler, and the divider. Restructure: realtor sign-in (email/password) is the primary form; "I have an invite code" toggle below it for new realtor signups. Update copy from "New here? Sign in with Google…" to realtor-focused.
 
-- `/p/$slug` packet page — this is the buyer entry point. Unchanged.
-- `/_authenticated/*` realtor app, `/admin/*`, `/login`, `/me/*`.
-- DB tables — no schema change. `towns`, `categories`, `businesses` still feed packet pages server-side; they're just no longer exposed via a public route.
-- `src/lib/towns.ts` helpers — still used by packet rendering and the realtor packet builder. Only the unused exports (`resolveTown`, the public-listing pieces) can be trimmed in a later pass; safer to leave for this turn.
+**Edit `src/lib/auth.tsx`**: remove `signInWithGoogle` from the context type, the provider value, and the implementation.
 
-## 4. Open question to flag (not blocking)
+**Call `supabase--configure_social_auth`** with `providers: []` and `disable_providers: ["google"]` to disable the Google provider in Lovable Cloud auth settings.
 
-Packet URLs (`/p/{slug}`) are currently in the sitemap and publicly readable. That's intentional today (a realtor shares the link with one buyer), but if you want stricter gating later we can: (a) drop them from the sitemap, (b) add `noindex` on the packet route, or (c) require a short token in the URL. Calling it out — not changing in this pass unless you say so.
+## 3. Build a real /sponsor page
 
-## Technical notes
+New file `src/routes/sponsor.tsx` with proper SEO `head()`. Sections:
+1. **Hero** — "Get in front of every new homeowner in your town." Subhead: how listings appear inside packets. CTA "Get listed" → mailto.
+2. **Why it works** — 3 bullets: captive audience (every closing in your town), warm intro (presented by the buyer's realtor), zero ad noise (curated, not algorithmic).
+3. **Tiers** — render from `sponsor_tiers` table (already publicly readable: `name`, `price_monthly`, `display_priority`, `key`). Show what each tier gets: directory placement priority, featured card vs. plain listing, coupon, photo. Use a static `TIER_BENEFITS` map keyed off `key` for the bullet lists since the table doesn't store them.
+4. **What's included visual** — small mock business card showing how a sponsor entry renders inside a packet (reuse styling from `BusinessCard`).
+5. **CTA band** — "Claim your category in your town" → `mailto:info@hearthhandbook.com?subject=Sponsor%20listing%20inquiry`.
 
-- TanStack file-based routing: deleting a route file removes the route; `routeTree.gen.ts` regenerates automatically.
-- All `<Link to="/$townSlug" ...>` and `<Link to="/towns">` references must be removed in the same pass or the typed router will fail the build. I'll grep for both before finishing.
-- No DB migration. No new dependencies.
+**Wire it up**:
+- `src/components/site-header.tsx`: change the "Get Listed" button from `<a href="/#sponsor">` to `<Link to="/sponsor">`. Add a "Sponsor" nav link too.
+- `src/components/site-footer.tsx`: change "Sponsor tiers" anchor to `<Link to="/sponsor">`.
+- `src/routes/index.tsx`: the in-page `#sponsor` band's "Get listed" CTA points to `/sponsor` instead of mailto, and we keep the band as a teaser on the home page.
+- `src/routes/sitemap[.]xml.ts`: add `/sponsor` entry.
+- `public/llms.txt`: add `/sponsor` to the page list.
+
+## 4. About page rewrite (realtor-first)
+
+Remaining consumer copy to fix in `src/routes/about.tsx`:
+- Hero subhead: change from "Meet the locals, grab a coupon, and feel at home — wherever you land. Hearth Handbook is a hand-curated, community-first guide built for the people who actually live, work and visit each town we cover." → realtor-pitched: closing-gift product for buyers, made by realtors.
+- "By the numbers" panel — replace consumer stats with realtor-relevant ones (Towns covered: 8, Sponsor categories: 12+, Buyers reached: TBD or drop the third stat).
+- "Free for residents, forever" card → "Free for buyers, forever" (still true — buyers don't pay, realtors do).
+- "Built for Wisconsin, by Wisconsinites" story paragraph: keep the printed-welcome-packet origin (it's true and on-brand) but reframe the destination as "a realtor toolkit so every closing comes with a beautiful welcome."
+- Roadmap section stays.
+- "Want your town next?" CTA stays but reword for realtors ("Want to bring Hearth Handbook to your county? We'd love to hear from you.").
+
+## 5. Tiny landing tweak
+
+Update home `#sponsor` band CTA href from `mailto:` to `<Link to="/sponsor">` so users can read the pitch first instead of being thrown into their email client.
+
+## Out of scope / flagged
+- Subscriber data tables (`subscriber_profiles`, `marketing_subscriptions`, `saved_items`) and the `subscriber` enum value remain in DB. Tell me if you want them dropped — I'll write a destructive migration.
+- `validate_invite_code` / `claim_invite_code` RPCs already gate realtor signups; no change needed there.
