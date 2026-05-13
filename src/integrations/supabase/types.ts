@@ -113,6 +113,36 @@ export type Database = {
         }
         Relationships: []
       }
+      marketing_subscriptions: {
+        Row: {
+          created_at: string
+          id: string
+          opted_in_at: string
+          opted_out_at: string | null
+          source: string
+          topic: Database["public"]["Enums"]["marketing_topic"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          opted_in_at?: string
+          opted_out_at?: string | null
+          source?: string
+          topic: Database["public"]["Enums"]["marketing_topic"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          opted_in_at?: string
+          opted_out_at?: string | null
+          source?: string
+          topic?: Database["public"]["Enums"]["marketing_topic"]
+          user_id?: string
+        }
+        Relationships: []
+      }
       packet_events: {
         Row: {
           created_at: string
@@ -363,6 +393,36 @@ export type Database = {
         }
         Relationships: []
       }
+      saved_items: {
+        Row: {
+          created_at: string
+          id: string
+          item_id: string
+          item_type: Database["public"]["Enums"]["saved_item_type"]
+          notes: string | null
+          redeemed_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          item_id: string
+          item_type: Database["public"]["Enums"]["saved_item_type"]
+          notes?: string | null
+          redeemed_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          item_id?: string
+          item_type?: Database["public"]["Enums"]["saved_item_type"]
+          notes?: string | null
+          redeemed_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       sponsor_tiers: {
         Row: {
           display_priority: number
@@ -386,6 +446,53 @@ export type Database = {
           price_monthly?: number
         }
         Relationships: []
+      }
+      subscriber_profiles: {
+        Row: {
+          created_at: string
+          has_kids: boolean
+          has_pets: boolean
+          home_town_id: string | null
+          id: string
+          interest_tags: string[]
+          lifestyle_tags: string[]
+          onboarded_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          has_kids?: boolean
+          has_pets?: boolean
+          home_town_id?: string | null
+          id?: string
+          interest_tags?: string[]
+          lifestyle_tags?: string[]
+          onboarded_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          has_kids?: boolean
+          has_pets?: boolean
+          home_town_id?: string | null
+          id?: string
+          interest_tags?: string[]
+          lifestyle_tags?: string[]
+          onboarded_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscriber_profiles_home_town_id_fkey"
+            columns: ["home_town_id"]
+            isOneToOne: false
+            referencedRelation: "towns"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       towns: {
         Row: {
@@ -504,7 +611,12 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "realtor"
+      app_role: "admin" | "realtor" | "subscriber"
+      marketing_topic:
+        | "local_deals"
+        | "new_businesses"
+        | "town_events"
+        | "realtor_recommendations"
       packet_event_device: "mobile" | "tablet" | "desktop" | "unknown"
       packet_event_source: "qr" | "direct" | "referral" | "search" | "unknown"
       packet_event_type:
@@ -517,6 +629,7 @@ export type Database = {
         | "sponsor_click"
         | "share_click"
       packet_status: "draft" | "generated"
+      saved_item_type: "business" | "coupon" | "packet"
       sponsor_tier: "none" | "bronze" | "silver" | "gold" | "s_tier"
     }
     CompositeTypes: {
@@ -645,7 +758,13 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "realtor"],
+      app_role: ["admin", "realtor", "subscriber"],
+      marketing_topic: [
+        "local_deals",
+        "new_businesses",
+        "town_events",
+        "realtor_recommendations",
+      ],
       packet_event_device: ["mobile", "tablet", "desktop", "unknown"],
       packet_event_source: ["qr", "direct", "referral", "search", "unknown"],
       packet_event_type: [
@@ -659,6 +778,7 @@ export const Constants = {
         "share_click",
       ],
       packet_status: ["draft", "generated"],
+      saved_item_type: ["business", "coupon", "packet"],
       sponsor_tier: ["none", "bronze", "silver", "gold", "s_tier"],
     },
   },
