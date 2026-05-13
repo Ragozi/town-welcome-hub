@@ -88,7 +88,7 @@ function AboutPage() {
             variant="outline"
             className="h-14 rounded-full border-foreground/15 px-7 text-base font-medium"
           >
-            <a href="mailto:igor@halolabsai.com">Get in touch</a>
+            <a href="mailto:info@hearthhandbook.com">Get in touch</a>
           </Button>
         </div>
       </section>
@@ -275,10 +275,10 @@ function AboutPage() {
               We'd love to hear from you.
             </h2>
             <a
-              href="mailto:igor@halolabsai.com"
+              href="mailto:info@hearthhandbook.com"
               className="inline-flex h-12 shrink-0 items-center gap-2 rounded-full bg-primary px-6 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
             >
-              <span>igor@halolabsai.com</span> <ArrowRight className="h-4 w-4" />
+              <span>info@hearthhandbook.com</span> <ArrowRight className="h-4 w-4" />
             </a>
           </div>
         </div>

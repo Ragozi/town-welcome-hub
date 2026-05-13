@@ -49,12 +49,12 @@ export function SiteFooter() {
                 Contact
               </div>
               <ul className="space-y-2 text-white/85">
-                <li>igor@halolabsai.com</li>
+                <li>info@hearthhandbook.com</li>
                 <li>Ozaukee County, WI</li>
                 <li className="flex gap-3 pt-1">
                   <a href="#" aria-label="Instagram" className="hover:text-primary"><Instagram className="h-4 w-4" /></a>
                   <a href="#" aria-label="Facebook" className="hover:text-primary"><Facebook className="h-4 w-4" /></a>
-                  <a href="mailto:igor@halolabsai.com" aria-label="Email" className="hover:text-primary"><Mail className="h-4 w-4" /></a>
+                  <a href="mailto:info@hearthhandbook.com" aria-label="Email" className="hover:text-primary"><Mail className="h-4 w-4" /></a>
                 </li>
               </ul>
             </div>
