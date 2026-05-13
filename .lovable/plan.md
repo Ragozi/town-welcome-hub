@@ -1,76 +1,84 @@
-## Goal
+# Invite-Code Realtor Signup
 
-Fix broken QR/PDF links by routing every absolute URL through a configurable `PUBLIC_BASE_URL`, and elevate the buyer landing + realtor packet view to a premium, on-brand feel.
+Lock down `/login` so only people holding a valid invite code from you or Ted can become realtors. Codes are generated in the admin panel, single-use, and consumed atomically at signup. Both Google and email/password are supported once a code is validated.
 
-## 1. Configurable public base URL
+## User flow
 
-Add a single resolver used by every link/QR/PDF generator.
+**Realtor receives code via email from admin** → visits `/login` → sees a clean "Have an invite code?" gate.
 
-**New file: `src/lib/public-url.ts`**
-- `export function getPublicBaseUrl(request?: Request): string`
-- Resolution order:
-  1. `process.env.PUBLIC_BASE_URL` (server) / `import.meta.env.VITE_PUBLIC_BASE_URL` (client) — trimmed of trailing `/`
-  2. If `request` provided: `new URL(request.url).origin`
-  3. If browser: `window.location.origin`
-  4. Fallback: current preview URL string
-- `export function packetUrl(slug, opts?: { source?: string })` returns `${base}/p/${slug}` with optional `?s=qr` etc.
+1. **Already has account** → Sign in with Google or email/password (no code required).
+2. **New realtor** → clicks "I have an invite code" → enters code → on valid+unused code, the Google button and email/password signup form unlock.
+3. After signup completes, the code is marked consumed (linked to their `user_id`) and the `realtor` role is assigned. Redirect to `/dashboard`.
+4. Invalid/expired/consumed code → friendly error, no signup path revealed.
 
-**Add secret:** prompt user to add `PUBLIC_BASE_URL` runtime secret (defaults to preview URL). Also document `VITE_PUBLIC_BASE_URL` for client builds when domain is attached. (Will use `secrets--add_secret` during implementation.)
+**Public visitors hitting `/login` without a code** see only the sign-in form (for existing realtors) and the "I have an invite code" link. No way to self-promote.
 
-## 2. Use it everywhere
+## Admin experience
 
-- `src/routes/api/packet-pdf.$slug.tsx`: replace `new URL(request.url).origin` with `getPublicBaseUrl(request)`. QR code + cover footer + thank-you all use this.
-- `src/routes/_authenticated/packets.$id.tsx`: derive `liveUrl` from `getPublicBaseUrl()` (client). Remove the `useState(origin)` dance. PDF download href stays relative (`/api/packet-pdf/...`) since it's same-origin from the realtor app, but show a separate "Public PDF link" using base URL for sharing.
-- `src/routes/p.$slug.tsx`: referral link + share buttons use `packetUrl`/base.
+New tab in `/admin`: **Invite codes**.
 
-## 3. Realtor packet view (`/packets/$id`)
+- Table of all codes: code string, created by, created date, expires date, status (unused / consumed / expired / revoked), consumed-by realtor name+email.
+- "Generate code" button: optional note ("for Sarah at KW Madison"), optional expiry (default 30 days), optional pre-fill email (locks the code to that email if provided). Returns the code + a one-click "Copy invite link" (`/login?code=WH-3F9K2A`).
+- Revoke action on unused codes.
 
-- Replace mounted-origin pattern with `getPublicBaseUrl()` so QR renders on first paint (no flash).
-- Side panel becomes a stacked card:
-  - **QR card**: white rounded-3xl, larger 240px QR, copy-link + download-QR-PNG buttons (use `qrcode.react` ref → canvas).
-  - **PDF card**: dark card, "Preview" opens PDF inline in new tab, "Download" forces `?download=1` (handled in PDF route via `Content-Disposition: attachment`).
-  - **Share card**: copy link, mailto, sms.
-- Add a small inline preview thumbnail (`<iframe src={pdfUrl} />` at 320×420, lazy) so realtors see the PDF without leaving the page.
+## Technical details
 
-## 4. Buyer landing (`/p/$slug`) premium polish
+### Database (one migration)
 
-Keep all existing tracking. Visual changes only:
+New table `realtor_invite_codes`:
+- `code` (text, unique, indexed) — format `WH-XXXXXX` (6 alphanumeric, uppercase, ambiguous chars removed)
+- `created_by` (uuid, FK to user) — admin who generated it
+- `note` (text, nullable) — internal label
+- `email_lock` (text, nullable) — if set, only this email can consume
+- `expires_at` (timestamptz, nullable)
+- `consumed_at` (timestamptz, nullable)
+- `consumed_by` (uuid, nullable) — references the resulting user
+- `revoked_at` (timestamptz, nullable)
+- standard `id`, `created_at`
 
-- **Softer palette**: shift hero overlay to warm cream gradient (`from-[--wi-cream] via-background/0`), reduce dark vignette intensity. Add fine grain texture (existing `--shadow-soft`).
-- **Realtor branding band — promoted to just under hero**, full-width on a tinted card:
-  - Larger headshot (96px), brokerage logo beside name, name in display font, contact chips with hover lift.
-  - "Your guide" eyebrow, soft divider.
-- **Welcome note** moved into its own quote-style block (serif accent, generous padding).
-- **Featured / Locals we love**: keep 3-up grid but add gentle hover scale, softer shadow, sponsor badge refined.
-- **Directory**: category headers get a hairline divider + count chip; cards get more whitespace, consistent radius (rounded-2xl), category icon (lucide) optional.
-- **Thank-you footer**: replace harsh `bg-foreground` with a warm gradient (`from-[--wi-pine] to-foreground`), heart icon animates on mount.
-- Generous `py-20` section spacing on md+; max-w-6xl for directory.
-- Add `aria-live` toast-free confirmation: tiny "Saved your visit ♥" pill bottom-right that fades after landing_view fires (subtle, dismissible).
+RLS: admins full access; everyone else no access (validation happens through SECURITY DEFINER RPCs only — codes are never client-readable).
 
-No new dependencies required.
+Two SECURITY DEFINER functions:
+- `validate_invite_code(code text, email text default null) returns boolean` — returns true if code exists, not consumed/revoked/expired, and email matches `email_lock` (when set). Public callable (anon/authenticated). Used by `/login` to gate the signup UI.
+- `consume_invite_code(code text, user_id uuid) returns boolean` — atomic: locks the row, re-validates, marks consumed. Returns true on success.
 
-## 5. PDF download mode
+**Modify `handle_new_user` trigger**: instead of unconditionally assigning `realtor` role, read invite code from `raw_user_meta_data->>'invite_code'`, call `consume_invite_code`. If consumption fails → delete the just-created auth user + raise exception so signup fails atomically. If no code in metadata at all → no role assigned (Google sign-ins of existing realtors keep their role from `user_roles`; brand-new Google users without a code get no role and can't access `/dashboard`).
 
-Update `/api/packet-pdf/$slug` to read `?download=1` query and switch `Content-Disposition` between `inline` (default, for preview iframe) and `attachment`.
+### Frontend
 
-## Test plan
+**`/login` route** (rewrite):
+- Top: "Sign in" form (email/password) + "Continue with Google" button — both call existing auth and only succeed if user already exists.
+- Below: collapsible "I'm a new realtor with an invite code" section.
+- Inside: code input → validate via RPC on submit → on success, reveal "Continue with Google" (passes code in OAuth state) and email/password signup form.
+- Support `?code=WH-XXXXXX` URL param for one-click invite links from admin emails.
 
-1. Set `PUBLIC_BASE_URL` to current preview origin.
-2. Open existing test packet `/packets/{id}` → QR renders immediately, PDF preview iframe loads, download button forces save.
-3. Scan QR with phone → lands on `/p/$slug?s=qr` → `landing_view` + `qr_scanned` events written.
-4. Open generated PDF → cover QR + footer URL match `PUBLIC_BASE_URL`.
-5. Change `PUBLIC_BASE_URL` to a fake domain → regenerate PDF → links update; UI still works because client falls back to `window.location.origin` when env unset.
+**Google OAuth integration:**
+- Use Lovable Cloud managed Google (`lovable.auth.signInWithOAuth("google", {...})`).
+- Pass the validated invite code through `options.data.invite_code` so it lands in `raw_user_meta_data` and the trigger consumes it. (Existing-user sign-ins ignore this — trigger only fires on new user creation.)
+
+**Email/password signup:** call `supabase.auth.signUp({ email, password, options: { data: { invite_code, full_name } } })`.
+
+**`/admin/invite-codes` route:** new tab in admin layout. List + Generate dialog + Revoke action. All operations via existing admin patterns (`supabase` client + RLS).
+
+### Auth provider config
+- Enable Google in Lovable Cloud (managed credentials, zero setup).
+- Keep email/password enabled.
+- Keep `auto_confirm_email: false` (realtors verify email — prevents typos and fake addresses burning invite codes).
+
+### Edge cases handled
+- Code consumed but auth.users insert succeeds, trigger fails → trigger raises, transaction rolls back, code stays unconsumed.
+- Realtor enters wrong email after Google flow: Google email is authoritative; if `email_lock` is set and Google email doesn't match, signup is rejected and code remains available.
+- Admin (you/Ted) signs in: your existing `admin` role in `user_roles` is unaffected. The trigger only adds `realtor` if a code is consumed; it doesn't touch existing roles.
+
+## Out of scope (mention only)
+- Bulk code generation / CSV export — easy to add later.
+- Auto-emailing the invite from the admin panel — for now you copy the link and paste into your email client.
+- Realtor self-service "request access" form — not needed under invite-only model.
 
 ## Files touched
-
-- new: `src/lib/public-url.ts`
-- edit: `src/routes/api/packet-pdf.$slug.tsx`
-- edit: `src/routes/_authenticated/packets.$id.tsx`
-- edit: `src/routes/p.$slug.tsx`
-- secret: add `PUBLIC_BASE_URL`
-
-## Out of scope
-
-- Custom domain attachment (separate flow)
-- Email-to-buyer delivery
-- Stats wiring beyond what's already logged
+- New migration: `realtor_invite_codes` table + RPCs + updated `handle_new_user` trigger.
+- New route: `src/routes/_authenticated/admin.invite-codes.tsx`.
+- Edit: `src/routes/login.tsx` (full rewrite of the form section).
+- Edit: `src/routes/_authenticated/admin.tsx` (add nav tab).
+- Edit: `src/lib/auth.tsx` (add `signUpWithCode` + `signInWithGoogle` helpers).
+- Lovable Cloud: enable Google provider via `configure_social_auth`.
