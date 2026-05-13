@@ -24,6 +24,21 @@ export const Route = createFileRoute("/towns")({
         property: "og:description",
         content: "Browse every Wisconsin town in the Hearth Handbook directory.",
       },
+      { property: "og:url", content: "https://hearthhandbook.com/towns" },
+    ],
+    links: [{ rel: "canonical", href: "https://hearthhandbook.com/towns" }],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "CollectionPage",
+          name: "Wisconsin Towns Directory",
+          url: "https://hearthhandbook.com/towns",
+          description: "Browse every Wisconsin town in the Hearth Handbook directory.",
+          isPartOf: { "@type": "WebSite", name: "Hearth Handbook", url: "https://hearthhandbook.com/" },
+        }),
+      },
     ],
   }),
   component: TownsPage,
@@ -109,11 +124,14 @@ function TownsPage() {
         {/* Search + filter */}
         <div className="mt-8 flex flex-col gap-4 md:flex-row md:items-center">
           <div className="relative w-full md:max-w-md">
-            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-foreground/40" />
+            <label htmlFor="towns-search" className="sr-only">Search towns</label>
+            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-foreground/40" aria-hidden="true" />
             <Input
+              id="towns-search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search town, county, or ZIP"
+              aria-label="Search town, county, or ZIP"
               className="h-12 rounded-full border-foreground/15 bg-card pl-11 pr-5"
             />
           </div>
@@ -187,7 +205,8 @@ function TownsPage() {
                   >
                     <img
                       src={hero.src}
-                      alt={t.name}
+                      alt={`Photo of ${t.name}, ${t.county} County, Wisconsin`}
+                      loading="lazy"
                       className={
                         "h-full w-full transition-transform duration-700 group-hover:scale-[1.06] " +
                         (hero.fit === "contain" ? "object-contain p-8" : "object-cover")

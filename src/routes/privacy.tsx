@@ -1,7 +1,16 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/privacy")({
-  head: () => ({ meta: [{ title: "Privacy Policy — Welcome Home" }, { name: "description", content: "How Welcome Home collects, uses, and protects your data." }] }),
+  head: () => ({
+    meta: [
+      { title: "Privacy Policy — Hearth Handbook" },
+      { name: "description", content: "How Hearth Handbook collects, uses, and protects your personal data, location, and email preferences." },
+      { property: "og:title", content: "Privacy Policy — Hearth Handbook" },
+      { property: "og:description", content: "How Hearth Handbook collects, uses, and protects your personal data." },
+      { property: "og:url", content: "https://hearthhandbook.com/privacy" },
+    ],
+    links: [{ rel: "canonical", href: "https://hearthhandbook.com/privacy" }],
+  }),
   component: PrivacyPage,
 });
 

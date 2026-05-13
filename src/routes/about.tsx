@@ -23,7 +23,9 @@ export const Route = createFileRoute("/about")({
         content:
           "Meet the team and mission behind Hearth Handbook — Wisconsin's hand-curated local guide.",
       },
+      { property: "og:url", content: "https://hearthhandbook.com/about" },
     ],
+    links: [{ rel: "canonical", href: "https://hearthhandbook.com/about" }],
   }),
   component: AboutPage,
 });
@@ -110,9 +112,9 @@ function AboutPage() {
                     Step 0{i + 1}
                   </span>
                 </div>
-                <h3 className="font-display mt-5 text-xl font-extrabold uppercase tracking-tight">
+                <h2 className="font-display mt-5 text-xl font-extrabold uppercase tracking-tight">
                   {s.title}
-                </h3>
+                </h2>
                 <p className="mt-2 text-sm text-foreground/65">{s.body}</p>
               </div>
             );

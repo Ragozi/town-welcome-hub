@@ -96,7 +96,7 @@ function BusinessImage({
     <div className={"relative w-full overflow-hidden " + aspect} style={{ background: token }}>
       <img
         src={businessImage(b, category)}
-        alt={b.name}
+        alt={`Logo for ${b.name}${category?.name ? ` (${category.name})` : ""}`}
         loading="lazy"
         onError={() => setErrored(true)}
         className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"

@@ -69,7 +69,7 @@ export const Route = createFileRoute("/$townSlug")({
       .join(" ");
     const title = `Welcome to ${name}, WI — Hearth Handbook`;
     const desc = `Restaurants, coffee, shops, services, and local favorites in ${name}, Wisconsin.`;
-    const path = `/${params.townSlug}`;
+    const url = `https://hearthhandbook.com/${params.townSlug}`;
     return {
       meta: [
         { title },
@@ -77,11 +77,25 @@ export const Route = createFileRoute("/$townSlug")({
         { property: "og:title", content: title },
         { property: "og:description", content: desc },
         { property: "og:type", content: "article" },
-        { property: "og:url", content: path },
+        { property: "og:url", content: url },
         { name: "twitter:title", content: title },
         { name: "twitter:description", content: desc },
       ],
-      links: [{ rel: "canonical", href: path }],
+      links: [{ rel: "canonical", href: url }],
+      scripts: [
+        {
+          type: "application/ld+json",
+          children: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "CollectionPage",
+            name: title,
+            description: desc,
+            url,
+            about: { "@type": "Place", name: `${name}, Wisconsin` },
+            isPartOf: { "@type": "WebSite", name: "Hearth Handbook", url: "https://hearthhandbook.com/" },
+          }),
+        },
+      ],
     };
   },
 });
