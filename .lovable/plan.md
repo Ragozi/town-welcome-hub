@@ -1,136 +1,45 @@
 ## Goal
 
-Turn the "ghost user" Google-signin path into a real consumer account: a signed-in resident or homebuyer who gets a personalized town feed, can save favorites, set interests, and optionally opt into a marketing email list we can monetize later.
+Reposition Hearth Handbook as a B2B product for realtors. Stop giving the local guide away for free. The only way a buyer sees town content is by scanning the QR code on a packet their realtor made (`/p/{slug}`).
 
-Realtor flow (invite code) is unchanged. This plan only adds a parallel `subscriber` role.
+## 1. New landing page (`src/routes/index.tsx`)
 
----
+Full rewrite. Realtor-first, buyer-secondary. No geolocation, no ZIP search, no town picker.
 
-## 1. Database
+Sections:
+1. **Hero** — "Give every buyer a handcrafted welcome to their new town." Subhead about closing-gift packets + QR code. Primary CTA "Start free" → `/login`. Secondary "See a sample packet" → links to a demo `/p/{slug}` (we'll hardcode one existing slug, or fall back to `/login` if none).
+2. **What it is** — 3-up: (1) Pick a town, (2) Personalize the packet (buyer name, kids/pets, interests), (3) Print the QR card / share the link. Lifted visual style from current Showcase grid.
+3. **Sample preview** — single screenshot/illustration of a packet page with the QR.
+4. **For buyers (small)** — one short band: "Got a QR code from your realtor? Scan it — your handbook is waiting." No link to browse anything.
+5. **Sponsor band** — keep the existing `#sponsor` "Get listed" CTA (local businesses are still a revenue lever).
+6. Footer unchanged.
 
-**New role**: extend `app_role` enum with `'subscriber'`.
+Remove: `useMyLocation`, `findByZip`, town `Select`, `listTowns`/`resolveTown` imports, `MapPin`/`Search`/`Loader2` imports that become unused.
 
-**New table — `subscriber_profiles**` (one row per non-realtor user; keeps consumer fields out of the realtor `profiles` table):
+## 2. Remove public town surface
 
-- `user_id` (FK to auth.users, unique)
-- `home_town_id` (FK towns, nullable — auto-set from IP, user can override)
-- `interest_tags` (text[]) — food, kids, fitness, outdoors, etc.
-- `lifestyle_tags` (text[]) — reuses same vocabulary as packets
-- `has_kids`, `has_pets` (bool)
-- timestamps
+- **Delete** `src/routes/$townSlug.tsx` (publicly browsable town directory). The packet page `/p/$slug` already renders the same town content scoped to a realtor's buyer — that's the only place it should live.
+- **Delete** `src/routes/towns.tsx` (public towns directory).
+- **Delete** `src/routes/api/pdf.$townSlug.tsx` (public per-town PDF — bypasses gating). Realtors still get packet PDFs via `src/routes/api/packet-pdf.$slug.tsx`.
+- **Update `src/components/site-header.tsx`**: remove "Towns" link. Nav becomes Home / About / Sponsor / Realtor Login. "Get Listed" CTA stays.
+- **Update `src/components/site-footer.tsx`**: remove any `/towns` or town-slug links.
+- **Update `src/routes/sitemap[.]xml.ts`**: stop emitting `/towns` and per-town URLs. Keep `/`, `/about`, `/login`, `/privacy`, `/terms`, and per-packet `/p/{slug}` entries (packets are realtor-shared, OK to leave indexable as today — flag in note below).
+- **Update `public/robots.txt`** and `public/llms.txt` if they reference `/towns` or town slugs.
+- **Update `src/routes/about.tsx`** copy if it links to `/towns` or describes browsing towns directly.
 
-**New table — `marketing_subscriptions**` (granular opt-ins, append-only consent log friendly):
+## 3. Leave alone (already gated correctly)
 
-- `user_id`
-- `topic` (enum: `local_deals`, `new_businesses`, `town_events`, `realtor_recommendations`)
-- `opted_in_at`, `opted_out_at` (nullable)
-- `source` (text: `signup_prefs`, `footer_link`, etc.) — for compliance audit
-- unique `(user_id, topic)` active row
+- `/p/$slug` packet page — this is the buyer entry point. Unchanged.
+- `/_authenticated/*` realtor app, `/admin/*`, `/login`, `/me/*`.
+- DB tables — no schema change. `towns`, `categories`, `businesses` still feed packet pages server-side; they're just no longer exposed via a public route.
+- `src/lib/towns.ts` helpers — still used by packet rendering and the realtor packet builder. Only the unused exports (`resolveTown`, the public-listing pieces) can be trimmed in a later pass; safer to leave for this turn.
 
-**New table — `saved_items**`:
+## 4. Open question to flag (not blocking)
 
-- `user_id`, `item_type` (`business` | `coupon` | `packet`), `item_id` (uuid), `created_at`
-- unique `(user_id, item_type, item_id)`
+Packet URLs (`/p/{slug}`) are currently in the sitemap and publicly readable. That's intentional today (a realtor shares the link with one buyer), but if you want stricter gating later we can: (a) drop them from the sitemap, (b) add `noindex` on the packet route, or (c) require a short token in the URL. Calling it out — not changing in this pass unless you say so.
 
-**Update `handle_new_user` trigger**:
+## Technical notes
 
-- If `invite_code` present → realtor path (today's behavior).
-- Else → insert `subscriber_profiles` row + assign `subscriber` role. No marketing opt-in by default.
-
-**RLS**:
-
-- `subscriber_profiles`: user reads/updates own row; admins all.
-- `marketing_subscriptions`: user reads/inserts/updates own; admins read all (for export/segmenting).
-- `saved_items`: user CRUD own.
-
----
-
-## 2. Auth & routing
-
-- `signInWithGoogle()` already works. Drop the "invite required" gate from the public Google button — it now does double duty (existing realtors sign in, new visitors become subscribers).
-- Keep the invite-code section on `/login` for new realtors only.
-- `useAuth()` exposes `role: 'admin' | 'realtor' | 'subscriber' | null` instead of just `isAdmin`.
-- New layout route `_authenticated/me/` for the subscriber dashboard. Realtor dashboard stays at `_authenticated/dashboard`.
-- After sign-in, redirect by role: admin → `/admin`, realtor → `/dashboard`, subscriber → `/me` (and on first ever visit → `/me/welcome`).
-
----
-
-## 3. Coarse location → town
-
-Server function `detect-town`:
-
-- Read `cf-ipcountry` / `cf-ipcity` / `cf-iplongitude` / `cf-iplatitude` headers (Cloudflare provides these on the Worker runtime).
-- Call existing `nearest_town(lat, lng)` RPC. Fallback: `town_by_zip` if we have a zip; final fallback: prompt user to pick from a dropdown of `towns`.
-- Save result to `subscriber_profiles.home_town_id` on first sign-in. User can change it any time from `/me/settings`.
-
-No browser geolocation API. No permission prompts.
-
----
-
-## 4. Subscriber UI (`/me`)
-
-- `**/me**` — Town feed. Hero: "Welcome to {town}." Sections: featured sponsors, active coupons (sorted by tier + interest match), new businesses, packets recently published in this town. Filters by saved interest tags.
-- `**/me/welcome**` — One-time onboarding screen shown after first signup:
-  1. Confirm/change detected town.
-  2. Pick interest tags (chips: Food, Kids, Pets, Fitness, Outdoors, Nightlife, Family, Shopping).
-  3. Marketing opt-in checkboxes (unchecked by default), each with a one-line description. CAN-SPAM-compliant copy.
-  4. "Finish" → writes prefs, redirects to `/me`.
-- `**/me/saved**` — Bookmarked businesses, coupons, packets. Heart icons on every card across the site write to `saved_items`.
-- `**/me/settings**` — Edit town, tags, marketing opt-ins; "Delete my account & data" button (calls server fn that wipes profile + subscriptions + saved + auth user).
-
----
-
-## 5. Admin additions
-
-New tab under `/admin`: **Subscribers**.
-
-- Count, growth chart, breakdown by town and by interest tag.
-- Marketing list view: filter by topic + town + interests → "Export CSV" (for now, hand-off to whatever sender we pick later).
-- No bulk email sending in this phase — explicitly punted per Q4.
-
----
-
-## 6. Compliance & trust
-
-- Privacy policy page (`/privacy`) — what we collect (email, name, IP-derived town, interests, saved items), why, retention, deletion rights.
-- Terms page (`/terms`) — light.
-- Footer links to both on every page.
-- Marketing opt-in checkboxes default unchecked, with explicit text: "I want emails about [topic]. I can unsubscribe any time."
-- Self-serve account deletion in `/me/settings`.
-- Every marketing email (when we build sending later) must include unsubscribe link → flips `opted_out_at`.
-
----
-
-## 7. Out of scope (deliberately)
-
-- Sending any marketing email (no domain, no templates, no scheduler). Just collecting the consented list.
-- Browser geolocation / precise location.
-- Sponsor pricing model for email placements.
-- Realtor "recommendations" matching (subscriber expresses interest in moving → notify their default town's realtors). Future.
-
----
-
-## Technical detail (for the agent)
-
-**Files to create**
-
-- Migration: enum extension, three tables, RLS, updated trigger.
-- `src/routes/_authenticated/me.tsx` (layout), `me.index.tsx`, `me.welcome.tsx`, `me.saved.tsx`, `me.settings.tsx`.
-- `src/routes/_authenticated/admin.subscribers.tsx`.
-- `src/routes/privacy.tsx`, `src/routes/terms.tsx`.
-- `src/lib/subscriber.functions.ts` — `detectTown`, `updatePreferences`, `toggleMarketingOptIn`, `toggleSaved`, `deleteMyAccount`.
-- `src/components/save-button.tsx`, `src/components/marketing-opt-in.tsx`.
-
-**Files to edit**
-
-- `src/lib/auth.tsx` — add `role`, expose subscriber profile, drop "Google = realtor only" framing.
-- `src/routes/login.tsx` — Google button moves out of the invite-code collapsible, becomes top-level.
-- `src/routes/_authenticated.tsx` — post-login role-based redirect helper.
-- `src/routes/_authenticated/admin.tsx` — add Subscribers tab.
-- `src/components/site-footer.tsx` — privacy + terms links.
-
-**Auth/role helper**: add `useRole()` returning `'admin' | 'realtor' | 'subscriber' | null` so guards stop sprinkling `isAdmin` checks.  
-  
-Add a coupon tracker and my favorites list in each suers profile. saved section if needed - think through what a personlized space could look like
-
-&nbsp;
+- TanStack file-based routing: deleting a route file removes the route; `routeTree.gen.ts` regenerates automatically.
+- All `<Link to="/$townSlug" ...>` and `<Link to="/towns">` references must be removed in the same pass or the typed router will fail the build. I'll grep for both before finishing.
+- No DB migration. No new dependencies.
