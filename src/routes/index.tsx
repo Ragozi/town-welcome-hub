@@ -41,6 +41,37 @@ export const Route = createFileRoute("/")({
         content:
           "Discover restaurants, shops, services, and local favorites in your Wisconsin town.",
       },
+      { property: "og:url", content: "https://hearthhandbook.com/" },
+    ],
+    links: [{ rel: "canonical", href: "https://hearthhandbook.com/" }],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@graph": [
+            {
+              "@type": "WebSite",
+              name: "Hearth Handbook",
+              url: "https://hearthhandbook.com/",
+              description:
+                "A digital welcome mat for Wisconsin towns — hand-curated local restaurants, shops, services, parks, and coupons.",
+              potentialAction: {
+                "@type": "SearchAction",
+                target: "https://hearthhandbook.com/towns?query={search_term_string}",
+                "query-input": "required name=search_term_string",
+              },
+            },
+            {
+              "@type": "Organization",
+              name: "Hearth Handbook",
+              url: "https://hearthhandbook.com/",
+              email: "igor@halolabsai.com",
+              areaServed: { "@type": "AdministrativeArea", name: "Wisconsin, USA" },
+            },
+          ],
+        }),
+      },
     ],
   }),
   component: Home,
@@ -159,7 +190,11 @@ function Home() {
           </span>
           <img
             src={HERO_IMAGE}
-            alt="A Wisconsin town in golden light"
+            alt="Aerial view of a Wisconsin town in golden afternoon light"
+            width={1200}
+            height={840}
+            fetchPriority="high"
+            decoding="async"
             className="h-[420px] w-full object-cover md:h-full"
           />
         </div>
@@ -219,7 +254,8 @@ function Home() {
               >
                 <img
                   src={s.img}
-                  alt={s.label}
+                  alt={`${s.label} category preview`}
+                  loading="lazy"
                   className="h-72 w-full object-cover transition-transform duration-700 group-hover:scale-[1.05]"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-foreground/85 via-foreground/10 to-transparent" />
@@ -227,9 +263,9 @@ function Home() {
                   <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-background/80">
                     <Icon className="h-4 w-4 text-primary" /> {s.label}
                   </div>
-                  <h3 className="font-display mt-2 text-2xl font-extrabold leading-tight">
+                  <h2 className="font-display mt-2 text-2xl font-extrabold leading-tight">
                     {s.title}
-                  </h3>
+                  </h2>
                   <span className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-primary px-3.5 py-1.5 text-xs font-semibold text-primary-foreground">
                     {s.cta} <ArrowRight className="h-3.5 w-3.5" />
                   </span>
@@ -280,16 +316,18 @@ function Home() {
             </div>
 
             <div>
-              <label className="eyebrow mb-2 block">Or enter ZIP</label>
+              <label htmlFor="zip-input" className="eyebrow mb-2 block">Or enter ZIP</label>
               <form
                 onSubmit={findByZip}
                 suppressHydrationWarning
                 className="flex gap-2"
               >
                 <Input
+                  id="zip-input"
                   inputMode="numeric"
                   maxLength={5}
                   placeholder="53024"
+                  aria-label="ZIP code"
                   value={zip}
                   onChange={(e) => setZip(e.target.value.replace(/\D/g, ""))}
                   className="h-12 rounded-full border-foreground/15 bg-background px-5"
@@ -297,9 +335,10 @@ function Home() {
                 />
                 <Button
                   type="submit"
+                  aria-label="Find town by ZIP code"
                   className="h-12 rounded-full bg-foreground px-5 text-background hover:bg-foreground/90"
                 >
-                  <Search className="h-4 w-4" />
+                  <Search className="h-4 w-4" aria-hidden="true" />
                 </Button>
               </form>
             </div>
