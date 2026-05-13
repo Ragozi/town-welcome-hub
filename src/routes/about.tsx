@@ -33,18 +33,18 @@ export const Route = createFileRoute("/about")({
 const STEPS = [
   {
     icon: MapPin,
-    title: "Find your town",
-    body: "Tap “Use my location”, enter a ZIP, or browse the Wisconsin towns directory.",
+    title: "Pick the town",
+    body: "Realtors choose from our hand-curated Wisconsin towns when they build a buyer's welcome packet.",
   },
   {
     icon: Sparkles,
-    title: "Meet the locals",
-    body: "Hand-curated restaurants, shops, services, parks and trails — no algorithm required.",
+    title: "Personalize the packet",
+    body: "Buyer name, new address, kids, pets, and lifestyle interests — everything is tuned to the family moving in.",
   },
   {
     icon: Heart,
-    title: "Grab a coupon",
-    body: "Featured local sponsors share exclusive welcome offers you can save or print.",
+    title: "Hand them the QR card",
+    body: "At closing, the buyer gets a printed card. They scan and their personal handbook is right there — no app, no signup.",
   },
 ];
 
@@ -78,8 +78,8 @@ function AboutPage() {
             size="lg"
             className="h-14 rounded-full bg-primary px-7 text-base font-semibold text-primary-foreground shadow-[var(--shadow-cta)] hover:bg-primary/90"
           >
-            <Link to="/towns">
-              Browse towns <ArrowRight className="ml-1 h-5 w-5" />
+            <Link to="/login">
+              Realtor sign in <ArrowRight className="ml-1 h-5 w-5" />
             </Link>
           </Button>
           <Button
@@ -145,7 +145,7 @@ function AboutPage() {
               asChild
               className="mt-6 h-12 rounded-full bg-foreground px-6 text-background hover:bg-foreground/90"
             >
-              <Link to="/towns">See all towns</Link>
+              <Link to="/login">Realtor sign in</Link>
             </Button>
           </div>
           <div className="rounded-3xl bg-foreground p-8 text-background shadow-[var(--shadow-soft)]">

@@ -13,9 +13,6 @@ export function SiteHeader() {
           <Link to="/" className="hover:text-foreground" activeProps={{ className: "text-foreground" }} activeOptions={{ exact: true }}>
             Home
           </Link>
-          <Link to="/towns" className="hover:text-foreground" activeProps={{ className: "text-foreground" }}>
-            Towns
-          </Link>
           <Link to="/about" className="hover:text-foreground" activeProps={{ className: "text-foreground" }}>
             About
           </Link>

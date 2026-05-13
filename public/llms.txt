@@ -1,25 +1,13 @@
 # Hearth Handbook
 
-> A digital welcome mat for Wisconsin towns — hand-curated local restaurants, shops, services, parks, and coupons for every community we cover.
+> Welcome packets and personalized neighborhood guides for real estate buyers — created by their realtor at closing.
 
-Hearth Handbook helps new residents and visitors discover the best of their Wisconsin town. Each guide is curated by a real person who lives nearby — no scraped listings, no algorithmic feeds. Sponsors are local businesses; coupons are exclusive to the guide.
+Hearth Handbook is a B2B tool for realtors. Realtors create a personalized welcome packet (a printed QR card + a private live page) for each buyer at closing. The packet contains a hand-curated guide to the buyer's new town: restaurants, shops, services, parks, and local sponsor coupons. The town directories are not browsable to the public — buyers reach their handbook only via the QR code their realtor gives them.
 
 ## Pages
 
-- [Home](/): Pick your Wisconsin town by location, ZIP, or browse.
-- [Towns directory](/towns): Browse every Wisconsin town in the Hearth Handbook directory.
-- [About](/about): Mission, coverage, and the team behind Hearth Handbook.
-- [Sign in](/login): Realtor and resident sign-in.
-- [Privacy](/privacy): How we handle your data.
+- [Home](/): Product overview for realtors.
+- [About](/about): Mission, coverage, and the team.
+- [Sign in](/login): Realtor sign-in.
+- [Privacy](/privacy): How we handle data.
 - [Terms](/terms): Terms of service.
-
-## Town guides
-
-- [Grafton](/grafton): Riverside village built around Bridge Street's brick storefronts.
-- [Cedarburg](/cedarburg): Historic downtown, covered bridge, year-round festivals.
-- [Mequon](/mequon): Leafy lakeshore neighborhoods and farm-to-table favorites.
-- [Port Washington](/port-washington): Lake Michigan harbor town with the iconic 1860 lighthouse.
-- [Thiensville](/thiensville): Compact, walkable village along the Milwaukee River.
-- [Saukville](/saukville): Riverside village on the Milwaukee River.
-- [Fredonia](/fredonia): Quiet northern Ozaukee community surrounded by farms and forests.
-- [Belgium](/belgium): Lake Michigan village with deep heritage and wide-open countryside.
