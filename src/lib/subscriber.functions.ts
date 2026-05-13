@@ -71,7 +71,14 @@ export const updateSubscriberPrefs = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: unknown) => UpdatePrefsSchema.parse(i))
   .handler(async ({ data, context }) => {
-    const patch: Record<string, unknown> = {};
+    const patch: {
+      home_town_id?: string | null;
+      interest_tags?: string[];
+      lifestyle_tags?: string[];
+      has_kids?: boolean;
+      has_pets?: boolean;
+      onboarded_at?: string;
+    } = {};
     if (data.home_town_id !== undefined) patch.home_town_id = data.home_town_id;
     if (data.interest_tags !== undefined) patch.interest_tags = data.interest_tags;
     if (data.lifestyle_tags !== undefined) patch.lifestyle_tags = data.lifestyle_tags;
