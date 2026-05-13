@@ -67,7 +67,7 @@ export const Route = createFileRoute("/$townSlug")({
       .split("-")
       .map((w) => w[0]?.toUpperCase() + w.slice(1))
       .join(" ");
-    const title = `Welcome to ${name}, WI — TownWelcome`;
+    const title = `Welcome to ${name}, WI — Hearth Handbook`;
     const desc = `Restaurants, coffee, shops, services, and local favorites in ${name}, Wisconsin.`;
     return {
       meta: [

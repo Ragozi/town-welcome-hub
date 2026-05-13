@@ -13,16 +13,16 @@ import { SectionDivider } from "@/components/section-divider";
 export const Route = createFileRoute("/towns")({
   head: () => ({
     meta: [
-      { title: "Wisconsin Towns Directory — TownWelcome" },
+      { title: "Wisconsin Towns Directory — Hearth Handbook" },
       {
         name: "description",
         content:
-          "Browse every Wisconsin town in the TownWelcome directory. Start in Ozaukee County and find local restaurants, shops, parks and trails.",
+          "Browse every Wisconsin town in the Hearth Handbook directory. Start in Ozaukee County and find local restaurants, shops, parks and trails.",
       },
-      { property: "og:title", content: "Wisconsin Towns Directory — TownWelcome" },
+      { property: "og:title", content: "Wisconsin Towns Directory — Hearth Handbook" },
       {
         property: "og:description",
-        content: "Browse every Wisconsin town in the TownWelcome directory.",
+        content: "Browse every Wisconsin town in the Hearth Handbook directory.",
       },
     ],
   }),
@@ -100,7 +100,7 @@ function TownsPage() {
             Find your <span className="text-primary">town.</span>
           </h1>
           <p className="max-w-md text-base text-foreground/70">
-            Every TownWelcome guide is hand-curated with local restaurants,
+            Every Hearth Handbook guide is hand-curated with local restaurants,
             shops, services, parks and coupons. Start with Ozaukee County —
             more towns are rolling out across Wisconsin.
           </p>

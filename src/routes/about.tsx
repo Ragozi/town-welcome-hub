@@ -8,20 +8,20 @@ import { SectionDivider } from "@/components/section-divider";
 export const Route = createFileRoute("/about")({
   head: () => ({
     meta: [
-      { title: "About TownWelcome — A digital welcome mat for Wisconsin" },
+      { title: "About Hearth Handbook — A digital welcome mat for Wisconsin" },
       {
         name: "description",
         content:
-          "TownWelcome is a digital welcome mat for Wisconsin towns — meet the locals, grab a coupon, and feel at home.",
+          "Hearth Handbook is a digital welcome mat for Wisconsin towns — meet the locals, grab a coupon, and feel at home.",
       },
       {
         property: "og:title",
-        content: "About TownWelcome — A digital welcome mat for Wisconsin",
+        content: "About Hearth Handbook — A digital welcome mat for Wisconsin",
       },
       {
         property: "og:description",
         content:
-          "Meet the team and mission behind TownWelcome — Wisconsin's hand-curated local guide.",
+          "Meet the team and mission behind Hearth Handbook — Wisconsin's hand-curated local guide.",
       },
     ],
   }),
@@ -67,7 +67,7 @@ function AboutPage() {
         </h1>
         <p className="mt-6 max-w-2xl text-lg text-foreground/70">
           Meet the locals, grab a coupon, and feel at home — wherever you land.
-          TownWelcome is a hand-curated, community-first guide built for the
+          Hearth Handbook is a hand-curated, community-first guide built for the
           people who actually live, work and visit each town we cover.
         </p>
         <div className="mt-8 flex flex-wrap gap-3">
@@ -212,7 +212,7 @@ function AboutPage() {
               by Wisconsinites.
             </h2>
             <p className="mt-4 text-foreground/70">
-              TownWelcome started as a printed welcome packet handed to new
+              Hearth Handbook started as a printed welcome packet handed to new
               neighbors in Ozaukee County. We turned it into a living guide so
               every visitor and new resident gets the same warm introduction —
               with the locals front and center.

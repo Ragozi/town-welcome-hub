@@ -9,7 +9,7 @@ export function SiteFooter() {
         <div className="flex flex-col gap-10 md:flex-row md:items-start md:justify-between">
           <div className="max-w-sm">
             <Link to="/" className="font-display text-2xl font-extrabold tracking-tight">
-              TOWNWELCOME<span className="text-primary">.</span>
+              HEARTH HANDBOOK<span className="text-primary">.</span>
             </Link>
             <p className="mt-3 text-sm text-white/70">
               A digital welcome mat for Wisconsin towns — meet the locals,
@@ -62,7 +62,7 @@ export function SiteFooter() {
         </div>
 
         <div className="mt-12 flex flex-col-reverse items-start justify-between gap-3 border-t border-white/10 pt-6 text-xs text-white/55 md:flex-row md:items-center">
-          <div>© {new Date().getFullYear()} TownWelcome. Built in Wisconsin.</div>
+          <div>© {new Date().getFullYear()} Hearth Handbook. Built in Wisconsin.</div>
           <div className="flex gap-5">
             <Link to="/privacy" className="hover:text-primary">Privacy</Link>
             <Link to="/terms" className="hover:text-primary">Terms</Link>
