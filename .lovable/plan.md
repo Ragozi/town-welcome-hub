@@ -1,84 +1,136 @@
-# Invite-Code Realtor Signup
+## Goal
 
-Lock down `/login` so only people holding a valid invite code from you or Ted can become realtors. Codes are generated in the admin panel, single-use, and consumed atomically at signup. Both Google and email/password are supported once a code is validated.
+Turn the "ghost user" Google-signin path into a real consumer account: a signed-in resident or homebuyer who gets a personalized town feed, can save favorites, set interests, and optionally opt into a marketing email list we can monetize later.
 
-## User flow
+Realtor flow (invite code) is unchanged. This plan only adds a parallel `subscriber` role.
 
-**Realtor receives code via email from admin** → visits `/login` → sees a clean "Have an invite code?" gate.
+---
 
-1. **Already has account** → Sign in with Google or email/password (no code required).
-2. **New realtor** → clicks "I have an invite code" → enters code → on valid+unused code, the Google button and email/password signup form unlock.
-3. After signup completes, the code is marked consumed (linked to their `user_id`) and the `realtor` role is assigned. Redirect to `/dashboard`.
-4. Invalid/expired/consumed code → friendly error, no signup path revealed.
+## 1. Database
 
-**Public visitors hitting `/login` without a code** see only the sign-in form (for existing realtors) and the "I have an invite code" link. No way to self-promote.
+**New role**: extend `app_role` enum with `'subscriber'`.
 
-## Admin experience
+**New table — `subscriber_profiles**` (one row per non-realtor user; keeps consumer fields out of the realtor `profiles` table):
 
-New tab in `/admin`: **Invite codes**.
+- `user_id` (FK to auth.users, unique)
+- `home_town_id` (FK towns, nullable — auto-set from IP, user can override)
+- `interest_tags` (text[]) — food, kids, fitness, outdoors, etc.
+- `lifestyle_tags` (text[]) — reuses same vocabulary as packets
+- `has_kids`, `has_pets` (bool)
+- timestamps
 
-- Table of all codes: code string, created by, created date, expires date, status (unused / consumed / expired / revoked), consumed-by realtor name+email.
-- "Generate code" button: optional note ("for Sarah at KW Madison"), optional expiry (default 30 days), optional pre-fill email (locks the code to that email if provided). Returns the code + a one-click "Copy invite link" (`/login?code=WH-3F9K2A`).
-- Revoke action on unused codes.
+**New table — `marketing_subscriptions**` (granular opt-ins, append-only consent log friendly):
 
-## Technical details
+- `user_id`
+- `topic` (enum: `local_deals`, `new_businesses`, `town_events`, `realtor_recommendations`)
+- `opted_in_at`, `opted_out_at` (nullable)
+- `source` (text: `signup_prefs`, `footer_link`, etc.) — for compliance audit
+- unique `(user_id, topic)` active row
 
-### Database (one migration)
+**New table — `saved_items**`:
 
-New table `realtor_invite_codes`:
-- `code` (text, unique, indexed) — format `WH-XXXXXX` (6 alphanumeric, uppercase, ambiguous chars removed)
-- `created_by` (uuid, FK to user) — admin who generated it
-- `note` (text, nullable) — internal label
-- `email_lock` (text, nullable) — if set, only this email can consume
-- `expires_at` (timestamptz, nullable)
-- `consumed_at` (timestamptz, nullable)
-- `consumed_by` (uuid, nullable) — references the resulting user
-- `revoked_at` (timestamptz, nullable)
-- standard `id`, `created_at`
+- `user_id`, `item_type` (`business` | `coupon` | `packet`), `item_id` (uuid), `created_at`
+- unique `(user_id, item_type, item_id)`
 
-RLS: admins full access; everyone else no access (validation happens through SECURITY DEFINER RPCs only — codes are never client-readable).
+**Update `handle_new_user` trigger**:
 
-Two SECURITY DEFINER functions:
-- `validate_invite_code(code text, email text default null) returns boolean` — returns true if code exists, not consumed/revoked/expired, and email matches `email_lock` (when set). Public callable (anon/authenticated). Used by `/login` to gate the signup UI.
-- `consume_invite_code(code text, user_id uuid) returns boolean` — atomic: locks the row, re-validates, marks consumed. Returns true on success.
+- If `invite_code` present → realtor path (today's behavior).
+- Else → insert `subscriber_profiles` row + assign `subscriber` role. No marketing opt-in by default.
 
-**Modify `handle_new_user` trigger**: instead of unconditionally assigning `realtor` role, read invite code from `raw_user_meta_data->>'invite_code'`, call `consume_invite_code`. If consumption fails → delete the just-created auth user + raise exception so signup fails atomically. If no code in metadata at all → no role assigned (Google sign-ins of existing realtors keep their role from `user_roles`; brand-new Google users without a code get no role and can't access `/dashboard`).
+**RLS**:
 
-### Frontend
+- `subscriber_profiles`: user reads/updates own row; admins all.
+- `marketing_subscriptions`: user reads/inserts/updates own; admins read all (for export/segmenting).
+- `saved_items`: user CRUD own.
 
-**`/login` route** (rewrite):
-- Top: "Sign in" form (email/password) + "Continue with Google" button — both call existing auth and only succeed if user already exists.
-- Below: collapsible "I'm a new realtor with an invite code" section.
-- Inside: code input → validate via RPC on submit → on success, reveal "Continue with Google" (passes code in OAuth state) and email/password signup form.
-- Support `?code=WH-XXXXXX` URL param for one-click invite links from admin emails.
+---
 
-**Google OAuth integration:**
-- Use Lovable Cloud managed Google (`lovable.auth.signInWithOAuth("google", {...})`).
-- Pass the validated invite code through `options.data.invite_code` so it lands in `raw_user_meta_data` and the trigger consumes it. (Existing-user sign-ins ignore this — trigger only fires on new user creation.)
+## 2. Auth & routing
 
-**Email/password signup:** call `supabase.auth.signUp({ email, password, options: { data: { invite_code, full_name } } })`.
+- `signInWithGoogle()` already works. Drop the "invite required" gate from the public Google button — it now does double duty (existing realtors sign in, new visitors become subscribers).
+- Keep the invite-code section on `/login` for new realtors only.
+- `useAuth()` exposes `role: 'admin' | 'realtor' | 'subscriber' | null` instead of just `isAdmin`.
+- New layout route `_authenticated/me/` for the subscriber dashboard. Realtor dashboard stays at `_authenticated/dashboard`.
+- After sign-in, redirect by role: admin → `/admin`, realtor → `/dashboard`, subscriber → `/me` (and on first ever visit → `/me/welcome`).
 
-**`/admin/invite-codes` route:** new tab in admin layout. List + Generate dialog + Revoke action. All operations via existing admin patterns (`supabase` client + RLS).
+---
 
-### Auth provider config
-- Enable Google in Lovable Cloud (managed credentials, zero setup).
-- Keep email/password enabled.
-- Keep `auto_confirm_email: false` (realtors verify email — prevents typos and fake addresses burning invite codes).
+## 3. Coarse location → town
 
-### Edge cases handled
-- Code consumed but auth.users insert succeeds, trigger fails → trigger raises, transaction rolls back, code stays unconsumed.
-- Realtor enters wrong email after Google flow: Google email is authoritative; if `email_lock` is set and Google email doesn't match, signup is rejected and code remains available.
-- Admin (you/Ted) signs in: your existing `admin` role in `user_roles` is unaffected. The trigger only adds `realtor` if a code is consumed; it doesn't touch existing roles.
+Server function `detect-town`:
 
-## Out of scope (mention only)
-- Bulk code generation / CSV export — easy to add later.
-- Auto-emailing the invite from the admin panel — for now you copy the link and paste into your email client.
-- Realtor self-service "request access" form — not needed under invite-only model.
+- Read `cf-ipcountry` / `cf-ipcity` / `cf-iplongitude` / `cf-iplatitude` headers (Cloudflare provides these on the Worker runtime).
+- Call existing `nearest_town(lat, lng)` RPC. Fallback: `town_by_zip` if we have a zip; final fallback: prompt user to pick from a dropdown of `towns`.
+- Save result to `subscriber_profiles.home_town_id` on first sign-in. User can change it any time from `/me/settings`.
 
-## Files touched
-- New migration: `realtor_invite_codes` table + RPCs + updated `handle_new_user` trigger.
-- New route: `src/routes/_authenticated/admin.invite-codes.tsx`.
-- Edit: `src/routes/login.tsx` (full rewrite of the form section).
-- Edit: `src/routes/_authenticated/admin.tsx` (add nav tab).
-- Edit: `src/lib/auth.tsx` (add `signUpWithCode` + `signInWithGoogle` helpers).
-- Lovable Cloud: enable Google provider via `configure_social_auth`.
+No browser geolocation API. No permission prompts.
+
+---
+
+## 4. Subscriber UI (`/me`)
+
+- `**/me**` — Town feed. Hero: "Welcome to {town}." Sections: featured sponsors, active coupons (sorted by tier + interest match), new businesses, packets recently published in this town. Filters by saved interest tags.
+- `**/me/welcome**` — One-time onboarding screen shown after first signup:
+  1. Confirm/change detected town.
+  2. Pick interest tags (chips: Food, Kids, Pets, Fitness, Outdoors, Nightlife, Family, Shopping).
+  3. Marketing opt-in checkboxes (unchecked by default), each with a one-line description. CAN-SPAM-compliant copy.
+  4. "Finish" → writes prefs, redirects to `/me`.
+- `**/me/saved**` — Bookmarked businesses, coupons, packets. Heart icons on every card across the site write to `saved_items`.
+- `**/me/settings**` — Edit town, tags, marketing opt-ins; "Delete my account & data" button (calls server fn that wipes profile + subscriptions + saved + auth user).
+
+---
+
+## 5. Admin additions
+
+New tab under `/admin`: **Subscribers**.
+
+- Count, growth chart, breakdown by town and by interest tag.
+- Marketing list view: filter by topic + town + interests → "Export CSV" (for now, hand-off to whatever sender we pick later).
+- No bulk email sending in this phase — explicitly punted per Q4.
+
+---
+
+## 6. Compliance & trust
+
+- Privacy policy page (`/privacy`) — what we collect (email, name, IP-derived town, interests, saved items), why, retention, deletion rights.
+- Terms page (`/terms`) — light.
+- Footer links to both on every page.
+- Marketing opt-in checkboxes default unchecked, with explicit text: "I want emails about [topic]. I can unsubscribe any time."
+- Self-serve account deletion in `/me/settings`.
+- Every marketing email (when we build sending later) must include unsubscribe link → flips `opted_out_at`.
+
+---
+
+## 7. Out of scope (deliberately)
+
+- Sending any marketing email (no domain, no templates, no scheduler). Just collecting the consented list.
+- Browser geolocation / precise location.
+- Sponsor pricing model for email placements.
+- Realtor "recommendations" matching (subscriber expresses interest in moving → notify their default town's realtors). Future.
+
+---
+
+## Technical detail (for the agent)
+
+**Files to create**
+
+- Migration: enum extension, three tables, RLS, updated trigger.
+- `src/routes/_authenticated/me.tsx` (layout), `me.index.tsx`, `me.welcome.tsx`, `me.saved.tsx`, `me.settings.tsx`.
+- `src/routes/_authenticated/admin.subscribers.tsx`.
+- `src/routes/privacy.tsx`, `src/routes/terms.tsx`.
+- `src/lib/subscriber.functions.ts` — `detectTown`, `updatePreferences`, `toggleMarketingOptIn`, `toggleSaved`, `deleteMyAccount`.
+- `src/components/save-button.tsx`, `src/components/marketing-opt-in.tsx`.
+
+**Files to edit**
+
+- `src/lib/auth.tsx` — add `role`, expose subscriber profile, drop "Google = realtor only" framing.
+- `src/routes/login.tsx` — Google button moves out of the invite-code collapsible, becomes top-level.
+- `src/routes/_authenticated.tsx` — post-login role-based redirect helper.
+- `src/routes/_authenticated/admin.tsx` — add Subscribers tab.
+- `src/components/site-footer.tsx` — privacy + terms links.
+
+**Auth/role helper**: add `useRole()` returning `'admin' | 'realtor' | 'subscriber' | null` so guards stop sprinkling `isAdmin` checks.  
+  
+Add a coupon tracker and my favorites list in each suers profile. saved section if needed - think through what a personlized space could look like
+
+&nbsp;

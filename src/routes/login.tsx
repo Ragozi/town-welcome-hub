@@ -16,15 +16,15 @@ export const Route = createFileRoute("/login")({
   }),
   head: () => ({
     meta: [
-      { title: "Realtor Login — Welcome Home" },
-      { name: "description", content: "Sign in to create personalized welcome packets for your buyers." },
+      { title: "Sign in — Welcome Home" },
+      { name: "description", content: "Sign in to Welcome Home for personalized local business picks, coupons, and town updates." },
     ],
   }),
   component: LoginPage,
 });
 
 function LoginPage() {
-  const { signIn, signUpWithCode, signInWithGoogle, session, loading } = useAuth();
+  const { signIn, signUpWithCode, signInWithGoogle, session, role, loading } = useAuth();
   const navigate = useNavigate();
   const search = Route.useSearch();
 
@@ -32,7 +32,7 @@ function LoginPage() {
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  // Invite code gate
+  // Realtor invite code
   const [showInvite, setShowInvite] = useState(!!search.code);
   const [inviteCode, setInviteCode] = useState((search.code ?? "").toUpperCase());
   const [codeValid, setCodeValid] = useState(false);
@@ -42,14 +42,14 @@ function LoginPage() {
   const [signupName, setSignupName] = useState("");
 
   useEffect(() => {
-    if (!loading && session) navigate({ to: "/dashboard" });
-  }, [session, loading, navigate]);
+    if (loading || !session) return;
+    if (role === "admin") navigate({ to: "/admin" });
+    else if (role === "realtor") navigate({ to: "/dashboard" });
+    else navigate({ to: "/me" });
+  }, [session, role, loading, navigate]);
 
-  // Auto-validate code from URL
   useEffect(() => {
-    if (search.code) {
-      void validateCode(search.code);
-    }
+    if (search.code) void validateCode(search.code);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -66,7 +66,7 @@ function LoginPage() {
     }
     setCodeValid(true);
     setInviteCode(code);
-    toast.success("Invite code accepted. Create your account below.");
+    toast.success("Invite code accepted. Create your realtor account below.");
   };
 
   const onSignIn = async (e: React.FormEvent) => {
@@ -74,8 +74,7 @@ function LoginPage() {
     setSubmitting(true);
     const { error } = await signIn(email.trim(), password);
     setSubmitting(false);
-    if (error) return toast.error(error);
-    navigate({ to: "/dashboard" });
+    if (error) toast.error(error);
   };
 
   const onSignUp = async (e: React.FormEvent) => {
@@ -89,10 +88,8 @@ function LoginPage() {
   };
 
   const onGoogle = async () => {
-    if (showInvite && inviteCode && codeValid) {
-      sessionStorage.setItem("pending_invite_code", inviteCode);
-    }
-    const { error } = await signInWithGoogle();
+    const code = showInvite && codeValid ? inviteCode : undefined;
+    const { error } = await signInWithGoogle(code);
     if (error) toast.error(error);
   };
 
@@ -105,14 +102,28 @@ function LoginPage() {
 
         <div className="rounded-3xl border border-border bg-card p-8 shadow-[var(--shadow-soft)]">
           <h1 className="font-display text-2xl font-extrabold uppercase tracking-tight">
-            Realtor sign in
+            Welcome
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Welcome Home is invite-only. New realtors need an invite code from your admin.
+            New here? Sign in with Google to get personalized local picks for your town.
           </p>
 
-          {/* Existing user sign-in */}
-          <form onSubmit={onSignIn} className="mt-6 space-y-4">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onGoogle}
+            className="mt-5 h-12 w-full rounded-full"
+          >
+            Continue with Google
+          </Button>
+
+          <div className="my-5 flex items-center gap-3">
+            <div className="h-px flex-1 bg-border" />
+            <span className="text-xs uppercase tracking-wider text-muted-foreground">or sign in with email</span>
+            <div className="h-px flex-1 bg-border" />
+          </div>
+
+          <form onSubmit={onSignIn} className="space-y-4">
             <div>
               <Label htmlFor="email">Email</Label>
               <Input
@@ -146,22 +157,7 @@ function LoginPage() {
             </Button>
           </form>
 
-          <div className="my-5 flex items-center gap-3">
-            <div className="h-px flex-1 bg-border" />
-            <span className="text-xs uppercase tracking-wider text-muted-foreground">or</span>
-            <div className="h-px flex-1 bg-border" />
-          </div>
-
-          <Button
-            type="button"
-            variant="outline"
-            onClick={onGoogle}
-            className="h-12 w-full rounded-full"
-          >
-            Continue with Google
-          </Button>
-
-          {/* Invite code gate */}
+          {/* Realtor invite-code gate */}
           <div className="mt-6 border-t border-border pt-5">
             <button
               type="button"
@@ -201,7 +197,8 @@ function LoginPage() {
                 {codeValid && (
                   <>
                     <p className="text-xs text-muted-foreground">
-                      Code accepted. Create your account with Google above, or with email below.
+                      Code accepted. Use the Google button above (it'll register you as a realtor)
+                      or create an account with email below.
                     </p>
                     <form onSubmit={onSignUp} className="space-y-3">
                       <div>
@@ -242,7 +239,7 @@ function LoginPage() {
                         disabled={submitting}
                         className="h-12 w-full rounded-full bg-primary text-primary-foreground hover:bg-primary/90"
                       >
-                        {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Create account"}
+                        {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Create realtor account"}
                       </Button>
                     </form>
                   </>
@@ -252,7 +249,14 @@ function LoginPage() {
           </div>
         </div>
 
-        <Link to="/" className="mt-6 text-center text-xs text-muted-foreground hover:text-foreground">
+        <p className="mt-5 text-center text-xs text-muted-foreground">
+          By continuing you agree to our{" "}
+          <Link to="/terms" className="underline hover:text-foreground">Terms</Link>{" "}
+          and{" "}
+          <Link to="/privacy" className="underline hover:text-foreground">Privacy Policy</Link>.
+        </p>
+
+        <Link to="/" className="mt-4 text-center text-xs text-muted-foreground hover:text-foreground">
           ← Back to home
         </Link>
       </div>
