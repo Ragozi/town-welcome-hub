@@ -56,7 +56,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(s);
       if (s?.user) {
         // Defer DB calls per Supabase guidance to avoid deadlock
-        setTimeout(() => loadProfile(s.user.id), 0);
+        setTimeout(async () => {
+          // If a pending invite code is stashed (Google signup flow), claim it before loading roles
+          const pending = typeof window !== "undefined" ? sessionStorage.getItem("pending_invite_code") : null;
+          if (pending) {
+            sessionStorage.removeItem("pending_invite_code");
+            try {
+              await supabase.rpc("claim_invite_code", { _code: pending });
+            } catch {
+              // ignore — they may already have a role
+            }
+          }
+          loadProfile(s.user.id);
+        }, 0);
       } else {
         setProfile(null);
         setIsAdmin(false);
