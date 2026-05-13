@@ -268,12 +268,12 @@ function Home() {
               Be the first business locals see
               when they move to town.
             </h2>
-            <a
-              href="mailto:info@hearthhandbook.com"
+            <Link
+              to="/sponsor"
               className="inline-flex h-12 shrink-0 items-center gap-2 rounded-full bg-primary px-6 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
             >
               Get listed <ArrowRight className="h-4 w-4" />
-            </a>
+            </Link>
           </div>
         </div>
       </section>

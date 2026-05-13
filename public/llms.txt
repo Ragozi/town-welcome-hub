@@ -8,6 +8,7 @@ Hearth Handbook is a B2B tool for realtors. Realtors create a personalized welco
 
 - [Home](/): Product overview for realtors.
 - [About](/about): Mission, coverage, and the team.
+- [Sponsor](/sponsor): For local businesses — how to get listed in town directories inside packets.
 - [Sign in](/login): Realtor sign-in.
 - [Privacy](/privacy): How we handle data.
 - [Terms](/terms): Terms of service.
