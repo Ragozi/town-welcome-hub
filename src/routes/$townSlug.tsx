@@ -69,13 +69,19 @@ export const Route = createFileRoute("/$townSlug")({
       .join(" ");
     const title = `Welcome to ${name}, WI — Hearth Handbook`;
     const desc = `Restaurants, coffee, shops, services, and local favorites in ${name}, Wisconsin.`;
+    const path = `/${params.townSlug}`;
     return {
       meta: [
         { title },
         { name: "description", content: desc },
         { property: "og:title", content: title },
         { property: "og:description", content: desc },
+        { property: "og:type", content: "article" },
+        { property: "og:url", content: path },
+        { name: "twitter:title", content: title },
+        { name: "twitter:description", content: desc },
       ],
+      links: [{ rel: "canonical", href: path }],
     };
   },
 });
