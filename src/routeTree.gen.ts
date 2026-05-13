@@ -27,6 +27,7 @@ import { Route as ApiPacketPdfSlugRouteImport } from './routes/api/packet-pdf.$s
 import { Route as AuthenticatedPacketsNewRouteImport } from './routes/_authenticated/packets.new'
 import { Route as AuthenticatedPacketsIdRouteImport } from './routes/_authenticated/packets.$id'
 import { Route as AuthenticatedAdminRealtorsRouteImport } from './routes/_authenticated/admin.realtors'
+import { Route as AuthenticatedAdminInviteCodesRouteImport } from './routes/_authenticated/admin.invite-codes'
 import { Route as AuthenticatedAdminEventsRouteImport } from './routes/_authenticated/admin.events'
 
 const TownsRoute = TownsRouteImport.update({
@@ -120,6 +121,12 @@ const AuthenticatedAdminRealtorsRoute =
     path: '/realtors',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const AuthenticatedAdminInviteCodesRoute =
+  AuthenticatedAdminInviteCodesRouteImport.update({
+    id: '/invite-codes',
+    path: '/invite-codes',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 const AuthenticatedAdminEventsRoute =
   AuthenticatedAdminEventsRouteImport.update({
     id: '/events',
@@ -139,6 +146,7 @@ export interface FileRoutesByFullPath {
   '/p/$slug': typeof PSlugRoute
   '/r/$referralSlug': typeof RReferralSlugRoute
   '/admin/events': typeof AuthenticatedAdminEventsRoute
+  '/admin/invite-codes': typeof AuthenticatedAdminInviteCodesRoute
   '/admin/realtors': typeof AuthenticatedAdminRealtorsRoute
   '/packets/$id': typeof AuthenticatedPacketsIdRoute
   '/packets/new': typeof AuthenticatedPacketsNewRoute
@@ -158,6 +166,7 @@ export interface FileRoutesByTo {
   '/p/$slug': typeof PSlugRoute
   '/r/$referralSlug': typeof RReferralSlugRoute
   '/admin/events': typeof AuthenticatedAdminEventsRoute
+  '/admin/invite-codes': typeof AuthenticatedAdminInviteCodesRoute
   '/admin/realtors': typeof AuthenticatedAdminRealtorsRoute
   '/packets/$id': typeof AuthenticatedPacketsIdRoute
   '/packets/new': typeof AuthenticatedPacketsNewRoute
@@ -180,6 +189,7 @@ export interface FileRoutesById {
   '/p/$slug': typeof PSlugRoute
   '/r/$referralSlug': typeof RReferralSlugRoute
   '/_authenticated/admin/events': typeof AuthenticatedAdminEventsRoute
+  '/_authenticated/admin/invite-codes': typeof AuthenticatedAdminInviteCodesRoute
   '/_authenticated/admin/realtors': typeof AuthenticatedAdminRealtorsRoute
   '/_authenticated/packets/$id': typeof AuthenticatedPacketsIdRoute
   '/_authenticated/packets/new': typeof AuthenticatedPacketsNewRoute
@@ -202,6 +212,7 @@ export interface FileRouteTypes {
     | '/p/$slug'
     | '/r/$referralSlug'
     | '/admin/events'
+    | '/admin/invite-codes'
     | '/admin/realtors'
     | '/packets/$id'
     | '/packets/new'
@@ -221,6 +232,7 @@ export interface FileRouteTypes {
     | '/p/$slug'
     | '/r/$referralSlug'
     | '/admin/events'
+    | '/admin/invite-codes'
     | '/admin/realtors'
     | '/packets/$id'
     | '/packets/new'
@@ -242,6 +254,7 @@ export interface FileRouteTypes {
     | '/p/$slug'
     | '/r/$referralSlug'
     | '/_authenticated/admin/events'
+    | '/_authenticated/admin/invite-codes'
     | '/_authenticated/admin/realtors'
     | '/_authenticated/packets/$id'
     | '/_authenticated/packets/new'
@@ -392,6 +405,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminRealtorsRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/invite-codes': {
+      id: '/_authenticated/admin/invite-codes'
+      path: '/invite-codes'
+      fullPath: '/admin/invite-codes'
+      preLoaderRoute: typeof AuthenticatedAdminInviteCodesRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/admin/events': {
       id: '/_authenticated/admin/events'
       path: '/events'
@@ -404,12 +424,14 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminEventsRoute: typeof AuthenticatedAdminEventsRoute
+  AuthenticatedAdminInviteCodesRoute: typeof AuthenticatedAdminInviteCodesRoute
   AuthenticatedAdminRealtorsRoute: typeof AuthenticatedAdminRealtorsRoute
   AuthenticatedAdminIndexRoute: typeof AuthenticatedAdminIndexRoute
 }
 
 const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminEventsRoute: AuthenticatedAdminEventsRoute,
+  AuthenticatedAdminInviteCodesRoute: AuthenticatedAdminInviteCodesRoute,
   AuthenticatedAdminRealtorsRoute: AuthenticatedAdminRealtorsRoute,
   AuthenticatedAdminIndexRoute: AuthenticatedAdminIndexRoute,
 }

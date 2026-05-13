@@ -324,6 +324,45 @@ export type Database = {
           },
         ]
       }
+      realtor_invite_codes: {
+        Row: {
+          code: string
+          consumed_at: string | null
+          consumed_by: string | null
+          created_at: string
+          created_by: string
+          email_lock: string | null
+          expires_at: string | null
+          id: string
+          note: string | null
+          revoked_at: string | null
+        }
+        Insert: {
+          code: string
+          consumed_at?: string | null
+          consumed_by?: string | null
+          created_at?: string
+          created_by: string
+          email_lock?: string | null
+          expires_at?: string | null
+          id?: string
+          note?: string | null
+          revoked_at?: string | null
+        }
+        Update: {
+          code?: string
+          consumed_at?: string | null
+          consumed_by?: string | null
+          created_at?: string
+          created_by?: string
+          email_lock?: string | null
+          expires_at?: string | null
+          id?: string
+          note?: string | null
+          revoked_at?: string | null
+        }
+        Relationships: []
+      }
       sponsor_tiers: {
         Row: {
           display_priority: number
@@ -432,6 +471,11 @@ export type Database = {
       }
     }
     Functions: {
+      claim_invite_code: { Args: { _code: string }; Returns: boolean }
+      consume_invite_code: {
+        Args: { _code: string; _email: string; _user_id: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -453,6 +497,10 @@ export type Database = {
           name: string
           slug: string
         }[]
+      }
+      validate_invite_code: {
+        Args: { _code: string; _email?: string }
+        Returns: boolean
       }
     }
     Enums: {
