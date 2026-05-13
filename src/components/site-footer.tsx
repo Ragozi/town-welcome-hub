@@ -64,8 +64,8 @@ export function SiteFooter() {
         <div className="mt-12 flex flex-col-reverse items-start justify-between gap-3 border-t border-white/10 pt-6 text-xs text-white/55 md:flex-row md:items-center">
           <div>© {new Date().getFullYear()} TownWelcome. Built in Wisconsin.</div>
           <div className="flex gap-5">
-            <a href="#" className="hover:text-primary">Privacy</a>
-            <a href="#" className="hover:text-primary">Terms</a>
+            <Link to="/privacy" className="hover:text-primary">Privacy</Link>
+            <Link to="/terms" className="hover:text-primary">Terms</Link>
           </div>
         </div>
       </div>
