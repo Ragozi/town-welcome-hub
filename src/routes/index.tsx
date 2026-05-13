@@ -29,13 +29,13 @@ import { SectionDivider } from "@/components/section-divider";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "TownWelcome — Your local Wisconsin town guide" },
+      { title: "Hearth Handbook — Your local Wisconsin town guide" },
       {
         name: "description",
         content:
           "Discover restaurants, shops, services, and local favorites in your Wisconsin town. Auto-detects your location.",
       },
-      { property: "og:title", content: "TownWelcome — Your local Wisconsin town guide" },
+      { property: "og:title", content: "Hearth Handbook — Your local Wisconsin town guide" },
       {
         property: "og:description",
         content:
@@ -114,7 +114,7 @@ function Home() {
           }
           if (match) goTo(match.slug);
           else {
-            toast.message("We couldn't find a TownWelcome page near you yet.", {
+            toast.message("We couldn't find a Hearth Handbook page near you yet.", {
               description: "Browse all towns or enter a ZIP below.",
             });
             setLocating(false);
@@ -144,7 +144,7 @@ function Home() {
     }
     const match = await resolveTown({ zip });
     if (match) goTo(match.slug);
-    else toast.error("No TownWelcome page for that ZIP yet.");
+    else toast.error("No Hearth Handbook page for that ZIP yet.");
   };
 
   return (
@@ -165,7 +165,7 @@ function Home() {
         </div>
 
         <div className="flex flex-col justify-center">
-          <SectionDivider label="TownWelcome / WI" className="mb-6" />
+          <SectionDivider label="Hearth Handbook / WI" className="mb-6" />
           <h1 className="font-display text-[44px] font-extrabold uppercase leading-[0.95] tracking-tight text-foreground sm:text-6xl">
             Discover your town,
             <br />

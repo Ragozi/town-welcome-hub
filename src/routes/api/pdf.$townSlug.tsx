@@ -93,7 +93,7 @@ export const Route = createFileRoute("/api/pdf/$townSlug")({
           status: 200,
           headers: {
             "Content-Type": "application/pdf",
-            "Content-Disposition": `inline; filename="townwelcome-${slug}.pdf"`,
+            "Content-Disposition": `inline; filename="hearth-handbook-${slug}.pdf"`,
             "Cache-Control": "public, max-age=300",
           },
         });
@@ -141,7 +141,7 @@ function TownPdf({
       <Page size="A4" style={styles.page}>
         <View style={styles.header}>
           <View>
-            <Text style={styles.brand}>TownWelcome · {town.state}</Text>
+            <Text style={styles.brand}>Hearth Handbook · {town.state}</Text>
             <Text style={styles.title}>Welcome to {town.name}</Text>
             <Text style={styles.blurb}>
               {town.county} County, {town.state}
@@ -187,7 +187,7 @@ function TownPdf({
         </View>
 
         <Text style={styles.footer}>
-          TownWelcome · {liveUrl} · Scan the QR for the live, up-to-date page
+          Hearth Handbook · {liveUrl} · Scan the QR for the live, up-to-date page
         </Text>
       </Page>
     </Document>
