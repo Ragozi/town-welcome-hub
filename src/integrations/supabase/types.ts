@@ -471,6 +471,7 @@ export type Database = {
       }
     }
     Functions: {
+      claim_invite_code: { Args: { _code: string }; Returns: boolean }
       consume_invite_code: {
         Args: { _code: string; _email: string; _user_id: string }
         Returns: boolean
