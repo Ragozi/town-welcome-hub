@@ -16,10 +16,10 @@ export const Route = createFileRoute("/login")({
   }),
   head: () => ({
     meta: [
-      { title: "Sign in — Hearth Handbook" },
-      { name: "description", content: "Sign in to Hearth Handbook for personalized local business picks, coupons, and town updates from your Wisconsin community." },
-      { property: "og:title", content: "Sign in — Hearth Handbook" },
-      { property: "og:description", content: "Sign in for personalized local picks and coupons." },
+      { title: "Realtor sign in — Hearth Handbook" },
+      { name: "description", content: "Sign in to Hearth Handbook to build personalized welcome packets and QR closing cards for your buyers." },
+      { property: "og:title", content: "Realtor sign in — Hearth Handbook" },
+      { property: "og:description", content: "Sign in to build welcome packets for your buyers." },
       { property: "og:url", content: "https://hearthhandbook.com/login" },
     ],
     links: [{ rel: "canonical", href: "https://hearthhandbook.com/login" }],
@@ -28,7 +28,7 @@ export const Route = createFileRoute("/login")({
 });
 
 function LoginPage() {
-  const { signIn, signUpWithCode, signInWithGoogle, session, role, loading } = useAuth();
+  const { signIn, signUpWithCode, session, role, loading } = useAuth();
   const navigate = useNavigate();
   const search = Route.useSearch();
 
@@ -49,7 +49,6 @@ function LoginPage() {
     if (loading || !session) return;
     if (role === "admin") navigate({ to: "/admin" });
     else if (role === "realtor") navigate({ to: "/dashboard" });
-    else navigate({ to: "/me" });
   }, [session, role, loading, navigate]);
 
   useEffect(() => {
@@ -91,43 +90,22 @@ function LoginPage() {
     toast.success("Check your email to verify your account.");
   };
 
-  const onGoogle = async () => {
-    const code = showInvite && codeValid ? inviteCode : undefined;
-    const { error } = await signInWithGoogle(code);
-    if (error) toast.error(error);
-  };
-
   return (
     <div className="min-h-screen bg-background">
       <div className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-5 py-12">
         <Link to="/" className="font-display mb-10 text-center text-xl font-extrabold tracking-tight">
-          WELCOME HOME<span className="text-primary">.</span>
+          HEARTH HANDBOOK<span className="text-primary">.</span>
         </Link>
 
         <div className="rounded-3xl border border-border bg-card p-8 shadow-[var(--shadow-soft)]">
           <h1 className="font-display text-2xl font-extrabold uppercase tracking-tight">
-            Welcome
+            Realtor sign in
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            New here? Sign in with Google to get personalized local picks for your town.
+            Build personalized welcome packets for your buyers.
           </p>
 
-          <Button
-            type="button"
-            variant="outline"
-            onClick={onGoogle}
-            className="mt-5 h-12 w-full rounded-full"
-          >
-            Continue with Google
-          </Button>
-
-          <div className="my-5 flex items-center gap-3">
-            <div className="h-px flex-1 bg-border" />
-            <span className="text-xs uppercase tracking-wider text-muted-foreground">or sign in with email</span>
-            <div className="h-px flex-1 bg-border" />
-          </div>
-
-          <form onSubmit={onSignIn} className="space-y-4">
+          <form onSubmit={onSignIn} className="mt-6 space-y-4">
             <div>
               <Label htmlFor="email">Email</Label>
               <Input
@@ -199,54 +177,48 @@ function LoginPage() {
                 </div>
 
                 {codeValid && (
-                  <>
-                    <p className="text-xs text-muted-foreground">
-                      Code accepted. Use the Google button above (it'll register you as a realtor)
-                      or create an account with email below.
-                    </p>
-                    <form onSubmit={onSignUp} className="space-y-3">
-                      <div>
-                        <Label htmlFor="signup-name">Full name</Label>
-                        <Input
-                          id="signup-name"
-                          required
-                          value={signupName}
-                          onChange={(e) => setSignupName(e.target.value)}
-                          className="mt-1.5 h-11 rounded-xl"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="signup-email">Email</Label>
-                        <Input
-                          id="signup-email"
-                          type="email"
-                          required
-                          value={signupEmail}
-                          onChange={(e) => setSignupEmail(e.target.value)}
-                          className="mt-1.5 h-11 rounded-xl"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="signup-password">Password</Label>
-                        <Input
-                          id="signup-password"
-                          type="password"
-                          required
-                          minLength={8}
-                          value={signupPassword}
-                          onChange={(e) => setSignupPassword(e.target.value)}
-                          className="mt-1.5 h-11 rounded-xl"
-                        />
-                      </div>
-                      <Button
-                        type="submit"
-                        disabled={submitting}
-                        className="h-12 w-full rounded-full bg-primary text-primary-foreground hover:bg-primary/90"
-                      >
-                        {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Create realtor account"}
-                      </Button>
-                    </form>
-                  </>
+                  <form onSubmit={onSignUp} className="space-y-3">
+                    <div>
+                      <Label htmlFor="signup-name">Full name</Label>
+                      <Input
+                        id="signup-name"
+                        required
+                        value={signupName}
+                        onChange={(e) => setSignupName(e.target.value)}
+                        className="mt-1.5 h-11 rounded-xl"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="signup-email">Email</Label>
+                      <Input
+                        id="signup-email"
+                        type="email"
+                        required
+                        value={signupEmail}
+                        onChange={(e) => setSignupEmail(e.target.value)}
+                        className="mt-1.5 h-11 rounded-xl"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="signup-password">Password</Label>
+                      <Input
+                        id="signup-password"
+                        type="password"
+                        required
+                        minLength={8}
+                        value={signupPassword}
+                        onChange={(e) => setSignupPassword(e.target.value)}
+                        className="mt-1.5 h-11 rounded-xl"
+                      />
+                    </div>
+                    <Button
+                      type="submit"
+                      disabled={submitting}
+                      className="h-12 w-full rounded-full bg-primary text-primary-foreground hover:bg-primary/90"
+                    >
+                      {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Create realtor account"}
+                    </Button>
+                  </form>
                 )}
               </div>
             )}

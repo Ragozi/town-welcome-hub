@@ -16,7 +16,7 @@ export function SiteHeader() {
           <Link to="/about" className="hover:text-foreground" activeProps={{ className: "text-foreground" }}>
             About
           </Link>
-          <a href="/#sponsor" className="hover:text-foreground">Sponsor</a>
+          <Link to="/sponsor" className="hover:text-foreground" activeProps={{ className: "text-foreground" }}>Sponsor</Link>
           <Link to="/login" className="hover:text-foreground" activeProps={{ className: "text-foreground" }}>
             Realtor Login
           </Link>
@@ -36,10 +36,10 @@ export function SiteHeader() {
             size="sm"
             className="h-10 rounded-full bg-foreground px-5 text-background hover:bg-foreground/90"
           >
-            <a href="/#sponsor" className="inline-flex items-center gap-2">
+            <Link to="/sponsor" className="inline-flex items-center gap-2">
               Get Listed
               <span className="inline-block h-2 w-2 rounded-full bg-primary" />
-            </a>
+            </Link>
           </Button>
         </div>
       </div>

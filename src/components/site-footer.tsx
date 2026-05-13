@@ -19,7 +19,7 @@ export function SiteFooter() {
               asChild
               className="mt-6 h-11 rounded-full bg-primary px-6 text-primary-foreground hover:bg-primary/90"
             >
-              <a href="#sponsor">List your business</a>
+              <Link to="/sponsor">List your business</Link>
             </Button>
           </div>
 
@@ -30,7 +30,7 @@ export function SiteFooter() {
               </div>
               <ul className="space-y-2 text-white/85">
                 <li><Link to="/about" className="hover:text-primary">About</Link></li>
-                <li><a href="/#sponsor" className="hover:text-primary">Sponsor tiers</a></li>
+                <li><Link to="/sponsor" className="hover:text-primary">Sponsor tiers</Link></li>
                 <li><Link to="/login" className="hover:text-primary">Realtor login</Link></li>
               </ul>
             </div>
