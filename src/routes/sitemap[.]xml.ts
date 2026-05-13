@@ -28,15 +28,14 @@ export const Route = createFileRoute("/sitemap.xml")({
 
         const { data: towns } = await supabaseAdmin
           .from("towns")
-          .select("slug, updated_at")
+          .select("slug")
           .order("slug");
 
         for (const t of towns ?? []) {
           entries.push({
-            path: `/towns/${t.slug}`,
+            path: `/${t.slug}`,
             changefreq: "weekly",
             priority: "0.8",
-            lastmod: t.updated_at ?? undefined,
           });
         }
 
