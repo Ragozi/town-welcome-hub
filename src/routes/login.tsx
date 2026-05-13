@@ -4,10 +4,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/lib/auth";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, KeyRound, ChevronDown } from "lucide-react";
+
+type LoginSearch = { code?: string };
 
 export const Route = createFileRoute("/login")({
+  validateSearch: (s: Record<string, unknown>): LoginSearch => ({
+    code: typeof s.code === "string" ? s.code : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Realtor Login — Welcome Home" },
@@ -18,27 +24,76 @@ export const Route = createFileRoute("/login")({
 });
 
 function LoginPage() {
-  const { signIn, session, loading } = useAuth();
+  const { signIn, signUpWithCode, signInWithGoogle, session, loading } = useAuth();
   const navigate = useNavigate();
+  const search = Route.useSearch();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  // Invite code gate
+  const [showInvite, setShowInvite] = useState(!!search.code);
+  const [inviteCode, setInviteCode] = useState((search.code ?? "").toUpperCase());
+  const [codeValid, setCodeValid] = useState(false);
+  const [validating, setValidating] = useState(false);
+  const [signupEmail, setSignupEmail] = useState("");
+  const [signupPassword, setSignupPassword] = useState("");
+  const [signupName, setSignupName] = useState("");
 
   useEffect(() => {
     if (!loading && session) navigate({ to: "/dashboard" });
   }, [session, loading, navigate]);
 
-  const onSubmit = async (e: React.FormEvent) => {
+  // Auto-validate code from URL
+  useEffect(() => {
+    if (search.code) {
+      void validateCode(search.code);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const validateCode = async (raw: string) => {
+    const code = raw.trim().toUpperCase();
+    if (!code) return;
+    setValidating(true);
+    const { data, error } = await supabase.rpc("validate_invite_code", { _code: code });
+    setValidating(false);
+    if (error || !data) {
+      setCodeValid(false);
+      toast.error("Invalid, expired, or already-used invite code.");
+      return;
+    }
+    setCodeValid(true);
+    setInviteCode(code);
+    toast.success("Invite code accepted. Create your account below.");
+  };
+
+  const onSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
     const { error } = await signIn(email.trim(), password);
     setSubmitting(false);
-    if (error) {
-      toast.error(error);
-      return;
-    }
-    toast.success("Welcome back.");
+    if (error) return toast.error(error);
     navigate({ to: "/dashboard" });
+  };
+
+  const onSignUp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!codeValid) return toast.error("Validate your invite code first.");
+    setSubmitting(true);
+    const { error } = await signUpWithCode(signupEmail.trim(), signupPassword, signupName.trim(), inviteCode);
+    setSubmitting(false);
+    if (error) return toast.error(error);
+    toast.success("Check your email to verify your account.");
+  };
+
+  const onGoogle = async () => {
+    if (showInvite && inviteCode && codeValid) {
+      sessionStorage.setItem("pending_invite_code", inviteCode);
+    }
+    const { error } = await signInWithGoogle();
+    if (error) toast.error(error);
   };
 
   return (
@@ -53,15 +108,11 @@ function LoginPage() {
             Realtor sign in
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Welcome Home is invite-only. If your brokerage hasn't been provisioned yet,
-            email{" "}
-            <a className="underline" href="mailto:igor@halolabsai.com">
-              igor@halolabsai.com
-            </a>
-            .
+            Welcome Home is invite-only. New realtors need an invite code from your admin.
           </p>
 
-          <form onSubmit={onSubmit} className="mt-6 space-y-4">
+          {/* Existing user sign-in */}
+          <form onSubmit={onSignIn} className="mt-6 space-y-4">
             <div>
               <Label htmlFor="email">Email</Label>
               <Input
@@ -94,6 +145,111 @@ function LoginPage() {
               {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Sign in"}
             </Button>
           </form>
+
+          <div className="my-5 flex items-center gap-3">
+            <div className="h-px flex-1 bg-border" />
+            <span className="text-xs uppercase tracking-wider text-muted-foreground">or</span>
+            <div className="h-px flex-1 bg-border" />
+          </div>
+
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onGoogle}
+            className="h-12 w-full rounded-full"
+          >
+            Continue with Google
+          </Button>
+
+          {/* Invite code gate */}
+          <div className="mt-6 border-t border-border pt-5">
+            <button
+              type="button"
+              onClick={() => setShowInvite((v) => !v)}
+              className="flex w-full items-center justify-between text-left text-sm font-medium text-foreground/80 hover:text-foreground"
+            >
+              <span className="inline-flex items-center gap-2">
+                <KeyRound className="h-4 w-4" />
+                I'm a new realtor with an invite code
+              </span>
+              <ChevronDown className={`h-4 w-4 transition ${showInvite ? "rotate-180" : ""}`} />
+            </button>
+
+            {showInvite && (
+              <div className="mt-4 space-y-4">
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="WH-XXXXXX"
+                    value={inviteCode}
+                    onChange={(e) => {
+                      setInviteCode(e.target.value.toUpperCase());
+                      setCodeValid(false);
+                    }}
+                    className="h-11 rounded-xl font-mono uppercase tracking-wider"
+                    disabled={codeValid}
+                  />
+                  <Button
+                    type="button"
+                    onClick={() => validateCode(inviteCode)}
+                    disabled={validating || codeValid || !inviteCode}
+                    className="h-11 rounded-xl"
+                  >
+                    {validating ? <Loader2 className="h-4 w-4 animate-spin" /> : codeValid ? "✓" : "Verify"}
+                  </Button>
+                </div>
+
+                {codeValid && (
+                  <>
+                    <p className="text-xs text-muted-foreground">
+                      Code accepted. Create your account with Google above, or with email below.
+                    </p>
+                    <form onSubmit={onSignUp} className="space-y-3">
+                      <div>
+                        <Label htmlFor="signup-name">Full name</Label>
+                        <Input
+                          id="signup-name"
+                          required
+                          value={signupName}
+                          onChange={(e) => setSignupName(e.target.value)}
+                          className="mt-1.5 h-11 rounded-xl"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="signup-email">Email</Label>
+                        <Input
+                          id="signup-email"
+                          type="email"
+                          required
+                          value={signupEmail}
+                          onChange={(e) => setSignupEmail(e.target.value)}
+                          className="mt-1.5 h-11 rounded-xl"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="signup-password">Password</Label>
+                        <Input
+                          id="signup-password"
+                          type="password"
+                          required
+                          minLength={8}
+                          value={signupPassword}
+                          onChange={(e) => setSignupPassword(e.target.value)}
+                          className="mt-1.5 h-11 rounded-xl"
+                        />
+                      </div>
+                      <Button
+                        type="submit"
+                        disabled={submitting}
+                        className="h-12 w-full rounded-full bg-primary text-primary-foreground hover:bg-primary/90"
+                      >
+                        {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Create account"}
+                      </Button>
+                    </form>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         <Link to="/" className="mt-6 text-center text-xs text-muted-foreground hover:text-foreground">
