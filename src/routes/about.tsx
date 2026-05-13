@@ -68,9 +68,10 @@ function AboutPage() {
           <span className="text-primary">Wisconsin</span> towns.
         </h1>
         <p className="mt-6 max-w-2xl text-lg text-foreground/70">
-          Meet the locals, grab a coupon, and feel at home — wherever you land.
-          Hearth Handbook is a hand-curated, community-first guide built for the
-          people who actually live, work and visit each town we cover.
+          Hearth Handbook is a closing-gift product for realtors. You build a
+          personalized welcome packet for each buyer — a printed QR card and a
+          private live page with a hand-curated guide to their new town. They
+          get the warmest possible welcome. You stay top-of-mind for life.
         </p>
         <div className="mt-8 flex flex-wrap gap-3">
           <Button
@@ -163,7 +164,7 @@ function AboutPage() {
                 <span className="font-display text-3xl font-extrabold">4</span>
               </li>
               <li className="flex items-baseline justify-between gap-4">
-                <span className="text-background/70">Local categories</span>
+                <span className="text-background/70">Sponsor categories</span>
                 <span className="font-display text-3xl font-extrabold">12+</span>
               </li>
             </ul>
@@ -215,9 +216,9 @@ function AboutPage() {
             </h2>
             <p className="mt-4 text-foreground/70">
               Hearth Handbook started as a printed welcome packet handed to new
-              neighbors in Ozaukee County. We turned it into a living guide so
-              every visitor and new resident gets the same warm introduction —
-              with the locals front and center.
+              neighbors in Ozaukee County. We turned it into a realtor toolkit
+              so every closing in our towns can come with a beautiful, personal
+              welcome — without anyone reinventing the wheel.
             </p>
           </div>
           <div className="space-y-4">
@@ -238,10 +239,10 @@ function AboutPage() {
                 <Heart className="h-5 w-5" />
               </span>
               <div>
-                <h3 className="font-semibold">Free for residents, forever</h3>
+                <h3 className="font-semibold">Free for buyers, forever</h3>
                 <p className="mt-1 text-sm text-foreground/65">
-                  Our guides will always be free to read. Sponsors keep the
-                  lights on so the welcome mat stays out.
+                  Buyers never pay. Realtors and local sponsors keep the lights
+                  on so every welcome packet stays free to the new neighbor.
                 </p>
               </div>
             </div>
@@ -270,9 +271,9 @@ function AboutPage() {
           />
           <div className="flex flex-col items-start justify-between gap-6 md:flex-row md:items-end">
             <h2 className="font-display max-w-xl text-3xl font-extrabold uppercase leading-tight tracking-tight sm:text-4xl">
-              Want your town next?
+              Want to bring Hearth Handbook
               <br />
-              We'd love to hear from you.
+              to your county?
             </h2>
             <a
               href="mailto:info@hearthhandbook.com"
