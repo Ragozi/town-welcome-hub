@@ -37,7 +37,7 @@ function PrivacyPage() {
       <h2>Your rights</h2>
       <p>You can edit your preferences, change your home town, opt out of any email topic, or delete your account entirely from <Link to="/me/settings" className="underline">Preferences</Link>. Deletion is permanent and immediate.</p>
       <h2>Contact</h2>
-      <p>Questions? Email igor@halolabsai.com.</p>
+      <p>Questions? Email info@hearthhandbook.com.</p>
     </div>
   );
 }

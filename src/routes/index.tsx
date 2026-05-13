@@ -66,7 +66,7 @@ export const Route = createFileRoute("/")({
               "@type": "Organization",
               name: "Hearth Handbook",
               url: "https://hearthhandbook.com/",
-              email: "igor@halolabsai.com",
+              email: "info@hearthhandbook.com",
               areaServed: { "@type": "AdministrativeArea", name: "Wisconsin, USA" },
             },
           ],
@@ -355,7 +355,7 @@ function Home() {
               when they move to town.
             </h2>
             <a
-              href="mailto:igor@halolabsai.com"
+              href="mailto:info@hearthhandbook.com"
               className="inline-flex h-12 shrink-0 items-center gap-2 rounded-full bg-primary px-6 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
             >
               Get listed <ArrowRight className="h-4 w-4" />
