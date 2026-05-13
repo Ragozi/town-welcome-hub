@@ -24,6 +24,13 @@ type AuthCtx = {
   loading: boolean;
   refreshProfile: () => Promise<void>;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
+  signUpWithCode: (
+    email: string,
+    password: string,
+    fullName: string,
+    inviteCode: string,
+  ) => Promise<{ error: string | null }>;
+  signInWithGoogle: (inviteCode?: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
 };
 
@@ -77,6 +84,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     signIn: async (email, password) => {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       return { error: error?.message ?? null };
+    },
+    signUpWithCode: async (email, password, fullName, inviteCode) => {
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/dashboard`,
+          data: { full_name: fullName, invite_code: inviteCode.trim().toUpperCase() },
+        },
+      });
+      return { error: error?.message ?? null };
+    },
+    signInWithGoogle: async (inviteCode) => {
+      const { lovable } = await import("@/integrations/lovable/index");
+      const extraParams: Record<string, string> = { prompt: "select_account" };
+      if (inviteCode) extraParams.invite_code = inviteCode.trim().toUpperCase();
+      const result = await lovable.auth.signInWithOAuth("google", {
+        redirect_uri: window.location.origin,
+        extraParams,
+      });
+      if (result.error) {
+        const msg = result.error instanceof Error ? result.error.message : String(result.error);
+        return { error: msg };
+      }
+      return { error: null };
     },
     signOut: async () => {
       await supabase.auth.signOut();
