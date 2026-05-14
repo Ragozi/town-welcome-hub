@@ -1,7 +1,7 @@
 import { createFileRoute, Link, Outlet, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { useAuth } from "@/lib/auth";
-import { Loader2, BarChart3, Users, ScrollText, KeyRound } from "lucide-react";
+import { Loader2, BarChart3, Users, ScrollText, KeyRound, DollarSign } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   component: AdminLayout,
@@ -46,7 +46,14 @@ function AdminLayout() {
           activeProps={{ className: "bg-foreground text-background" }}
           className="inline-flex items-center gap-1.5 rounded-full border border-border px-4 py-1.5 hover:bg-foreground/5"
         >
-          <Users className="h-4 w-4" /> Realtors
+          <Users className="h-4 w-4" /> Users
+        </Link>
+        <Link
+          to="/admin/finance"
+          activeProps={{ className: "bg-foreground text-background" }}
+          className="inline-flex items-center gap-1.5 rounded-full border border-border px-4 py-1.5 hover:bg-foreground/5"
+        >
+          <DollarSign className="h-4 w-4" /> Finance
         </Link>
         <Link
           to="/admin/events"
