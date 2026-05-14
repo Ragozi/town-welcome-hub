@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { SectionDivider } from "@/components/section-divider";
+import { SponsorInquiryForm } from "@/components/sponsor-inquiry-form";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/sponsor")({
@@ -78,12 +79,17 @@ const TIER_BENEFITS: Record<string, { tagline: string; perks: string[]; highligh
   },
 };
 
-const SPONSOR_MAILTO =
-  "mailto:info@hearthhandbook.com?subject=Sponsor%20listing%20inquiry";
+const SPONSOR_EMAIL = "info@hearthhandbook.com";
+
+function scrollToInquiry() {
+  const el = document.getElementById("inquire");
+  if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+}
 
 function SponsorPage() {
   const [tiers, setTiers] = useState<Tier[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedTier, setSelectedTier] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     void (async () => {
@@ -95,6 +101,11 @@ function SponsorPage() {
       setLoading(false);
     })();
   }, []);
+
+  const handlePickTier = (key: string) => {
+    setSelectedTier(key);
+    setTimeout(scrollToInquiry, 0);
+  };
 
   // Show paid tiers in the pricing grid; "none" is the free fallback we describe in copy.
   const paidTiers = tiers.filter((t) => t.key !== "none");
@@ -118,13 +129,12 @@ function SponsorPage() {
         </p>
         <div className="mt-8 flex flex-wrap gap-3">
           <Button
-            asChild
+            type="button"
             size="lg"
+            onClick={scrollToInquiry}
             className="h-14 rounded-full bg-primary px-7 text-base font-semibold text-primary-foreground shadow-[var(--shadow-cta)] hover:bg-primary/90"
           >
-            <a href={SPONSOR_MAILTO}>
-              Get listed <ArrowRight className="ml-1 h-5 w-5" />
-            </a>
+            Get listed <ArrowRight className="ml-1 h-5 w-5" />
           </Button>
           <Link
             to="/about"
@@ -195,7 +205,7 @@ function SponsorPage() {
           {!loading && paidTiers.length === 0 && (
             <div className="col-span-full rounded-3xl border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
               We're refreshing our sponsor tiers. Email us at{" "}
-              <a href={SPONSOR_MAILTO} className="underline">
+              <a href={`mailto:${SPONSOR_EMAIL}`} className="underline">
                 info@hearthhandbook.com
               </a>{" "}
               for current pricing.
@@ -240,10 +250,11 @@ function SponsorPage() {
                   ))}
                 </ul>
                 <Button
-                  asChild
+                  type="button"
+                  onClick={() => handlePickTier(t.key)}
                   className="mt-6 h-12 w-full rounded-full bg-foreground text-background hover:bg-foreground/90"
                 >
-                  <a href={SPONSOR_MAILTO}>Claim this tier</a>
+                  Claim this tier
                 </Button>
               </div>
             );
@@ -258,12 +269,13 @@ function SponsorPage() {
               Free listings include name, category and contact info — no photo or coupon. Sorted after sponsors.
             </p>
           </div>
-          <a
-            href={SPONSOR_MAILTO}
+          <button
+            type="button"
+            onClick={scrollToInquiry}
             className="inline-flex items-center gap-2 text-sm font-semibold text-foreground hover:text-primary"
           >
             Get added free <ArrowRight className="h-4 w-4" />
-          </a>
+          </button>
         </div>
       </section>
 
@@ -332,25 +344,29 @@ function SponsorPage() {
         </div>
       </section>
 
-      {/* CTA */}
-      <section className="mx-auto max-w-6xl px-5 pb-24">
-        <div className="overflow-hidden rounded-3xl bg-foreground p-10 text-background md:p-14">
-          <SectionDivider
-            label="Claim your category"
-            className="mb-5 [&_span]:text-background/60 [&_span:first-child]:text-background"
+      {/* INQUIRY FORM */}
+      <section id="inquire" className="mx-auto max-w-3xl px-5 pb-24 scroll-mt-24">
+        <SectionDivider label="Get in touch" className="mb-6" />
+        <h2 className="font-display max-w-xl text-3xl font-extrabold uppercase leading-tight tracking-tight sm:text-4xl">
+          Tell us about your business.
+        </h2>
+        <p className="mt-3 max-w-xl text-foreground/70">
+          Only one Premier sponsor per category, per town. Send us the details
+          and we'll reply with availability and next steps.
+        </p>
+        <div className="mt-8">
+          <SponsorInquiryForm
+            tiers={tiers.map((t) => ({ key: t.key, name: t.name }))}
+            defaultTier={selectedTier}
           />
-          <div className="flex flex-col items-start justify-between gap-6 md:flex-row md:items-end">
-            <h2 className="font-display max-w-xl text-3xl font-extrabold uppercase leading-tight tracking-tight sm:text-4xl">
-              Only one Premier sponsor per category, per town.
-            </h2>
-            <a
-              href={SPONSOR_MAILTO}
-              className="inline-flex h-12 shrink-0 items-center gap-2 rounded-full bg-primary px-6 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
-            >
-              <span>info@hearthhandbook.com</span> <ArrowRight className="h-4 w-4" />
-            </a>
-          </div>
         </div>
+        <p className="mt-4 text-center text-xs text-foreground/55">
+          Prefer email? Reach us at{" "}
+          <a href={`mailto:${SPONSOR_EMAIL}`} className="underline">
+            {SPONSOR_EMAIL}
+          </a>
+          .
+        </p>
       </section>
 
       <SiteFooter />

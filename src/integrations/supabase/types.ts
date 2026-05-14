@@ -423,6 +423,51 @@ export type Database = {
         }
         Relationships: []
       }
+      sponsor_inquiries: {
+        Row: {
+          business_name: string
+          category: string | null
+          contact_name: string
+          created_at: string
+          email: string
+          id: string
+          message: string | null
+          phone: string | null
+          status: string
+          tier_key: string | null
+          town: string | null
+          website: string | null
+        }
+        Insert: {
+          business_name: string
+          category?: string | null
+          contact_name: string
+          created_at?: string
+          email: string
+          id?: string
+          message?: string | null
+          phone?: string | null
+          status?: string
+          tier_key?: string | null
+          town?: string | null
+          website?: string | null
+        }
+        Update: {
+          business_name?: string
+          category?: string | null
+          contact_name?: string
+          created_at?: string
+          email?: string
+          id?: string
+          message?: string | null
+          phone?: string | null
+          status?: string
+          tier_key?: string | null
+          town?: string | null
+          website?: string | null
+        }
+        Relationships: []
+      }
       sponsor_tiers: {
         Row: {
           display_priority: number
