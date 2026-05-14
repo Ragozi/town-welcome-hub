@@ -8,6 +8,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { logEvent } from "@/lib/tracking.functions";
 import { detectSource, getSessionId, readUtm } from "@/lib/tracking";
 import { getPublicBaseUrl } from "@/lib/public-url";
+import { RequireAuth } from "@/components/require-auth";
 
 type LoaderData = {
   packet: Packet;
@@ -71,7 +72,11 @@ export const Route = createFileRoute("/p/$slug")({
       </div>
     </div>
   ),
-  component: BuyerLanding,
+  component: () => (
+    <RequireAuth>
+      <BuyerLanding />
+    </RequireAuth>
+  ),
 });
 
 function BuyerLanding() {

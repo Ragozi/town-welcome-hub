@@ -7,6 +7,7 @@ import { SiteFooter } from "@/components/site-footer";
 import { SectionDivider } from "@/components/section-divider";
 import { SponsorInquiryForm } from "@/components/sponsor-inquiry-form";
 import { supabase } from "@/integrations/supabase/client";
+import { RequireAuth } from "@/components/require-auth";
 
 export const Route = createFileRoute("/sponsor")({
   head: () => ({
@@ -27,7 +28,11 @@ export const Route = createFileRoute("/sponsor")({
     ],
     links: [{ rel: "canonical", href: "https://hearthhandbook.com/sponsor" }],
   }),
-  component: SponsorPage,
+  component: () => (
+    <RequireAuth>
+      <SponsorPage />
+    </RequireAuth>
+  ),
 });
 
 type Tier = {
