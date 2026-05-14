@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { SectionDivider } from "@/components/section-divider";
+import { SponsorInquiryForm } from "@/components/sponsor-inquiry-form";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/sponsor")({
