@@ -19,7 +19,7 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { Loader2, Plus, Shield, Key, Trash2 } from "lucide-react";
 
-export const Route = createFileRoute("/_authenticated/admin/realtors")({
+export const Route = createFileRoute("/_authenticated/admin/users")({
   component: AdminRealtors,
 });
 
