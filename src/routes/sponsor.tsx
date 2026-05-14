@@ -129,13 +129,12 @@ function SponsorPage() {
         </p>
         <div className="mt-8 flex flex-wrap gap-3">
           <Button
-            asChild
+            type="button"
             size="lg"
+            onClick={scrollToInquiry}
             className="h-14 rounded-full bg-primary px-7 text-base font-semibold text-primary-foreground shadow-[var(--shadow-cta)] hover:bg-primary/90"
           >
-            <a href={SPONSOR_MAILTO}>
-              Get listed <ArrowRight className="ml-1 h-5 w-5" />
-            </a>
+            Get listed <ArrowRight className="ml-1 h-5 w-5" />
           </Button>
           <Link
             to="/about"
