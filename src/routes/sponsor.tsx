@@ -344,25 +344,29 @@ function SponsorPage() {
         </div>
       </section>
 
-      {/* CTA */}
-      <section className="mx-auto max-w-6xl px-5 pb-24">
-        <div className="overflow-hidden rounded-3xl bg-foreground p-10 text-background md:p-14">
-          <SectionDivider
-            label="Claim your category"
-            className="mb-5 [&_span]:text-background/60 [&_span:first-child]:text-background"
+      {/* INQUIRY FORM */}
+      <section id="inquire" className="mx-auto max-w-3xl px-5 pb-24 scroll-mt-24">
+        <SectionDivider label="Get in touch" className="mb-6" />
+        <h2 className="font-display max-w-xl text-3xl font-extrabold uppercase leading-tight tracking-tight sm:text-4xl">
+          Tell us about your business.
+        </h2>
+        <p className="mt-3 max-w-xl text-foreground/70">
+          Only one Premier sponsor per category, per town. Send us the details
+          and we'll reply with availability and next steps.
+        </p>
+        <div className="mt-8">
+          <SponsorInquiryForm
+            tiers={tiers.map((t) => ({ key: t.key, name: t.name }))}
+            defaultTier={selectedTier}
           />
-          <div className="flex flex-col items-start justify-between gap-6 md:flex-row md:items-end">
-            <h2 className="font-display max-w-xl text-3xl font-extrabold uppercase leading-tight tracking-tight sm:text-4xl">
-              Only one Premier sponsor per category, per town.
-            </h2>
-            <a
-              href={SPONSOR_MAILTO}
-              className="inline-flex h-12 shrink-0 items-center gap-2 rounded-full bg-primary px-6 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
-            >
-              <span>info@hearthhandbook.com</span> <ArrowRight className="h-4 w-4" />
-            </a>
-          </div>
         </div>
+        <p className="mt-4 text-center text-xs text-foreground/55">
+          Prefer email? Reach us at{" "}
+          <a href={`mailto:${SPONSOR_EMAIL}`} className="underline">
+            {SPONSOR_EMAIL}
+          </a>
+          .
+        </p>
       </section>
 
       <SiteFooter />
