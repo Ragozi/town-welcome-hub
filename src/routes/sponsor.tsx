@@ -250,10 +250,11 @@ function SponsorPage() {
                   ))}
                 </ul>
                 <Button
-                  asChild
+                  type="button"
+                  onClick={() => handlePickTier(t.key)}
                   className="mt-6 h-12 w-full rounded-full bg-foreground text-background hover:bg-foreground/90"
                 >
-                  <a href={SPONSOR_MAILTO}>Claim this tier</a>
+                  Claim this tier
                 </Button>
               </div>
             );
