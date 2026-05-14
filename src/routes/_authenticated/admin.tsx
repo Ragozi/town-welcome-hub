@@ -42,7 +42,7 @@ function AdminLayout() {
           <BarChart3 className="h-4 w-4" /> Overview
         </Link>
         <Link
-          to="/admin/realtors"
+          to="/admin/users"
           activeProps={{ className: "bg-foreground text-background" }}
           className="inline-flex items-center gap-1.5 rounded-full border border-border px-4 py-1.5 hover:bg-foreground/5"
         >
