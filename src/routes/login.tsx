@@ -177,8 +177,8 @@ function LoginPage() {
                 </div>
 
                 {codeValid && (
-                  <form onSubmit={onSignUp} className="space-y-3">
-                    <div>
+                  <form onSubmit={onSignUp} className="space-y-3" suppressHydrationWarning>
+                    <div suppressHydrationWarning>
                       <Label htmlFor="signup-name">Full name</Label>
                       <Input
                         id="signup-name"
@@ -188,7 +188,7 @@ function LoginPage() {
                         className="mt-1.5 h-11 rounded-xl"
                       />
                     </div>
-                    <div>
+                    <div suppressHydrationWarning>
                       <Label htmlFor="signup-email">Email</Label>
                       <Input
                         id="signup-email"
@@ -199,7 +199,7 @@ function LoginPage() {
                         className="mt-1.5 h-11 rounded-xl"
                       />
                     </div>
-                    <div>
+                    <div suppressHydrationWarning>
                       <Label htmlFor="signup-password">Password</Label>
                       <Input
                         id="signup-password"
