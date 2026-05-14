@@ -32,42 +32,62 @@ function AdminLayout() {
           Operations
         </h1>
       </div>
-      <nav className="flex flex-wrap gap-2 border-b border-border pb-3 text-sm font-medium">
+      <nav className="flex flex-wrap gap-2 border-b border-border pb-4 text-sm">
         <Link
           to="/admin"
           activeOptions={{ exact: true }}
-          activeProps={{ className: "bg-foreground text-background" }}
-          className="inline-flex items-center gap-1.5 rounded-full border border-border px-4 py-1.5 hover:bg-foreground/5"
+          activeProps={{
+            className:
+              "!bg-gradient-to-br !from-orange-500 !via-amber-500 !to-rose-500 !text-white !border-transparent !shadow-[0_8px_24px_-6px_rgba(234,88,12,0.55)] !-translate-y-0.5",
+          }}
+          className="group inline-flex items-center gap-2 rounded-full border border-border bg-background/60 px-4 py-2 font-display font-bold uppercase tracking-wide transition-all duration-200 hover:-translate-y-0.5 hover:border-orange-400/60 hover:bg-orange-50 hover:text-orange-700 hover:shadow-[0_6px_18px_-8px_rgba(234,88,12,0.45)] dark:hover:bg-orange-950/40 dark:hover:text-orange-200"
         >
-          <BarChart3 className="h-4 w-4" /> Overview
+          <span className="text-base transition-transform duration-300 group-hover:scale-125 group-hover:rotate-12">🔥</span>
+          <span>Hearth Hub</span>
         </Link>
         <Link
           to="/admin/users"
-          activeProps={{ className: "bg-foreground text-background" }}
-          className="inline-flex items-center gap-1.5 rounded-full border border-border px-4 py-1.5 hover:bg-foreground/5"
+          activeProps={{
+            className:
+              "!bg-gradient-to-r !from-rose-400 !via-fuchsia-500 !to-indigo-500 !text-white !border-transparent !shadow-[0_8px_24px_-6px_rgba(217,70,239,0.55)] !-translate-y-0.5",
+          }}
+          className="group inline-flex items-center gap-2 rounded-full border border-border bg-background/60 px-4 py-2 font-display font-bold uppercase tracking-wide transition-all duration-200 hover:-translate-y-0.5 hover:border-fuchsia-400/60 hover:bg-fuchsia-50 hover:text-fuchsia-700 hover:shadow-[0_6px_18px_-8px_rgba(217,70,239,0.45)] dark:hover:bg-fuchsia-950/40 dark:hover:text-fuchsia-200"
         >
-          <Users className="h-4 w-4" /> Users
+          <span className="text-base transition-transform duration-300 group-hover:scale-125 group-hover:-rotate-6">🌈</span>
+          <span>The Chosen Family</span>
         </Link>
         <Link
           to="/admin/finance"
-          activeProps={{ className: "bg-foreground text-background" }}
-          className="inline-flex items-center gap-1.5 rounded-full border border-border px-4 py-1.5 hover:bg-foreground/5"
+          activeProps={{
+            className:
+              "!bg-gradient-to-br !from-amber-400 !via-yellow-500 !to-orange-500 !text-white !border-transparent !shadow-[0_8px_24px_-6px_rgba(234,179,8,0.55)] !-translate-y-0.5",
+          }}
+          className="group inline-flex items-center gap-2 rounded-full border border-border bg-background/60 px-4 py-2 font-display font-bold uppercase tracking-wide transition-all duration-200 hover:-translate-y-0.5 hover:border-amber-400/60 hover:bg-amber-50 hover:text-amber-700 hover:shadow-[0_6px_18px_-8px_rgba(234,179,8,0.45)] dark:hover:bg-amber-950/40 dark:hover:text-amber-200"
         >
-          <DollarSign className="h-4 w-4" /> Finance
+          <span className="text-base transition-transform duration-300 group-hover:scale-125 group-hover:rotate-12">🍯</span>
+          <span>Serving Coin</span>
         </Link>
         <Link
           to="/admin/events"
-          activeProps={{ className: "bg-foreground text-background" }}
-          className="inline-flex items-center gap-1.5 rounded-full border border-border px-4 py-1.5 hover:bg-foreground/5"
+          activeProps={{
+            className:
+              "!bg-gradient-to-br !from-stone-700 !via-amber-800 !to-orange-700 !text-white !border-transparent !shadow-[0_8px_24px_-6px_rgba(120,53,15,0.55)] !-translate-y-0.5",
+          }}
+          className="group inline-flex items-center gap-2 rounded-full border border-border bg-background/60 px-4 py-2 font-display font-bold uppercase tracking-wide transition-all duration-200 hover:-translate-y-0.5 hover:border-amber-700/60 hover:bg-amber-50 hover:text-amber-900 hover:shadow-[0_6px_18px_-8px_rgba(120,53,15,0.45)] dark:hover:bg-amber-950/40 dark:hover:text-amber-100"
         >
-          <ScrollText className="h-4 w-4" /> Event log
+          <span className="text-base transition-transform duration-300 group-hover:scale-125 group-hover:-rotate-12">☕</span>
+          <span>Spill the Tea</span>
         </Link>
         <Link
           to="/admin/invite-codes"
-          activeProps={{ className: "bg-foreground text-background" }}
-          className="inline-flex items-center gap-1.5 rounded-full border border-border px-4 py-1.5 hover:bg-foreground/5"
+          activeProps={{
+            className:
+              "!bg-gradient-to-r !from-pink-500 !via-rose-500 !to-orange-500 !text-white !border-transparent !shadow-[0_8px_24px_-6px_rgba(244,63,94,0.55)] !-translate-y-0.5",
+          }}
+          className="group inline-flex items-center gap-2 rounded-full border border-border bg-background/60 px-4 py-2 font-display font-bold uppercase tracking-wide transition-all duration-200 hover:-translate-y-0.5 hover:border-rose-400/60 hover:bg-rose-50 hover:text-rose-700 hover:shadow-[0_6px_18px_-8px_rgba(244,63,94,0.45)] dark:hover:bg-rose-950/40 dark:hover:text-rose-200"
         >
-          <KeyRound className="h-4 w-4" /> Invite codes
+          <span className="text-base transition-transform duration-300 group-hover:scale-125 group-hover:rotate-12">🎟️</span>
+          <span>Come Through</span>
         </Link>
       </nav>
       <Outlet />
