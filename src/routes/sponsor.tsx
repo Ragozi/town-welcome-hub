@@ -79,12 +79,17 @@ const TIER_BENEFITS: Record<string, { tagline: string; perks: string[]; highligh
   },
 };
 
-const SPONSOR_MAILTO =
-  "mailto:info@hearthhandbook.com?subject=Sponsor%20listing%20inquiry";
+const SPONSOR_EMAIL = "info@hearthhandbook.com";
+
+function scrollToInquiry() {
+  const el = document.getElementById("inquire");
+  if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+}
 
 function SponsorPage() {
   const [tiers, setTiers] = useState<Tier[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedTier, setSelectedTier] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     void (async () => {
@@ -96,6 +101,11 @@ function SponsorPage() {
       setLoading(false);
     })();
   }, []);
+
+  const handlePickTier = (key: string) => {
+    setSelectedTier(key);
+    setTimeout(scrollToInquiry, 0);
+  };
 
   // Show paid tiers in the pricing grid; "none" is the free fallback we describe in copy.
   const paidTiers = tiers.filter((t) => t.key !== "none");
