@@ -205,7 +205,7 @@ function SponsorPage() {
           {!loading && paidTiers.length === 0 && (
             <div className="col-span-full rounded-3xl border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
               We're refreshing our sponsor tiers. Email us at{" "}
-              <a href={SPONSOR_MAILTO} className="underline">
+              <a href={`mailto:${SPONSOR_EMAIL}`} className="underline">
                 info@hearthhandbook.com
               </a>{" "}
               for current pricing.
