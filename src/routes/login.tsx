@@ -105,8 +105,8 @@ function LoginPage() {
             Build personalized welcome packets for your buyers.
           </p>
 
-          <form onSubmit={onSignIn} className="mt-6 space-y-4">
-            <div>
+          <form onSubmit={onSignIn} className="mt-6 space-y-4" suppressHydrationWarning>
+            <div suppressHydrationWarning>
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
@@ -118,7 +118,7 @@ function LoginPage() {
                 className="mt-1.5 h-11 rounded-xl"
               />
             </div>
-            <div>
+            <div suppressHydrationWarning>
               <Label htmlFor="password">Password</Label>
               <Input
                 id="password"
