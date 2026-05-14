@@ -29,6 +29,7 @@ import { Route as AuthenticatedPacketsNewRouteImport } from './routes/_authentic
 import { Route as AuthenticatedPacketsIdRouteImport } from './routes/_authenticated/packets.$id'
 import { Route as AuthenticatedAdminRealtorsRouteImport } from './routes/_authenticated/admin.realtors'
 import { Route as AuthenticatedAdminInviteCodesRouteImport } from './routes/_authenticated/admin.invite-codes'
+import { Route as AuthenticatedAdminFinanceRouteImport } from './routes/_authenticated/admin.finance'
 import { Route as AuthenticatedAdminEventsRouteImport } from './routes/_authenticated/admin.events'
 
 const TermsRoute = TermsRouteImport.update({
@@ -133,6 +134,12 @@ const AuthenticatedAdminInviteCodesRoute =
     path: '/invite-codes',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const AuthenticatedAdminFinanceRoute =
+  AuthenticatedAdminFinanceRouteImport.update({
+    id: '/finance',
+    path: '/finance',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 const AuthenticatedAdminEventsRoute =
   AuthenticatedAdminEventsRouteImport.update({
     id: '/events',
@@ -154,6 +161,7 @@ export interface FileRoutesByFullPath {
   '/p/$slug': typeof PSlugRoute
   '/r/$referralSlug': typeof RReferralSlugRoute
   '/admin/events': typeof AuthenticatedAdminEventsRoute
+  '/admin/finance': typeof AuthenticatedAdminFinanceRoute
   '/admin/invite-codes': typeof AuthenticatedAdminInviteCodesRoute
   '/admin/realtors': typeof AuthenticatedAdminRealtorsRoute
   '/packets/$id': typeof AuthenticatedPacketsIdRoute
@@ -175,6 +183,7 @@ export interface FileRoutesByTo {
   '/p/$slug': typeof PSlugRoute
   '/r/$referralSlug': typeof RReferralSlugRoute
   '/admin/events': typeof AuthenticatedAdminEventsRoute
+  '/admin/finance': typeof AuthenticatedAdminFinanceRoute
   '/admin/invite-codes': typeof AuthenticatedAdminInviteCodesRoute
   '/admin/realtors': typeof AuthenticatedAdminRealtorsRoute
   '/packets/$id': typeof AuthenticatedPacketsIdRoute
@@ -199,6 +208,7 @@ export interface FileRoutesById {
   '/p/$slug': typeof PSlugRoute
   '/r/$referralSlug': typeof RReferralSlugRoute
   '/_authenticated/admin/events': typeof AuthenticatedAdminEventsRoute
+  '/_authenticated/admin/finance': typeof AuthenticatedAdminFinanceRoute
   '/_authenticated/admin/invite-codes': typeof AuthenticatedAdminInviteCodesRoute
   '/_authenticated/admin/realtors': typeof AuthenticatedAdminRealtorsRoute
   '/_authenticated/packets/$id': typeof AuthenticatedPacketsIdRoute
@@ -223,6 +233,7 @@ export interface FileRouteTypes {
     | '/p/$slug'
     | '/r/$referralSlug'
     | '/admin/events'
+    | '/admin/finance'
     | '/admin/invite-codes'
     | '/admin/realtors'
     | '/packets/$id'
@@ -244,6 +255,7 @@ export interface FileRouteTypes {
     | '/p/$slug'
     | '/r/$referralSlug'
     | '/admin/events'
+    | '/admin/finance'
     | '/admin/invite-codes'
     | '/admin/realtors'
     | '/packets/$id'
@@ -267,6 +279,7 @@ export interface FileRouteTypes {
     | '/p/$slug'
     | '/r/$referralSlug'
     | '/_authenticated/admin/events'
+    | '/_authenticated/admin/finance'
     | '/_authenticated/admin/invite-codes'
     | '/_authenticated/admin/realtors'
     | '/_authenticated/packets/$id'
@@ -432,6 +445,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminInviteCodesRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/finance': {
+      id: '/_authenticated/admin/finance'
+      path: '/finance'
+      fullPath: '/admin/finance'
+      preLoaderRoute: typeof AuthenticatedAdminFinanceRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/admin/events': {
       id: '/_authenticated/admin/events'
       path: '/events'
@@ -444,6 +464,7 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminEventsRoute: typeof AuthenticatedAdminEventsRoute
+  AuthenticatedAdminFinanceRoute: typeof AuthenticatedAdminFinanceRoute
   AuthenticatedAdminInviteCodesRoute: typeof AuthenticatedAdminInviteCodesRoute
   AuthenticatedAdminRealtorsRoute: typeof AuthenticatedAdminRealtorsRoute
   AuthenticatedAdminIndexRoute: typeof AuthenticatedAdminIndexRoute
@@ -451,6 +472,7 @@ interface AuthenticatedAdminRouteChildren {
 
 const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminEventsRoute: AuthenticatedAdminEventsRoute,
+  AuthenticatedAdminFinanceRoute: AuthenticatedAdminFinanceRoute,
   AuthenticatedAdminInviteCodesRoute: AuthenticatedAdminInviteCodesRoute,
   AuthenticatedAdminRealtorsRoute: AuthenticatedAdminRealtorsRoute,
   AuthenticatedAdminIndexRoute: AuthenticatedAdminIndexRoute,
@@ -497,13 +519,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

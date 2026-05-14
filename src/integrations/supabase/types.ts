@@ -113,6 +113,51 @@ export type Database = {
         }
         Relationships: []
       }
+      expenses: {
+        Row: {
+          amount: number
+          category: string
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          is_recurring: boolean
+          notes: string | null
+          occurred_on: string
+          recurring_interval: string | null
+          updated_at: string
+          vendor: string | null
+        }
+        Insert: {
+          amount: number
+          category: string
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          is_recurring?: boolean
+          notes?: string | null
+          occurred_on?: string
+          recurring_interval?: string | null
+          updated_at?: string
+          vendor?: string | null
+        }
+        Update: {
+          amount?: number
+          category?: string
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          is_recurring?: boolean
+          notes?: string | null
+          occurred_on?: string
+          recurring_interval?: string | null
+          updated_at?: string
+          vendor?: string | null
+        }
+        Relationships: []
+      }
       marketing_subscriptions: {
         Row: {
           created_at: string
@@ -467,6 +512,62 @@ export type Database = {
           website?: string | null
         }
         Relationships: []
+      }
+      sponsor_subscriptions: {
+        Row: {
+          business_id: string | null
+          business_name: string
+          contact_email: string | null
+          created_at: string
+          created_by: string
+          ended_on: string | null
+          id: string
+          monthly_amount: number
+          notes: string | null
+          started_on: string
+          status: string
+          tier_key: string | null
+          updated_at: string
+        }
+        Insert: {
+          business_id?: string | null
+          business_name: string
+          contact_email?: string | null
+          created_at?: string
+          created_by: string
+          ended_on?: string | null
+          id?: string
+          monthly_amount?: number
+          notes?: string | null
+          started_on?: string
+          status?: string
+          tier_key?: string | null
+          updated_at?: string
+        }
+        Update: {
+          business_id?: string | null
+          business_name?: string
+          contact_email?: string | null
+          created_at?: string
+          created_by?: string
+          ended_on?: string | null
+          id?: string
+          monthly_amount?: number
+          notes?: string | null
+          started_on?: string
+          status?: string
+          tier_key?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sponsor_subscriptions_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       sponsor_tiers: {
         Row: {
