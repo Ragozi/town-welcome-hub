@@ -269,12 +269,13 @@ function SponsorPage() {
               Free listings include name, category and contact info — no photo or coupon. Sorted after sponsors.
             </p>
           </div>
-          <a
-            href={SPONSOR_MAILTO}
+          <button
+            type="button"
+            onClick={scrollToInquiry}
             className="inline-flex items-center gap-2 text-sm font-semibold text-foreground hover:text-primary"
           >
             Get added free <ArrowRight className="h-4 w-4" />
-          </a>
+          </button>
         </div>
       </section>
 
