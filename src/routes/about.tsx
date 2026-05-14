@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { SectionDivider } from "@/components/section-divider";
+import { RequireAuth } from "@/components/require-auth";
 
 export const Route = createFileRoute("/about")({
   head: () => ({
@@ -27,7 +28,11 @@ export const Route = createFileRoute("/about")({
     ],
     links: [{ rel: "canonical", href: "https://hearthhandbook.com/about" }],
   }),
-  component: AboutPage,
+  component: () => (
+    <RequireAuth>
+      <AboutPage />
+    </RequireAuth>
+  ),
 });
 
 const STEPS = [
