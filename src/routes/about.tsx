@@ -5,6 +5,7 @@ import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { SectionDivider } from "@/components/section-divider";
 import { RequireAuth } from "@/components/require-auth";
+import logoBadge from "@/assets/brand/logo-badge.png";
 
 export const Route = createFileRoute("/about")({
   head: () => ({
