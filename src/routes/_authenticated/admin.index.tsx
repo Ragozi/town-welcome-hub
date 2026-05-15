@@ -1,14 +1,16 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { adminGetMetrics } from "@/lib/admin.functions";
+import { generateQaHandbook, getQaHandbook } from "@/lib/scraped.functions";
 import { useAuth } from "@/lib/auth";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
   PieChart, Pie, Cell, BarChart, Bar,
 } from "recharts";
-import { ArrowDown, ArrowUp, Download, FileText, MapPin, MousePointerClick, QrCode, Users2, Loader2, ShieldAlert, LogIn } from "lucide-react";
+import { ArrowDown, ArrowUp, Download, FileText, MapPin, MousePointerClick, QrCode, Users2, Loader2, ShieldAlert, LogIn, Beaker, ExternalLink, RefreshCw } from "lucide-react";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/admin/")({
   component: AdminOverview,
@@ -103,6 +105,8 @@ function AdminOverview() {
           ))}
         </div>
       </div>
+
+      <QaHandbookCard />
 
       {/* KPI cards */}
       <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-6">
@@ -304,3 +308,63 @@ function Leaderboard({
     </div>
   );
 }
+
+function QaHandbookCard() {
+  const qc = useQueryClient();
+  const getQa = useServerFn(getQaHandbook);
+  const genQa = useServerFn(generateQaHandbook);
+  const { data, isLoading } = useQuery({
+    queryKey: ["qa-handbook"],
+    queryFn: () => getQa(),
+  });
+  const mut = useMutation({
+    mutationFn: () => genQa(),
+    onSuccess: () => {
+      toast.success("QA handbook regenerated");
+      qc.invalidateQueries({ queryKey: ["qa-handbook"] });
+    },
+    onError: (e) => toast.error("Generate failed", { description: (e as Error).message }),
+  });
+
+  return (
+    <div className="rounded-3xl border border-primary/30 bg-primary/5 p-6 shadow-[var(--shadow-soft)]">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-start gap-3">
+          <div className="rounded-2xl bg-primary/15 p-2.5">
+            <Beaker className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <h3 className="font-display text-lg font-extrabold uppercase tracking-tight">QA Handbook</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              A persistent test packet at <code className="rounded bg-background px-1 py-0.5 text-xs">/p/qa-sample</code> for reviewing layout end-to-end.
+            </p>
+            {data?.updated_at && (
+              <p className="mt-1 text-xs text-muted-foreground">Last generated {new Date(data.updated_at).toLocaleString()}</p>
+            )}
+          </div>
+        </div>
+        <div className="flex shrink-0 gap-2">
+          {data?.slug && (
+            <a
+              href={`/p/${data.slug}`}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-4 py-2 text-xs font-semibold uppercase tracking-wider hover:border-primary/40"
+            >
+              <ExternalLink className="h-3.5 w-3.5" /> View
+            </a>
+          )}
+          <button
+            onClick={() => mut.mutate()}
+            disabled={mut.isPending || isLoading}
+            className="inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-xs font-semibold uppercase tracking-wider text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
+          >
+            {mut.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+            {data ? "Regenerate" : "Generate"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+

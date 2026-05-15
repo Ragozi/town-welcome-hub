@@ -1,9 +1,12 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { useAuth } from "@/lib/auth";
 import { createPacket } from "@/lib/packets";
 import { listTowns } from "@/lib/towns";
+import { previewTownBusinesses } from "@/lib/scraped.functions";
+import { tierPriority, type SponsorTier } from "@/lib/towns";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, ArrowRight, Loader2, Sparkles, Check } from "lucide-react";
+import { ArrowLeft, ArrowRight, Loader2, Sparkles, Check, Eye, EyeOff, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/packets/new")({
@@ -34,7 +37,7 @@ const LIFESTYLE_OPTIONS = [
   "Retirees", "Newlyweds", "Relocating from out of state",
 ];
 
-type Step = 1 | 2 | 3 | 4;
+type Step = 1 | 2 | 3 | 4 | 5;
 
 function NewPacket() {
   const { user, profile } = useAuth();
@@ -95,6 +98,14 @@ function NewPacket() {
   const [hasPets, setHasPets] = useState(false);
   const [interests, setInterests] = useState<string[]>([]);
   const [lifestyle, setLifestyle] = useState<string[]>([]);
+  const [excludedIds, setExcludedIds] = useState<Set<string>>(new Set());
+
+  const previewFn = useServerFn(previewTownBusinesses);
+  const previewQ = useQuery({
+    queryKey: ["packet-preview", townId],
+    enabled: step === 4 && !!townId,
+    queryFn: () => previewFn({ data: { townId } }),
+  });
 
   const toggle = (arr: string[], v: string) =>
     arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v];
@@ -122,7 +133,8 @@ function NewPacket() {
         lifestyle_tags: lifestyle,
         town_id: townId || null,
         status: "generated",
-      });
+        excluded_business_ids: [...excludedIds],
+      } as never);
       toast.success("Welcome packet created.");
       navigate({ to: "/packets/$id", params: { id: packet.id } });
     } catch (e) {
@@ -139,7 +151,7 @@ function NewPacket() {
         <Link to="/dashboard" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
           <ArrowLeft className="h-4 w-4" /> Back to dashboard
         </Link>
-        <p className="text-sm text-muted-foreground">Step {step} of 4</p>
+        <p className="text-sm text-muted-foreground">Step {step} of 5</p>
       </div>
 
       <div>
@@ -151,7 +163,7 @@ function NewPacket() {
 
       {/* Progress */}
       <div className="flex gap-2">
-        {[1, 2, 3, 4].map((n) => (
+        {[1, 2, 3, 4, 5].map((n) => (
           <div
             key={n}
             className={
@@ -310,6 +322,88 @@ function NewPacket() {
 
         {step === 4 && (
           <div className="space-y-5">
+            <h2 className="font-display text-xl font-extrabold uppercase tracking-tight">Preview content</h2>
+            <p className="text-sm text-muted-foreground">
+              Review what will appear in the buyer's handbook. Hide anything that doesn't fit.
+            </p>
+            {!townId && (
+              <div className="flex items-start gap-2 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+                <AlertTriangle className="h-4 w-4 shrink-0" /> No town selected — go back and pick one.
+              </div>
+            )}
+            {townId && previewQ.isLoading && (
+              <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+            )}
+            {townId && previewQ.data && (() => {
+              const { categories, businesses } = previewQ.data;
+              if (businesses.length === 0) {
+                return (
+                  <div className="flex items-start gap-2 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+                    <AlertTriangle className="h-4 w-4 shrink-0" /> No businesses for this town yet. Ask an admin to scrape & promote some, or generate anyway.
+                  </div>
+                );
+              }
+              const byCat = new Map<string, typeof businesses>();
+              for (const b of businesses) {
+                const arr = byCat.get(b.category_id) ?? [];
+                arr.push(b);
+                byCat.set(b.category_id, arr);
+              }
+              return (
+                <div className="space-y-5">
+                  {categories.filter((c) => (byCat.get(c.id)?.length ?? 0) > 0).map((c) => {
+                    const list = (byCat.get(c.id) ?? []).slice().sort(
+                      (a, b) => tierPriority[b.sponsor_tier as SponsorTier] - tierPriority[a.sponsor_tier as SponsorTier]
+                        || a.name.localeCompare(b.name)
+                    );
+                    return (
+                      <div key={c.id} className="rounded-2xl border border-border bg-secondary/20 p-4">
+                        <div className="mb-2 flex items-baseline justify-between">
+                          <h3 className="font-display text-sm font-extrabold uppercase tracking-tight">{c.name}</h3>
+                          <span className="text-[11px] uppercase tracking-wider text-muted-foreground">{list.length} spots</span>
+                        </div>
+                        <ul className="divide-y divide-border/60">
+                          {list.map((b) => {
+                            const hidden = excludedIds.has(b.id);
+                            return (
+                              <li key={b.id} className={"flex items-center gap-3 py-2 " + (hidden ? "opacity-40" : "")}>
+                                <div className="flex-1 min-w-0">
+                                  <p className="truncate text-sm font-medium">{b.name}</p>
+                                  <p className="truncate text-xs text-muted-foreground">
+                                    {b.sponsor_tier !== "none" && <span className="mr-2 inline-block rounded-full bg-primary/15 px-1.5 text-[10px] font-semibold uppercase text-primary">{b.sponsor_tier}</span>}
+                                    {b.subcategory ?? b.address ?? ""}
+                                  </p>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const n = new Set(excludedIds);
+                                    if (n.has(b.id)) n.delete(b.id); else n.add(b.id);
+                                    setExcludedIds(n);
+                                  }}
+                                  className="rounded-full p-1.5 text-muted-foreground hover:bg-background hover:text-foreground"
+                                  aria-label={hidden ? "Show" : "Hide"}
+                                >
+                                  {hidden ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                </button>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </div>
+                    );
+                  })}
+                  {excludedIds.size > 0 && (
+                    <p className="text-xs text-muted-foreground">{excludedIds.size} hidden from this handbook.</p>
+                  )}
+                </div>
+              );
+            })()}
+          </div>
+        )}
+
+        {step === 5 && (
+          <div className="space-y-5">
             <h2 className="font-display text-xl font-extrabold uppercase tracking-tight">Review & generate</h2>
             <ReviewRow label="Buyer" value={`${buyerFirst} ${buyerLast}`.trim() || "—"} />
             <ReviewRow label="Address" value={address || "—"} />
@@ -317,6 +411,7 @@ function NewPacket() {
             <ReviewRow label="Town" value={(allTowns.data ?? []).find(t => t.id === townId)?.name ?? "—"} />
             <ReviewRow label="Interests" value={interests.length ? interests.join(", ") : "—"} />
             <ReviewRow label="Lifestyle" value={lifestyle.length ? lifestyle.join(", ") : "—"} />
+            <ReviewRow label="Hidden businesses" value={excludedIds.size ? `${excludedIds.size}` : "0"} />
 
             <div className="rounded-2xl border border-primary/30 bg-primary/5 p-5">
               <div className="flex items-start gap-3">
@@ -339,7 +434,7 @@ function NewPacket() {
         >
           <ArrowLeft className="mr-1 h-4 w-4" /> Back
         </Button>
-        {step < 4 ? (
+        {step < 5 ? (
           <Button
             onClick={() => setStep((s) => (s + 1) as Step)}
             disabled={!canNext}

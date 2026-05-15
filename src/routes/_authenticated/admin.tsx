@@ -75,6 +75,16 @@ function AdminLayout() {
           Application Log
         </Link>
         <Link
+          to="/admin/towns"
+          activeProps={{
+            className:
+              "!bg-gradient-to-br !from-emerald-500 !via-teal-500 !to-cyan-500 !text-white !border-transparent !shadow-[0_8px_24px_-6px_rgba(16,185,129,0.55)] !-translate-y-0.5",
+          }}
+          className="inline-flex items-center rounded-full border border-border bg-background/60 px-4 py-2 font-display font-bold uppercase tracking-wide transition-all duration-200 hover:-translate-y-0.5 hover:border-emerald-400/60 hover:bg-emerald-50 hover:text-emerald-700 hover:shadow-[0_6px_18px_-8px_rgba(16,185,129,0.45)] dark:hover:bg-emerald-950/40 dark:hover:text-emerald-200"
+        >
+          Town Libraries
+        </Link>
+        <Link
           to="/admin/invite-codes"
           activeProps={{
             className:

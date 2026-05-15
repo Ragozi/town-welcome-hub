@@ -39,8 +39,13 @@ export const Route = createFileRoute("/p/$slug")({
     const town = (townRes.data ?? null) as Town | null;
     let businesses: Business[] = [];
     if (town) {
-      const { data: bizData } = await supabase.from("businesses").select("*").eq("town_id", town.id);
-      businesses = (bizData ?? []) as Business[];
+      const { data: bizData } = await supabase
+        .from("businesses")
+        .select("*")
+        .eq("town_id", town.id);
+      const all = (bizData ?? []) as Business[];
+      const excluded = new Set<string>((p as Packet & { excluded_business_ids?: string[] }).excluded_business_ids ?? []);
+      businesses = all.filter((b) => !excluded.has(b.id));
     }
 
     return {
