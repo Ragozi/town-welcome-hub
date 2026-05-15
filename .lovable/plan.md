@@ -1,94 +1,106 @@
-## 1. Label & Naming Cleanup
+# Handbook QA + Data Pipeline + Entity Library
 
-In `src/routes/_authenticated/admin.tsx` strip the emojis and rename the nav links (keep the juicy hover/active gradients, just drop the emoji `<span>`):
+Three connected pieces, sequenced so each unblocks the next.
 
-- 🔥 Hearth Hub → **Overview**
-- 🌈 The Chosen Family → **IAM**
-- 🍯 Serving Coin → **Financial Dashboard**
-- ☕ Spill the Tea → **Application Log**
-- 🎟️ Come Through → **Invitations**
+---
 
-Page titles / headings updated to match in:
-- `admin.users.tsx` → heading "Identity & Access Management"
-- `admin.finance.tsx` → "Financial Dashboard"
-- `admin.events.tsx` → "Application Log"
-- `admin.invite-codes.tsx` → "Invitations"
+## 1. Connect Firecrawl
 
-"New packet" → "New Handbook" everywhere it appears:
-- `src/routes/_authenticated.tsx` (top nav button)
-- `src/routes/_authenticated/packets.index.tsx` (CTA)
-- `src/routes/_authenticated/packets.new.tsx` (eyebrow / page title)
-- `src/routes/_authenticated/settings.tsx` (placeholder copy)
+Add Firecrawl as the scrape source for local business data.
 
-## 2. Role Model: 4 Tiers
+- Add Firecrawl connector via `standard_connectors--connect` (`firecrawl`)
+- Server-only client in `src/lib/firecrawl.server.ts` reading `FIRECRAWL_API_KEY` from `process.env`
 
-Migration extends the `app_role` enum and re-buckets existing users:
+---
 
-```text
-super_admin    (eric@, ted@ — full control, IAM access)
-realtor_admin  (manages a brokerage/team)
-realtor_agent  (default for invite-code signups; replaces "realtor")
-sponsor_user   (business sponsor accounts)
-```
+## 2. Scraped entities library (per-town)
 
-- `ALTER TYPE app_role ADD VALUE IF NOT EXISTS` for the 3 new values.
-- Backfill: existing `admin` rows → also insert `super_admin`; existing `realtor` rows → also insert `realtor_agent`. Keep legacy values around so RLS doesn't break mid-deploy.
-- Update `handle_new_user()` and `claim_invite_code()` to assign `realtor_agent`.
-- RLS policies referencing `'admin'` updated to accept `super_admin`/`realtor_admin` where appropriate. IAM-mutating policies (user_roles, invite codes) remain **super_admin only**.
+A new admin surface where each town has its own library of scraped businesses. Admins decide which ones flow into handbooks.
 
-`src/lib/auth.tsx`: extend `Role` union, add `isSuperAdmin`, `isRealtorAdmin`, `isRealtorAgent`, `isSponsor`. Keep `isAdmin = super_admin || realtor_admin` for back-compat. Gate `/admin/users` and `/admin/invite-codes` on `isSuperAdmin` only.
+### Schema
 
-## 3. Server-Side IAM Hardening (`src/lib/admin.functions.ts`)
+New table `scraped_businesses`:
+- `town_id` (FK → towns)
+- `category_id` (FK → categories, nullable until classified)
+- `source` (`firecrawl_search` | `firecrawl_map` | `manual`)
+- `source_url`, `source_query`
+- `name`, `address`, `phone`, `website`, `description`, `logo_url`
+- `raw` (jsonb — full Firecrawl payload)
+- `status` enum: `pending` | `included` | `excluded` | `promoted`
+- `excluded_reason` (text, nullable)
+- `promoted_business_id` (FK → businesses, nullable — set when "Promote to sponsor")
+- `last_scraped_at`, timestamps
+- Unique on (`town_id`, `website`) to dedupe re-scrapes
 
-- New `assertSuperAdmin` used by `adminCreateUser`, `adminSetRole`, `adminResetPassword`, `adminDeleteUser`, `adminInviteUser`, `adminResendInvite`, `adminSetUserActive`.
-- `adminListUsers` stays admin-tier; mutations are super-admin only.
-- `CreateUserSchema`: replace `is_admin: boolean` with `role: z.enum(["super_admin","realtor_admin","realtor_agent","sponsor_user"])`.
-- Switch new-user provisioning to **`auth.admin.inviteUserByEmail(email, { data: { full_name, assigned_role }, redirectTo })`** so Supabase sends the invite email; then upsert profile + assigned role.
-- `adminResendInvite({ user_id })` re-issues the invite email via `auth.admin.inviteUserByEmail`.
-- **`adminSetUserActive({ user_id, active })`** — calls `auth.admin.updateUserById(id, { ban_duration: active ? "none" : "876000h" })` to deactivate / reactivate. Server prevents self-deactivation and deactivating the last active super admin.
-- `adminListUsers` returns extra fields used by the UI: `email_confirmed_at`, `banned_until`, `invited_at`.
+RLS: admin-only read/write.
 
-## 4. IAM UI (`src/routes/_authenticated/admin.users.tsx`)
+### Server functions (`src/lib/scraped.functions.ts`)
 
-- Heading: "Identity & Access Management".
-- "New user" dialog (super-admin only):
-  - Full name, Email
-  - **Role** dropdown (required): Super Admin / Realtor Admin / Realtor Agent / Sponsor User
-  - Password field removed; copy: "We'll email an invitation with a setup link."
-  - On success: `qc.setQueryData(["admin-users"], prev => [newUser, ...prev])` for instant insert + `invalidateQueries` for reconciliation. Toast success/error.
-- Replace single Admin toggle with a **Role** Select per row → `adminSetRole`.
-- **Last Sign In** logic:
-  - `!confirmed` → "Pending Verification"
-  - `confirmed && !last_sign_in_at` → "N/A"
-  - else → formatted timestamp
-- **Status** column (priority order):
-  1. `banned_until > now` → **Disabled**
-  2. `invited_at && !confirmed` → **Pending Invitation**
-  3. `!confirmed` → **Pending Verification**
-  4. else → **Active**
-- Row actions menu (super-admin only):
-  - **Resend Invitation** (when status is Pending Invitation/Verification)
-  - **Reset password**
-  - **Deactivate user** / **Reactivate user** (toggles based on current status; confirms before deactivating)
-  - **Delete** (server blocks deleting self or last super admin)
+- `scrapeTown({ townId, categorySlugs?, limit? })` — admin-only. Runs Firecrawl `search` per category for the town's name + state, upserts results as `pending`.
+- `listScrapedForTown({ townId, status? })`
+- `setScrapedStatus({ id, status, reason? })` — include / exclude / pending
+- `promoteToBusiness({ id, sponsor_tier })` — copies into `businesses` table and marks `promoted`
 
-## 5. Reactive Updates
+### UI: `/admin/towns/$slug/library`
 
-All mutations use `useMutation` with `onSuccess: invalidateQueries(["admin-users"])`, plus optimistic insert on create. No manual refresh.
+- Header: town name + "Scrape now" button (categories multiselect, limit slider)
+- Tabs: **Pending** · **Included** · **Excluded** · **Promoted (Sponsors)**
+- Table per row: logo, name, category, website, source, last scraped
+- Per-row actions: Include · Exclude (with reason) · Promote to sponsor (opens tier picker)
+- Bulk: select rows → Include / Exclude
+- Counts per tab in chip badges
 
-## 6. Acceptance
+Link from `/admin` → "Town Libraries" → list of towns → `/admin/towns/$slug/library`.
 
-- Eric & Ted = Super Admin; everyone else `realtor_agent`.
-- Only super admins see New User, role dropdown, role Select, deactivate, delete.
-- Creating a user emails the invite; row appears immediately.
-- Status reflects Disabled / Pending Invitation / Pending Verification / Active.
-- Deactivate flips the user's status to Disabled and blocks login until reactivated.
-- Last Sign In follows the 3-state rule.
-- All tabs and page titles use new names; emojis removed; "New packet" reads "New Handbook" throughout.
+---
 
-## Technical notes
+## 3. Data parse preview (in New Handbook flow)
 
-- Deactivation uses Supabase `ban_duration` ("876000h" ≈ 100 years). Reactivation passes `"none"`.
-- Supabase's "Invite user" auth template must be enabled; default sender is rate-limited without custom SMTP — failures surface via error toast.
-- `ALTER TYPE ADD VALUE` runs in its own statements before any policy changes (non-transactional).
-- Legacy `'admin'`/`'realtor'` enum values kept for now; a follow-up migration can drop them once nothing references them.
+Before generating the PDF, show what will appear so the realtor can adjust.
+
+After the existing New Handbook form, insert a **Preview** step:
+
+- Detected town (with override dropdown)
+- For each category: list of businesses that will appear, ordered by sponsor tier then alpha
+  - Source badge (Sponsor / Included from library / Auto)
+  - Eyeball toggle to exclude-for-this-handbook-only (stored on packet as `excluded_business_ids[]`)
+- Missing-data warnings (no businesses for category X, ambiguous town match, etc.)
+- "Looks good → Generate handbook" button
+
+Schema add: `packets.excluded_business_ids uuid[] default '{}'`.
+
+The town/category business query gets a filter: `status = 'included' OR status = 'promoted'` from the library, plus any direct sponsors, minus the per-packet exclusions.
+
+---
+
+## 4. QA handbook
+
+A first end-to-end test packet so we can iterate on layout/content.
+
+- Admin button on `/admin` → "Generate QA handbook"
+- Creates a packet with fixed slug `qa-sample`, seeded buyer data ("Sample Buyer", a real address in a town that has library data), runs the same render path as a real packet
+- Re-running overwrites the existing `qa-sample`
+- Visible at `/p/qa-sample` and downloadable as PDF
+- Admin page shows: last generated timestamp, link to view, link to PDF, "Regenerate" button
+
+This is the surface we'll use to review and iterate on visual/content changes.
+
+---
+
+## Build order
+
+1. Migration: `scraped_businesses` table + `packets.excluded_business_ids`
+2. Firecrawl connector + server client
+3. Scrape + library admin UI (one town first to validate)
+4. Parse-preview step in New Handbook
+5. QA handbook generator + admin entry point
+
+## Files
+
+- new: `supabase/migrations/<ts>_scraped_businesses.sql`
+- new: `src/lib/firecrawl.server.ts`, `src/lib/scraped.functions.ts`
+- new: `src/routes/_authenticated/admin.towns.index.tsx`, `src/routes/_authenticated/admin.towns.$slug.library.tsx`
+- new: `src/routes/_authenticated/admin.qa.tsx` (or button on admin index)
+- edit: `src/routes/_authenticated/packets.new.tsx` (add Preview step)
+- edit: `src/routes/_authenticated/admin.tsx` / `admin.index.tsx` (nav entries)
+- edit: `src/lib/packets.ts` or related render path (apply library + per-packet exclusions)
