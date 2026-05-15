@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { useAuth } from "@/lib/auth";
 import { Loader2, LayoutDashboard, FilePlus2, Settings, LogOut, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import logoHorizontal from "@/assets/brand/logo-horizontal.png";
 
 export const Route = createFileRoute("/_authenticated")({
   component: AuthLayout,
@@ -36,8 +37,8 @@ function AuthLayout() {
       <header className="sticky top-0 z-40 border-b border-border bg-background/85 backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-3.5">
           <div className="flex items-center gap-8">
-            <Link to="/dashboard" className="font-display text-lg font-extrabold tracking-tight">
-              HEARTH HANDBOOK<span className="text-primary">.</span>
+            <Link to="/dashboard" aria-label="Hearth Handbook home" className="inline-flex items-center">
+              <img src={logoHorizontal} alt="Hearth Handbook" width={150} height={36} className="h-9 w-auto" />
             </Link>
             <nav className="hidden items-center gap-6 text-sm font-medium text-foreground/70 md:flex">
               {isRealtor && (

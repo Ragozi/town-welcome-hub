@@ -5,6 +5,7 @@ import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { SectionDivider } from "@/components/section-divider";
 import { RequireAuth } from "@/components/require-auth";
+import logoBadge from "@/assets/brand/logo-badge.png";
 
 export const Route = createFileRoute("/about")({
   head: () => ({
@@ -67,11 +68,23 @@ function AboutPage() {
 
       {/* HERO */}
       <section className="mx-auto max-w-6xl px-5 pt-12 pb-16">
-        <SectionDivider label="Our mission" className="mb-5" />
-        <h1 className="font-display max-w-3xl text-4xl font-extrabold uppercase leading-[0.95] tracking-tight sm:text-6xl">
-          A digital welcome mat for{" "}
-          <span className="text-primary">Wisconsin</span> towns.
-        </h1>
+        <div className="flex flex-col items-start gap-8 md:flex-row md:items-center">
+          <img
+            src={logoBadge}
+            alt="Hearth Handbook seal"
+            width={160}
+            height={160}
+            className="h-32 w-32 shrink-0 md:h-40 md:w-40"
+          />
+          <div>
+            <SectionDivider label="Our mission" className="mb-5" />
+            <h1 className="font-display max-w-3xl text-4xl font-semibold leading-tight tracking-wide sm:text-6xl">
+              A digital welcome mat for{" "}
+              <span className="text-primary">Wisconsin</span> towns.
+            </h1>
+            <p className="mt-4 brand-tagline">Feel at home, from the start.</p>
+          </div>
+        </div>
         <p className="mt-6 max-w-2xl text-lg text-foreground/70">
           Hearth Handbook is a closing-gift product for realtors. You build a
           personalized welcome packet for each buyer — a printed QR card and a
@@ -286,6 +299,46 @@ function AboutPage() {
             >
               <span>info@hearthhandbook.com</span> <ArrowRight className="h-4 w-4" />
             </a>
+          </div>
+        </div>
+      </section>
+
+      {/* BRAND */}
+      <section className="mx-auto max-w-6xl px-5 pb-24">
+        <SectionDivider label="The brand" className="mb-8" />
+        <div className="grid gap-8 rounded-3xl border border-border bg-card p-8 md:grid-cols-[auto,1fr] md:p-12">
+          <img
+            src={logoBadge}
+            alt="Hearth Handbook seal"
+            width={180}
+            height={180}
+            className="h-36 w-36 self-center md:h-44 md:w-44"
+          />
+          <div>
+            <h2 className="font-display text-3xl font-semibold tracking-wide">
+              Hearth Handbook
+            </h2>
+            <p className="mt-3 brand-tagline">Feel at home, from the start.</p>
+            <p className="mt-4 max-w-xl text-sm text-muted-foreground">
+              A refined serif wordmark, a hand-drawn fireplace mark, and a
+              warm palette of cream, charcoal, and copper. The whole product
+              is built to feel like a thoughtful housewarming gift.
+            </p>
+            <div className="mt-6 flex flex-wrap gap-3">
+              {[
+                { label: "Cream", v: "var(--brand-cream)", fg: "var(--brand-charcoal)" },
+                { label: "Charcoal", v: "var(--brand-charcoal)", fg: "var(--brand-cream)" },
+                { label: "Copper", v: "var(--brand-copper)", fg: "var(--brand-cream)" },
+              ].map((s) => (
+                <div
+                  key={s.label}
+                  className="flex h-20 w-28 flex-col items-start justify-end rounded-xl border border-border p-3 text-xs font-semibold"
+                  style={{ background: s.v, color: s.fg }}
+                >
+                  {s.label}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </section>

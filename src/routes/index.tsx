@@ -1,6 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, Bird } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import logoPrimary from "@/assets/brand/logo-primary.png";
+import logoMark from "@/assets/brand/logo-mark.png";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -29,8 +31,8 @@ function ComingSoon() {
     <div className="min-h-screen bg-background flex flex-col">
       <header className="mx-auto w-full max-w-6xl px-5 pt-8 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Bird className="h-6 w-6 text-[color:var(--wi-cheddar)]" />
-          <span className="font-display text-lg font-extrabold uppercase tracking-tight">
+          <img src={logoMark} alt="" width={32} height={32} className="h-8 w-8" />
+          <span className="font-display text-lg font-semibold tracking-wide">
             Hearth Handbook
           </span>
         </div>
@@ -42,16 +44,19 @@ function ComingSoon() {
         </Link>
       </header>
 
-      <main className="flex-1 mx-auto flex w-full max-w-3xl flex-col items-center justify-center px-5 py-20 text-center">
-        <span className="eyebrow mb-6 rounded-full border border-foreground/15 bg-secondary px-4 py-1.5 text-foreground/70">
-          // Coming soon
+      <main className="flex-1 mx-auto flex w-full max-w-3xl flex-col items-center justify-center px-5 py-16 text-center">
+        <img
+          src={logoPrimary}
+          alt="Hearth Handbook — Feel at home, from the start."
+          width={520}
+          height={350}
+          className="mb-10 h-auto w-full max-w-md"
+        />
+        <span className="eyebrow mb-4 rounded-full border border-foreground/15 bg-secondary px-4 py-1.5 text-foreground/70">
+          Coming soon
         </span>
-        <h1 className="font-display text-5xl font-extrabold uppercase leading-[0.95] tracking-tight text-foreground sm:text-7xl">
-          Something
-          <br />
-          warm is on
-          <br />
-          the way.
+        <h1 className="font-display text-4xl font-semibold leading-tight tracking-wide text-foreground sm:text-5xl">
+          Something warm is on the way.
         </h1>
         <p className="mt-6 max-w-lg text-base text-foreground/70">
           Hearth Handbook is a modern closing-gift toolkit for realtors —
