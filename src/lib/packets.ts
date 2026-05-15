@@ -43,30 +43,24 @@ export async function listMyPackets(userId: string) {
 }
 
 export async function getPacketBySlug(slug: string) {
-  const { data, error } = await supabase
-    .from("packets")
-    .select("*")
-    .eq("slug", slug)
-    .maybeSingle();
+  const { data, error } = await supabase.from("packets").select("*").eq("slug", slug).maybeSingle();
   if (error) throw error;
   return data as Packet | null;
 }
 
 export async function getPacketById(id: string) {
-  const { data, error } = await supabase
-    .from("packets")
-    .select("*")
-    .eq("id", id)
-    .maybeSingle();
+  const { data, error } = await supabase.from("packets").select("*").eq("id", id).maybeSingle();
   if (error) throw error;
   return data as Packet | null;
 }
 
-export async function createPacket(input: Partial<Packet> & {
-  realtor_id: string;
-  buyer_first_name: string;
-  address: string;
-}) {
+export async function createPacket(
+  input: Partial<Packet> & {
+    realtor_id: string;
+    buyer_first_name: string;
+    address: string;
+  },
+) {
   const slug = input.slug ?? newPacketSlug();
   const { data, error } = await supabase
     .from("packets")

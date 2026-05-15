@@ -7,18 +7,43 @@ export function SiteHeader() {
     <header className="sticky top-0 z-40 border-b border-border/60 bg-background/85 backdrop-blur-md">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-4">
         <Link to="/" aria-label="Hearth Handbook home" className="inline-flex items-center">
-          <img src={logoHorizontal} alt="Hearth Handbook" width={180} height={44} className="h-11 w-auto" />
+          <img
+            src={logoHorizontal}
+            alt="Hearth Handbook"
+            width={180}
+            height={44}
+            className="h-11 w-auto"
+          />
         </Link>
 
         <nav className="hidden items-center gap-7 text-[13px] font-medium uppercase tracking-wider text-foreground/75 md:flex">
-          <Link to="/" className="hover:text-foreground" activeProps={{ className: "text-foreground" }} activeOptions={{ exact: true }}>
+          <Link
+            to="/"
+            className="hover:text-foreground"
+            activeProps={{ className: "text-foreground" }}
+            activeOptions={{ exact: true }}
+          >
             Home
           </Link>
-          <Link to="/about" className="hover:text-foreground" activeProps={{ className: "text-foreground" }}>
+          <Link
+            to="/about"
+            className="hover:text-foreground"
+            activeProps={{ className: "text-foreground" }}
+          >
             About
           </Link>
-          <Link to="/sponsor" className="hover:text-foreground" activeProps={{ className: "text-foreground" }}>Sponsor</Link>
-          <Link to="/login" className="hover:text-foreground" activeProps={{ className: "text-foreground" }}>
+          <Link
+            to="/sponsor"
+            className="hover:text-foreground"
+            activeProps={{ className: "text-foreground" }}
+          >
+            Sponsor
+          </Link>
+          <Link
+            to="/login"
+            className="hover:text-foreground"
+            activeProps={{ className: "text-foreground" }}
+          >
             Realtor Login
           </Link>
         </nav>

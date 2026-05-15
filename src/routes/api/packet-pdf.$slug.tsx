@@ -1,14 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createElement } from "react";
-import {
-  Document,
-  Page,
-  Text,
-  View,
-  StyleSheet,
-  Image,
-  renderToStream,
-} from "@react-pdf/renderer";
+import { Document, Page, Text, View, StyleSheet, Image, renderToStream } from "@react-pdf/renderer";
 import QRCode from "qrcode";
 import { tierPriority, type Business, type Category, type Town } from "@/lib/towns";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
@@ -16,17 +8,47 @@ import type { Packet } from "@/lib/packets";
 import { getPublicBaseUrl } from "@/lib/public-url";
 
 const styles = StyleSheet.create({
-  page: { padding: 36, fontSize: 10, fontFamily: "Helvetica", color: "#1a1410", backgroundColor: "#F9F2E8" },
+  page: {
+    padding: 36,
+    fontSize: 10,
+    fontFamily: "Helvetica",
+    color: "#1a1410",
+    backgroundColor: "#F9F2E8",
+  },
   cover: { padding: 0, fontFamily: "Helvetica", color: "#1a1410", backgroundColor: "#F9F2E8" },
   coverImageWrap: { height: 360, backgroundColor: "#1a1410", position: "relative" },
   coverImage: { width: "100%", height: "100%", objectFit: "cover", opacity: 0.9 },
   coverOverlay: { position: "absolute", inset: 0, backgroundColor: "rgba(26,20,16,0.35)" },
   coverContent: { padding: 36 },
-  brand: { fontSize: 9, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", color: "#FF6B00" },
-  buyerTitle: { fontSize: 36, fontWeight: 700, marginTop: 10, textTransform: "uppercase", letterSpacing: -0.5 },
+  brand: {
+    fontSize: 9,
+    fontWeight: 700,
+    letterSpacing: 2,
+    textTransform: "uppercase",
+    color: "#FF6B00",
+  },
+  buyerTitle: {
+    fontSize: 36,
+    fontWeight: 700,
+    marginTop: 10,
+    textTransform: "uppercase",
+    letterSpacing: -0.5,
+  },
   buyerAddr: { fontSize: 12, marginTop: 6, color: "#6a5a48" },
-  noteBox: { marginTop: 22, padding: 16, borderRadius: 8, backgroundColor: "#FFFFFF", border: "1 solid #f0d6b6" },
-  noteEyebrow: { fontSize: 8, fontWeight: 700, letterSpacing: 1.5, color: "#FF6B00", textTransform: "uppercase" },
+  noteBox: {
+    marginTop: 22,
+    padding: 16,
+    borderRadius: 8,
+    backgroundColor: "#FFFFFF",
+    border: "1 solid #f0d6b6",
+  },
+  noteEyebrow: {
+    fontSize: 8,
+    fontWeight: 700,
+    letterSpacing: 1.5,
+    color: "#FF6B00",
+    textTransform: "uppercase",
+  },
   note: { fontSize: 10, marginTop: 6, lineHeight: 1.5 },
   agentRow: { flexDirection: "row", marginTop: 18, alignItems: "center", gap: 12 },
   agentBlock: { flex: 1 },
@@ -35,31 +57,77 @@ const styles = StyleSheet.create({
   agentMeta: { fontSize: 9, color: "#6a5a48", marginTop: 6 },
   qr: { width: 78, height: 78 },
   qrCaption: { fontSize: 7, textAlign: "center", color: "#6a5a48", marginTop: 2, maxWidth: 90 },
-  header: { flexDirection: "row", justifyContent: "space-between", marginBottom: 14, paddingBottom: 10, borderBottom: "1 solid #e7d9c5" },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 14,
+    paddingBottom: 10,
+    borderBottom: "1 solid #e7d9c5",
+  },
   pageTitle: { fontSize: 18, fontWeight: 700, textTransform: "uppercase" },
   sectionTitle: {
-    fontSize: 11, fontWeight: 700, marginTop: 12, marginBottom: 6,
-    color: "#FF6B00", textTransform: "uppercase", letterSpacing: 1,
-    borderBottom: "1 solid #f5d8b8", paddingBottom: 3,
+    fontSize: 11,
+    fontWeight: 700,
+    marginTop: 12,
+    marginBottom: 6,
+    color: "#FF6B00",
+    textTransform: "uppercase",
+    letterSpacing: 1,
+    borderBottom: "1 solid #f5d8b8",
+    paddingBottom: 3,
   },
   featuredRow: { flexDirection: "row", gap: 6, marginBottom: 6 },
   featuredCard: {
-    flex: 1, border: "1 solid #f0d6b6", backgroundColor: "#FFFFFF",
-    padding: 10, borderRadius: 6,
+    flex: 1,
+    border: "1 solid #f0d6b6",
+    backgroundColor: "#FFFFFF",
+    padding: 10,
+    borderRadius: 6,
   },
   bizName: { fontSize: 10, fontWeight: 700 },
   bizMeta: { fontSize: 8, color: "#6a5a48", marginTop: 1 },
   coupon: { fontSize: 8, color: "#FF6B00", marginTop: 3, fontWeight: 700 },
   twoCol: { flexDirection: "row", gap: 12 },
   col: { flex: 1 },
-  catTitle: { fontSize: 10, fontWeight: 700, marginTop: 8, marginBottom: 3, textTransform: "uppercase", letterSpacing: 0.8 },
+  catTitle: {
+    fontSize: 10,
+    fontWeight: 700,
+    marginTop: 8,
+    marginBottom: 3,
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+  },
   bizRow: { marginBottom: 5 },
-  footer: { position: "absolute", bottom: 18, left: 36, right: 36, fontSize: 7, color: "#6a5a48", textAlign: "center" },
-  thankYouPage: { padding: 36, backgroundColor: "#1a1410", color: "#F9F2E8", fontFamily: "Helvetica" },
+  footer: {
+    position: "absolute",
+    bottom: 18,
+    left: 36,
+    right: 36,
+    fontSize: 7,
+    color: "#6a5a48",
+    textAlign: "center",
+  },
+  thankYouPage: {
+    padding: 36,
+    backgroundColor: "#1a1410",
+    color: "#F9F2E8",
+    fontFamily: "Helvetica",
+  },
   thankBig: { fontSize: 32, fontWeight: 700, textTransform: "uppercase", marginTop: 24 },
-  thankBody: { fontSize: 11, marginTop: 12, color: "rgba(249,242,232,0.85)", lineHeight: 1.6, maxWidth: 380 },
+  thankBody: {
+    fontSize: 11,
+    marginTop: 12,
+    color: "rgba(249,242,232,0.85)",
+    lineHeight: 1.6,
+    maxWidth: 380,
+  },
   thankAgent: { marginTop: 28, fontSize: 11, color: "rgba(249,242,232,0.7)" },
-  thankCta: { marginTop: 14, padding: 12, border: "1 solid rgba(249,242,232,0.25)", borderRadius: 8 },
+  thankCta: {
+    marginTop: 14,
+    padding: 12,
+    border: "1 solid rgba(249,242,232,0.25)",
+    borderRadius: 8,
+  },
 });
 
 export const Route = createFileRoute("/api/packet-pdf/$slug")({
@@ -285,16 +353,22 @@ function PacketPdf({
       {/* Thank-you / referral */}
       <Page size="A4" style={styles.thankYouPage}>
         <Text style={styles.brand}>// Thank you</Text>
-        <Text style={styles.thankBig}>
-          Thank you, {packet.buyer_first_name}.
-        </Text>
+        <Text style={styles.thankBig}>Thank you, {packet.buyer_first_name}.</Text>
         <Text style={styles.thankBody}>
-          It has been an honor helping you find home. If a friend or family member is
-          thinking about a move, I would love to help them too. Your trust means the world.
+          It has been an honor helping you find home. If a friend or family member is thinking about
+          a move, I would love to help them too. Your trust means the world.
         </Text>
 
         <View style={styles.thankCta}>
-          <Text style={{ fontSize: 9, color: "#FF6B00", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase" }}>
+          <Text
+            style={{
+              fontSize: 9,
+              color: "#FF6B00",
+              fontWeight: 700,
+              letterSpacing: 1,
+              textTransform: "uppercase",
+            }}
+          >
             // Refer a friend
           </Text>
           <Text style={{ fontSize: 11, marginTop: 6 }}>
@@ -329,8 +403,7 @@ function FeaturedCardPdf({ b }: { b: Business }) {
 function CategoryPdf({ category, list }: { category: Category; list: Business[] }) {
   const sorted = [...list].sort(
     (a, b) =>
-      tierPriority[b.sponsor_tier] - tierPriority[a.sponsor_tier] ||
-      a.name.localeCompare(b.name),
+      tierPriority[b.sponsor_tier] - tierPriority[a.sponsor_tier] || a.name.localeCompare(b.name),
   );
   return (
     <View>
@@ -339,9 +412,7 @@ function CategoryPdf({ category, list }: { category: Category; list: Business[] 
         <View key={b.id} style={styles.bizRow}>
           <Text style={styles.bizName}>{b.name}</Text>
           {(b.phone || b.address) && (
-            <Text style={styles.bizMeta}>
-              {[b.phone, b.address].filter(Boolean).join(" · ")}
-            </Text>
+            <Text style={styles.bizMeta}>{[b.phone, b.address].filter(Boolean).join(" · ")}</Text>
           )}
           {b.coupon_text && <Text style={styles.coupon}>* {b.coupon_text}</Text>}
         </View>

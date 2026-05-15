@@ -31,8 +31,8 @@ function Dashboard() {
           Welcome back{profile?.full_name ? `, ${profile.full_name.split(" ")[0]}` : ""}.
         </h1>
         <p className="mt-3 max-w-xl text-foreground/70">
-          Create a thoughtful, branded welcome packet for every new buyer. PDF, web page,
-          and QR code — generated in under a minute.
+          Create a thoughtful, branded welcome packet for every new buyer. PDF, web page, and QR
+          code — generated in under a minute.
         </p>
         <div className="mt-7 flex flex-wrap gap-3">
           <Button
@@ -43,11 +43,7 @@ function Dashboard() {
               <FilePlus2 className="mr-1 h-4 w-4" /> Create Welcome Packet
             </Link>
           </Button>
-          <Button
-            asChild
-            variant="outline"
-            className="h-12 rounded-full border-foreground/15"
-          >
+          <Button asChild variant="outline" className="h-12 rounded-full border-foreground/15">
             <Link to="/settings">Branding & profile</Link>
           </Button>
         </div>
@@ -70,8 +66,14 @@ function Dashboard() {
               Welcome packets
             </h2>
           </div>
-          <Button asChild variant="ghost" className="text-sm text-muted-foreground hover:text-foreground">
-            <Link to="/packets">View all <ArrowRight className="ml-1 h-3.5 w-3.5" /></Link>
+          <Button
+            asChild
+            variant="ghost"
+            className="text-sm text-muted-foreground hover:text-foreground"
+          >
+            <Link to="/packets">
+              View all <ArrowRight className="ml-1 h-3.5 w-3.5" />
+            </Link>
           </Button>
         </div>
 
@@ -165,10 +167,13 @@ function EmptyState() {
         Your first welcome
       </h3>
       <p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">
-        Turn your next closing into a moment your buyer will remember. Build a personalized
-        packet in under a minute.
+        Turn your next closing into a moment your buyer will remember. Build a personalized packet
+        in under a minute.
       </p>
-      <Button asChild className="mt-6 h-11 rounded-full bg-primary px-6 text-primary-foreground hover:bg-primary/90">
+      <Button
+        asChild
+        className="mt-6 h-11 rounded-full bg-primary px-6 text-primary-foreground hover:bg-primary/90"
+      >
         <Link to="/packets/new">
           <FilePlus2 className="mr-1 h-4 w-4" /> Create Welcome Packet
         </Link>

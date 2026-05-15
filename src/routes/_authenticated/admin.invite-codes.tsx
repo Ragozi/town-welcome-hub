@@ -5,7 +5,13 @@ import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Copy, Loader2, Plus, Ban } from "lucide-react";
@@ -35,10 +41,14 @@ function generateCode() {
   return `WH-${s}`;
 }
 
-function statusOf(c: InviteCode): { label: string; variant: "default" | "secondary" | "destructive" | "outline" } {
+function statusOf(c: InviteCode): {
+  label: string;
+  variant: "default" | "secondary" | "destructive" | "outline";
+} {
   if (c.revoked_at) return { label: "Revoked", variant: "destructive" };
   if (c.consumed_at) return { label: "Used", variant: "secondary" };
-  if (c.expires_at && new Date(c.expires_at) <= new Date()) return { label: "Expired", variant: "outline" };
+  if (c.expires_at && new Date(c.expires_at) <= new Date())
+    return { label: "Expired", variant: "outline" };
   return { label: "Available", variant: "default" };
 }
 
@@ -112,8 +122,12 @@ function InviteCodesPage() {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="font-display text-xl font-extrabold uppercase tracking-tight">Invitations</h2>
-          <p className="text-sm text-muted-foreground">Generate single-use invite codes for new realtors.</p>
+          <h2 className="font-display text-xl font-extrabold uppercase tracking-tight">
+            Invitations
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Generate single-use invite codes for new realtors.
+          </p>
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
@@ -146,7 +160,9 @@ function InviteCodesPage() {
                   onChange={(e) => setEmailLock(e.target.value)}
                   className="mt-1.5"
                 />
-                <p className="mt-1 text-xs text-muted-foreground">If set, only this email can use the code.</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  If set, only this email can use the code.
+                </p>
               </div>
               <div>
                 <Label htmlFor="expires">Expires in (days, blank = never)</Label>

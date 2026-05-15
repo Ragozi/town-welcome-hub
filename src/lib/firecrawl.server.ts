@@ -39,7 +39,9 @@ export async function firecrawlSearch(
     const text = await res.text().catch(() => "");
     throw new Error(`Firecrawl search failed [${res.status}]: ${text}`);
   }
-  const json = (await res.json()) as { data?: { web?: FirecrawlSearchResult[] } | FirecrawlSearchResult[] };
+  const json = (await res.json()) as {
+    data?: { web?: FirecrawlSearchResult[] } | FirecrawlSearchResult[];
+  };
   const data = json.data;
   if (Array.isArray(data)) return data;
   return data?.web ?? [];

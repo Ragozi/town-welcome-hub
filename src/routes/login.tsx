@@ -18,7 +18,11 @@ export const Route = createFileRoute("/login")({
   head: () => ({
     meta: [
       { title: "Realtor sign in — Hearth Handbook" },
-      { name: "description", content: "Sign in to Hearth Handbook to build personalized welcome packets and QR closing cards for your buyers." },
+      {
+        name: "description",
+        content:
+          "Sign in to Hearth Handbook to build personalized welcome packets and QR closing cards for your buyers.",
+      },
       { property: "og:title", content: "Realtor sign in — Hearth Handbook" },
       { property: "og:description", content: "Sign in to build welcome packets for your buyers." },
       { property: "og:url", content: "https://hearthhandbook.com/login" },
@@ -85,7 +89,12 @@ function LoginPage() {
     e.preventDefault();
     if (!codeValid) return toast.error("Validate your invite code first.");
     setSubmitting(true);
-    const { error } = await signUpWithCode(signupEmail.trim(), signupPassword, signupName.trim(), inviteCode);
+    const { error } = await signUpWithCode(
+      signupEmail.trim(),
+      signupPassword,
+      signupName.trim(),
+      inviteCode,
+    );
     setSubmitting(false);
     if (error) return toast.error(error);
     toast.success("Check your email to verify your account.");
@@ -95,13 +104,17 @@ function LoginPage() {
     <div className="min-h-screen bg-background">
       <div className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-5 py-12">
         <Link to="/" aria-label="Hearth Handbook home" className="mb-8 flex justify-center">
-          <img src={logoPrimary} alt="Hearth Handbook" width={280} height={188} className="h-auto w-64" />
+          <img
+            src={logoPrimary}
+            alt="Hearth Handbook"
+            width={280}
+            height={188}
+            className="h-auto w-64"
+          />
         </Link>
 
         <div className="rounded-3xl border border-border bg-card p-8 shadow-[var(--shadow-soft)]">
-          <h1 className="font-display text-3xl font-semibold tracking-wide">
-            Realtor sign in
-          </h1>
+          <h1 className="font-display text-3xl font-semibold tracking-wide">Realtor sign in</h1>
           <p className="mt-2 text-sm text-muted-foreground">
             Feel at home, from the start. Build personalized welcome packets for your buyers.
           </p>
@@ -173,7 +186,13 @@ function LoginPage() {
                     disabled={validating || codeValid || !inviteCode}
                     className="h-11 rounded-xl"
                   >
-                    {validating ? <Loader2 className="h-4 w-4 animate-spin" /> : codeValid ? "✓" : "Verify"}
+                    {validating ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : codeValid ? (
+                      "✓"
+                    ) : (
+                      "Verify"
+                    )}
                   </Button>
                 </div>
 
@@ -217,7 +236,11 @@ function LoginPage() {
                       disabled={submitting}
                       className="h-12 w-full rounded-full bg-primary text-primary-foreground hover:bg-primary/90"
                     >
-                      {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Create realtor account"}
+                      {submitting ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        "Create realtor account"
+                      )}
                     </Button>
                   </form>
                 )}
@@ -228,12 +251,20 @@ function LoginPage() {
 
         <p className="mt-5 text-center text-xs text-muted-foreground">
           By continuing you agree to our{" "}
-          <Link to="/terms" className="underline hover:text-foreground">Terms</Link>{" "}
+          <Link to="/terms" className="underline hover:text-foreground">
+            Terms
+          </Link>{" "}
           and{" "}
-          <Link to="/privacy" className="underline hover:text-foreground">Privacy Policy</Link>.
+          <Link to="/privacy" className="underline hover:text-foreground">
+            Privacy Policy
+          </Link>
+          .
         </p>
 
-        <Link to="/" className="mt-4 text-center text-xs text-muted-foreground hover:text-foreground">
+        <Link
+          to="/"
+          className="mt-4 text-center text-xs text-muted-foreground hover:text-foreground"
+        >
           ← Back to home
         </Link>
       </div>

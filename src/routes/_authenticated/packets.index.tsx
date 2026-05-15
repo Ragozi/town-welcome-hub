@@ -27,13 +27,20 @@ function PacketsList() {
             Welcome packets
           </h1>
         </div>
-        <Button asChild className="h-11 rounded-full bg-primary text-primary-foreground hover:bg-primary/90">
-          <Link to="/packets/new"><FilePlus2 className="mr-1 h-4 w-4" /> New Handbook</Link>
+        <Button
+          asChild
+          className="h-11 rounded-full bg-primary text-primary-foreground hover:bg-primary/90"
+        >
+          <Link to="/packets/new">
+            <FilePlus2 className="mr-1 h-4 w-4" /> New Handbook
+          </Link>
         </Button>
       </div>
 
       {isLoading ? (
-        <div className="rounded-3xl border border-dashed p-10 text-center text-muted-foreground">Loading…</div>
+        <div className="rounded-3xl border border-dashed p-10 text-center text-muted-foreground">
+          Loading…
+        </div>
       ) : packets.length === 0 ? (
         <div className="rounded-3xl border border-dashed bg-card p-10 text-center text-muted-foreground">
           No packets yet. Create your first to get started.
@@ -53,10 +60,19 @@ function PacketsList() {
             <tbody>
               {packets.map((p) => (
                 <tr key={p.id} className="border-t border-border/60">
-                  <td className="px-5 py-4 font-medium">{p.buyer_first_name} {p.buyer_last_name ?? ""}</td>
+                  <td className="px-5 py-4 font-medium">
+                    {p.buyer_first_name} {p.buyer_last_name ?? ""}
+                  </td>
                   <td className="px-5 py-4 text-foreground/70">{p.address}</td>
                   <td className="px-5 py-4">
-                    <span className={"inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider " + (p.status === "generated" ? "bg-[color:var(--wi-pine)]/15 text-[color:var(--wi-pine)]" : "bg-secondary text-foreground/70")}>
+                    <span
+                      className={
+                        "inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider " +
+                        (p.status === "generated"
+                          ? "bg-[color:var(--wi-pine)]/15 text-[color:var(--wi-pine)]"
+                          : "bg-secondary text-foreground/70")
+                      }
+                    >
                       {p.status}
                     </span>
                   </td>
@@ -64,7 +80,11 @@ function PacketsList() {
                     {format(new Date(p.created_at), "MMM d, yyyy")}
                   </td>
                   <td className="px-5 py-4 text-right">
-                    <Link to="/packets/$id" params={{ id: p.id }} className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">
+                    <Link
+                      to="/packets/$id"
+                      params={{ id: p.id }}
+                      className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+                    >
                       <Eye className="h-3.5 w-3.5" /> Open
                     </Link>
                   </td>

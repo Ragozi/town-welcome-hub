@@ -26,7 +26,11 @@ export function BusinessCard({
           : "shadow-[var(--shadow-soft)]")
       }
     >
-      <BusinessImage b={b} category={category} aspect={isFeatured ? "aspect-[4/3]" : "aspect-[5/3]"} />
+      <BusinessImage
+        b={b}
+        category={category}
+        aspect={isFeatured ? "aspect-[4/3]" : "aspect-[5/3]"}
+      />
 
       <div className="flex flex-1 flex-col gap-3 p-4">
         <div className="flex items-start justify-between gap-2">
@@ -48,9 +52,7 @@ export function BusinessCard({
         </div>
 
         {b.description && (
-          <p className="text-sm leading-snug text-foreground/75 line-clamp-2">
-            {b.description}
-          </p>
+          <p className="text-sm leading-snug text-foreground/75 line-clamp-2">{b.description}</p>
         )}
 
         {b.coupon_text && (
@@ -81,10 +83,7 @@ function BusinessImage({
 
   if (errored) {
     return (
-      <div
-        className={"relative w-full " + aspect}
-        style={{ background: token, color: "white" }}
-      >
+      <div className={"relative w-full " + aspect} style={{ background: token, color: "white" }}>
         <span className="absolute inset-0 flex items-center justify-center font-display text-4xl font-extrabold tracking-tight">
           {initials}
         </span>

@@ -76,15 +76,27 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "Hearth Handbook — Welcome Home, Thoughtfully." },
-      { name: "description", content: "Elegant digital and printable welcome packets that connect new residents with the heart of their community." },
+      {
+        name: "description",
+        content:
+          "Elegant digital and printable welcome packets that connect new residents with the heart of their community.",
+      },
       { name: "author", content: "Hearth Handbook" },
       { property: "og:site_name", content: "Hearth Handbook" },
       { property: "og:title", content: "Hearth Handbook — Welcome Home, Thoughtfully." },
-      { property: "og:description", content: "Elegant digital and printable welcome packets that connect new residents with the heart of their community." },
+      {
+        property: "og:description",
+        content:
+          "Elegant digital and printable welcome packets that connect new residents with the heart of their community.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:title", content: "Hearth Handbook — Welcome Home, Thoughtfully." },
-      { name: "twitter:description", content: "Elegant digital and printable welcome packets that connect new residents with the heart of their community." },
+      {
+        name: "twitter:description",
+        content:
+          "Elegant digital and printable welcome packets that connect new residents with the heart of their community.",
+      },
       { property: "og:image", content: "https://hearthhandbook.com/og-image.png" },
       { name: "twitter:image", content: "https://hearthhandbook.com/og-image.png" },
     ],
@@ -137,11 +149,7 @@ function RootComponent() {
       window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
         try {
           const url =
-            typeof input === "string"
-              ? input
-              : input instanceof URL
-                ? input.toString()
-                : input.url;
+            typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
           if (url && url.includes("/_serverFn/")) {
             const headers = new Headers(
               init?.headers ?? (input instanceof Request ? input.headers : undefined),

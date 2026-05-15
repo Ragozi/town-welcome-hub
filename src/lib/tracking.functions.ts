@@ -52,12 +52,21 @@ export const logEvent = createServerFn({ method: "POST" })
         .select("id, realtor_id, town_id")
         .eq("slug", data.packet_slug)
         .maybeSingle();
-      if (packet) {
-        packet_id = packet.id;
-        realtor_id = packet.realtor_id;
-        town_id = packet.town_id ?? null;
+      if (!packet) {
+        // Drop events for unknown slugs to prevent analytics poisoning.
+        return { ok: false };
       }
+      packet_id = packet.id;
+      realtor_id = packet.realtor_id;
+      town_id = packet.town_id ?? null;
+    } else {
+      // Reject events without a slug; nothing to attribute.
+      return { ok: false };
     }
+
+    // Cap metadata payload size to prevent oversized inserts.
+    const metaStr = JSON.stringify(data.metadata ?? {});
+    const safeMetadata = metaStr.length > 4000 ? {} : (data.metadata ?? {});
 
     const { error } = await supabaseAdmin.from("packet_events").insert({
       packet_id,
@@ -73,7 +82,7 @@ export const logEvent = createServerFn({ method: "POST" })
       device: detectDevice(ua),
       session_id: data.session_id ?? null,
       utm: data.utm ?? {},
-      metadata: data.metadata ?? {},
+      metadata: safeMetadata,
     });
 
     if (error) {

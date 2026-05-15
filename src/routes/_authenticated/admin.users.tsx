@@ -16,17 +16,41 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Loader2, Plus, MoreHorizontal, Mail, KeyRound, UserX, UserCheck, Trash2, ShieldAlert } from "lucide-react";
+import {
+  Loader2,
+  Plus,
+  MoreHorizontal,
+  Mail,
+  KeyRound,
+  UserX,
+  UserCheck,
+  Trash2,
+  ShieldAlert,
+} from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/admin/users")({
   component: IamPage,
@@ -62,14 +86,21 @@ function statusOf(u: UserRow): Status {
 }
 
 function statusBadge(s: Status) {
-  const map: Record<Status, { variant: "default" | "secondary" | "destructive" | "outline"; className?: string }> = {
-    "Active": { variant: "default" },
+  const map: Record<
+    Status,
+    { variant: "default" | "secondary" | "destructive" | "outline"; className?: string }
+  > = {
+    Active: { variant: "default" },
     "Pending Invitation": { variant: "secondary" },
     "Pending Verification": { variant: "outline" },
-    "Disabled": { variant: "destructive" },
+    Disabled: { variant: "destructive" },
   };
   const { variant, className } = map[s];
-  return <Badge variant={variant} className={className}>{s}</Badge>;
+  return (
+    <Badge variant={variant} className={className}>
+      {s}
+    </Badge>
+  );
 }
 
 function lastSignInLabel(u: UserRow): string {
@@ -104,10 +135,14 @@ function IamPage() {
       invite({ data: input }),
     onSuccess: (newUser) => {
       qc.setQueryData<UserRow[]>(["admin-users"], (prev) =>
-        prev ? [newUser as UserRow, ...prev.filter((u) => u.id !== newUser.id)] : [newUser as UserRow],
+        prev
+          ? [newUser as UserRow, ...prev.filter((u) => u.id !== newUser.id)]
+          : [newUser as UserRow],
       );
       qc.invalidateQueries({ queryKey: ["admin-users"] });
-      toast.success("Invitation sent", { description: `${newUser.email} will receive a setup link.` });
+      toast.success("Invitation sent", {
+        description: `${newUser.email} will receive a setup link.`,
+      });
     },
     onError: (e: Error) => toast.error("Could not invite user", { description: e.message }),
   });
@@ -143,7 +178,11 @@ function IamPage() {
   };
 
   const onSetActive = async (user_id: string, active: boolean, email: string) => {
-    if (!active && !confirm(`Deactivate ${email}? They will not be able to sign in until reactivated.`)) return;
+    if (
+      !active &&
+      !confirm(`Deactivate ${email}? They will not be able to sign in until reactivated.`)
+    )
+      return;
     try {
       await setActive({ data: { user_id, active } });
       toast.success(active ? "User reactivated" : "User deactivated");
@@ -234,7 +273,9 @@ function IamPage() {
                           </SelectContent>
                         </Select>
                       ) : (
-                        <span className="text-foreground/70">{primary ? roleLabel(primary) : "—"}</span>
+                        <span className="text-foreground/70">
+                          {primary ? roleLabel(primary) : "—"}
+                        </span>
                       )}
                     </td>
                     <td className="px-5 py-4">{statusBadge(status)}</td>
@@ -249,7 +290,8 @@ function IamPage() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            {(status === "Pending Invitation" || status === "Pending Verification") && (
+                            {(status === "Pending Invitation" ||
+                              status === "Pending Verification") && (
                               <DropdownMenuItem onClick={() => onResend(u.id, u.email)}>
                                 <Mail className="mr-2 h-4 w-4" /> Resend invitation
                               </DropdownMenuItem>
@@ -307,7 +349,9 @@ function NewUserDialog({
   const [role, setRole] = useState<AssignableRole | "">("");
 
   const reset = () => {
-    setEmail(""); setName(""); setRole("");
+    setEmail("");
+    setName("");
+    setRole("");
   };
 
   const submit = async () => {

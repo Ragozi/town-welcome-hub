@@ -70,10 +70,7 @@ export const deleteSponsorSub = createServerFn({ method: "POST" })
   .inputValidator((i: unknown) => z.object({ id: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }) => {
     await assertAdmin(context.userId);
-    const { error } = await supabaseAdmin
-      .from("sponsor_subscriptions")
-      .delete()
-      .eq("id", data.id);
+    const { error } = await supabaseAdmin.from("sponsor_subscriptions").delete().eq("id", data.id);
     if (error) throw new Response(error.message, { status: 400 });
     return { ok: true };
   });

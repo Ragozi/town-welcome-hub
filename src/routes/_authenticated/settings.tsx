@@ -7,7 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Loader2, Save, Upload } from "lucide-react";
 import { toast } from "sonner";
 
@@ -117,7 +123,11 @@ function Settings() {
             <Input value={brokerageName} onChange={(e) => setBrokerageName(e.target.value)} />
           </Field>
           <Field label="Public email">
-            <Input type="email" value={emailPublic} onChange={(e) => setEmailPublic(e.target.value)} />
+            <Input
+              type="email"
+              value={emailPublic}
+              onChange={(e) => setEmailPublic(e.target.value)}
+            />
           </Field>
           <Field label="Phone">
             <Input value={phone} onChange={(e) => setPhone(e.target.value)} />
@@ -143,10 +153,14 @@ function Settings() {
 
         <Field label="Default town">
           <Select value={defaultTownId} onValueChange={setDefaultTownId}>
-            <SelectTrigger><SelectValue placeholder="Choose a town" /></SelectTrigger>
+            <SelectTrigger>
+              <SelectValue placeholder="Choose a town" />
+            </SelectTrigger>
             <SelectContent>
               {(towns.data ?? []).map((t: { id: string; name: string }) => (
-                <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                <SelectItem key={t.id} value={t.id}>
+                  {t.name}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -162,14 +176,42 @@ function Settings() {
         </Field>
 
         <div className="grid gap-4 md:grid-cols-3">
-          <Field label="Instagram"><Input placeholder="@yourhandle" value={instagram} onChange={(e) => setInstagram(e.target.value)} /></Field>
-          <Field label="Facebook"><Input placeholder="facebook.com/…" value={facebook} onChange={(e) => setFacebook(e.target.value)} /></Field>
-          <Field label="Website"><Input placeholder="https://…" value={website} onChange={(e) => setWebsite(e.target.value)} /></Field>
+          <Field label="Instagram">
+            <Input
+              placeholder="@yourhandle"
+              value={instagram}
+              onChange={(e) => setInstagram(e.target.value)}
+            />
+          </Field>
+          <Field label="Facebook">
+            <Input
+              placeholder="facebook.com/…"
+              value={facebook}
+              onChange={(e) => setFacebook(e.target.value)}
+            />
+          </Field>
+          <Field label="Website">
+            <Input
+              placeholder="https://…"
+              value={website}
+              onChange={(e) => setWebsite(e.target.value)}
+            />
+          </Field>
         </div>
 
         <div className="flex justify-end">
-          <Button onClick={onSave} disabled={saving} className="h-11 rounded-full bg-primary px-6 text-primary-foreground hover:bg-primary/90">
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Save className="mr-1 h-4 w-4" /> Save</>}
+          <Button
+            onClick={onSave}
+            disabled={saving}
+            className="h-11 rounded-full bg-primary px-6 text-primary-foreground hover:bg-primary/90"
+          >
+            {saving ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <>
+                <Save className="mr-1 h-4 w-4" /> Save
+              </>
+            )}
           </Button>
         </div>
       </div>
@@ -187,7 +229,11 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 }
 
 function ImageField({
-  label, url, onUrl, onUpload, shape,
+  label,
+  url,
+  onUrl,
+  onUpload,
+  shape,
 }: {
   label: string;
   url: string;
@@ -199,7 +245,12 @@ function ImageField({
     <div>
       <Label className="mb-1.5 block text-sm">{label}</Label>
       <div className="flex items-center gap-4 rounded-2xl border border-border bg-secondary/30 p-4">
-        <div className={"h-16 w-16 overflow-hidden bg-foreground " + (shape === "circle" ? "rounded-full" : "rounded-xl")}>
+        <div
+          className={
+            "h-16 w-16 overflow-hidden bg-foreground " +
+            (shape === "circle" ? "rounded-full" : "rounded-xl")
+          }
+        >
           {url && <img src={url} alt="" className="h-full w-full object-cover" />}
         </div>
         <div className="flex-1">

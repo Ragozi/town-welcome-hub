@@ -104,11 +104,7 @@ export function SponsorInquiryForm({
         <p className="mt-3 text-foreground/70">
           Thanks — we'll be in touch within one business day at the email you provided.
         </p>
-        <Button
-          variant="outline"
-          className="mt-6 rounded-full"
-          onClick={() => setSubmitted(false)}
-        >
+        <Button variant="outline" className="mt-6 rounded-full" onClick={() => setSubmitted(false)}>
           Submit another
         </Button>
       </div>
@@ -173,10 +169,7 @@ export function SponsorInquiryForm({
           />
         </Field>
         <Field label="Sponsor tier" error={errors.tier_key}>
-          <Select
-            value={form.tier_key || undefined}
-            onValueChange={(v) => update("tier_key", v)}
-          >
+          <Select value={form.tier_key || undefined} onValueChange={(v) => update("tier_key", v)}>
             <SelectTrigger>
               <SelectValue placeholder="Pick a tier (or leave blank)" />
             </SelectTrigger>

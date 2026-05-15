@@ -10,15 +10,13 @@ export const Route = createFileRoute("/")({
       { title: "Hearth Handbook — Coming soon" },
       {
         name: "description",
-        content:
-          "Hearth Handbook is launching soon. A modern closing-gift toolkit for realtors.",
+        content: "Hearth Handbook is launching soon. A modern closing-gift toolkit for realtors.",
       },
       { name: "robots", content: "noindex, nofollow" },
       { property: "og:title", content: "Hearth Handbook — Coming soon" },
       {
         property: "og:description",
-        content:
-          "A modern closing-gift toolkit for realtors. Launching soon.",
+        content: "A modern closing-gift toolkit for realtors. Launching soon.",
       },
     ],
     links: [{ rel: "canonical", href: "https://hearthhandbook.com/" }],
@@ -32,9 +30,7 @@ function ComingSoon() {
       <header className="mx-auto w-full max-w-6xl px-5 pt-8 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <img src={logoMark} alt="" width={32} height={32} className="h-8 w-8" />
-          <span className="font-display text-lg font-semibold tracking-wide">
-            Hearth Handbook
-          </span>
+          <span className="font-display text-lg font-semibold tracking-wide">Hearth Handbook</span>
         </div>
         <Link
           to="/login"
@@ -59,9 +55,8 @@ function ComingSoon() {
           Something warm is on the way.
         </h1>
         <p className="mt-6 max-w-lg text-base text-foreground/70">
-          Hearth Handbook is a modern closing-gift toolkit for realtors —
-          personalized welcome packets your buyers actually use. We're
-          putting the finishing touches on it now.
+          Hearth Handbook is a modern closing-gift toolkit for realtors — personalized welcome
+          packets your buyers actually use. We're putting the finishing touches on it now.
         </p>
 
         <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
@@ -77,8 +72,7 @@ function ComingSoon() {
         </div>
 
         <p className="mt-8 text-xs text-foreground/55">
-          Approved realtors and team members can sign in with their account.
-          For inquiries, email{" "}
+          Approved realtors and team members can sign in with their account. For inquiries, email{" "}
           <a
             href="mailto:info@hearthhandbook.com"
             className="font-semibold text-foreground hover:text-primary"
