@@ -68,11 +68,23 @@ function AboutPage() {
 
       {/* HERO */}
       <section className="mx-auto max-w-6xl px-5 pt-12 pb-16">
-        <SectionDivider label="Our mission" className="mb-5" />
-        <h1 className="font-display max-w-3xl text-4xl font-extrabold uppercase leading-[0.95] tracking-tight sm:text-6xl">
-          A digital welcome mat for{" "}
-          <span className="text-primary">Wisconsin</span> towns.
-        </h1>
+        <div className="flex flex-col items-start gap-8 md:flex-row md:items-center">
+          <img
+            src={logoBadge}
+            alt="Hearth Handbook seal"
+            width={160}
+            height={160}
+            className="h-32 w-32 shrink-0 md:h-40 md:w-40"
+          />
+          <div>
+            <SectionDivider label="Our mission" className="mb-5" />
+            <h1 className="font-display max-w-3xl text-4xl font-semibold leading-tight tracking-wide sm:text-6xl">
+              A digital welcome mat for{" "}
+              <span className="text-primary">Wisconsin</span> towns.
+            </h1>
+            <p className="mt-4 brand-tagline">Feel at home, from the start.</p>
+          </div>
+        </div>
         <p className="mt-6 max-w-2xl text-lg text-foreground/70">
           Hearth Handbook is a closing-gift product for realtors. You build a
           personalized welcome packet for each buyer — a printed QR card and a
