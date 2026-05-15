@@ -6,7 +6,7 @@ import { tierPriority, type Business, type Category, type Town } from "@/lib/tow
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import type { Packet } from "@/lib/packets";
 import { getPublicBaseUrl } from "@/lib/public-url";
-import { verifyPdfToken } from "@/lib/public-packet.functions";
+import { verifyPdfToken } from "@/lib/pdf-token.server";
 
 const styles = StyleSheet.create({
   page: {

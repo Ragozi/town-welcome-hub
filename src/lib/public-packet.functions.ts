@@ -1,66 +1,22 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { createHmac, timingSafeEqual } from "crypto";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import type { SponsorTier } from "@/lib/towns";
+import { signPdfToken } from "@/lib/pdf-token.server";
+import type {
+  PublicBusiness,
+  PublicCategory,
+  PublicPacket,
+  PublicRealtor,
+  PublicTown,
+} from "@/lib/public-packet-types";
 
-// ---- Sanitized DTO ----------------------------------------------------------
-
-export type PublicRealtor = {
-  full_name: string | null;
-  brokerage_name: string | null;
-  brokerage_logo_url: string | null;
-  headshot_url: string | null;
-  email_public: string | null;
-  phone: string | null;
-  referral_slug: string | null;
-};
-
-export type PublicTown = {
-  id: string;
-  name: string;
-  state: string;
-  hero_blurb: string | null;
-};
-
-export type PublicBusiness = {
-  id: string;
-  name: string;
-  category_id: string;
-  subcategory: string | null;
-  description: string | null;
-  address: string | null;
-  phone: string | null;
-  website: string | null;
-  logo_url: string | null;
-  coupon_text: string | null;
-  sponsor_tier: SponsorTier;
-  featured_order: number;
-};
-
-export type PublicCategory = {
-  id: string;
-  name: string;
-  slug: string;
-  display_order: number;
-  icon: string | null;
-};
-
-export type PublicPacket = {
-  slug: string;
-  buyer_first_name: string;
-  buyer_has_partner: boolean; // safe boolean instead of last name
-  welcome_note: string | null;
-  home_photo_url: string | null;
-  // Address reduced to town/state — never full street address
-  location_label: string | null;
-  realtor: PublicRealtor | null;
-  town: PublicTown | null;
-  categories: PublicCategory[];
-  businesses: PublicBusiness[];
-};
-
-// ---- getPublicPacket --------------------------------------------------------
+export type {
+  PublicBusiness,
+  PublicCategory,
+  PublicPacket,
+  PublicRealtor,
+  PublicTown,
+} from "@/lib/public-packet-types";
 
 export const getPublicPacket = createServerFn({ method: "GET" })
   .inputValidator((input: unknown) =>
@@ -125,44 +81,11 @@ export const getPublicPacket = createServerFn({ method: "GET" })
     };
   });
 
-// ---- Signed PDF tokens ------------------------------------------------------
-
-const TOKEN_TTL_SECONDS = 60 * 60 * 24; // 24 hours
-
-function hmac(payload: string): string {
-  const secret = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-  return createHmac("sha256", secret).update(payload).digest("hex");
-}
-
-export function signPdfToken(slug: string, ttlSeconds: number = TOKEN_TTL_SECONDS): string {
-  const exp = Math.floor(Date.now() / 1000) + ttlSeconds;
-  const sig = hmac(`${slug}.${exp}`);
-  return `${exp}.${sig}`;
-}
-
-export function verifyPdfToken(slug: string, token: string | null | undefined): boolean {
-  if (!token) return false;
-  const [expStr, sig] = token.split(".");
-  if (!expStr || !sig) return false;
-  const exp = Number(expStr);
-  if (!Number.isFinite(exp) || exp < Math.floor(Date.now() / 1000)) return false;
-  const expected = hmac(`${slug}.${exp}`);
-  try {
-    const a = Buffer.from(sig, "hex");
-    const b = Buffer.from(expected, "hex");
-    if (a.length !== b.length) return false;
-    return timingSafeEqual(a, b);
-  } catch {
-    return false;
-  }
-}
-
 /**
- * Issues a short-lived signed token for the public buyer landing page or for
- * the realtor's own packet detail view. Anyone who knows a packet slug can
- * already see the public landing page, so issuing a token here is safe — the
- * token's purpose is to (a) keep the PDF storage bucket private and (b) let
- * us add expiry / revocation on the PDF route.
+ * Issues a short-lived signed token for the PDF route. Anyone who knows a
+ * packet slug already has access to the public buyer landing page, so issuing
+ * a token here doesn't expand exposure — it lets us keep the storage bucket
+ * private and add expiry to PDF access.
  */
 export const issuePdfToken = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) =>
@@ -174,6 +97,6 @@ export const issuePdfToken = createServerFn({ method: "POST" })
       .select("slug")
       .eq("slug", data.slug)
       .maybeSingle();
-    if (!packet) return { token: null };
-    return { token: signPdfToken(packet.slug) };
+    if (!packet) return { token: null as string | null };
+    return { token: signPdfToken(packet.slug) as string | null };
   });
