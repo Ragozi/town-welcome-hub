@@ -1,62 +1,94 @@
-## 1. Remove subscriber accounts (consumer side)
+## 1. Label & Naming Cleanup
 
-Delete consumer-only routes and code. Realtors and admins remain.
+In `src/routes/_authenticated/admin.tsx` strip the emojis and rename the nav links (keep the juicy hover/active gradients, just drop the emoji `<span>`):
 
-**Delete files**
-- `src/routes/_authenticated/me.tsx`
-- `src/routes/_authenticated/me.index.tsx`
-- `src/routes/_authenticated/me.welcome.tsx`
-- `src/routes/_authenticated/me.saved.tsx`
-- `src/routes/_authenticated/me.settings.tsx`
-- `src/routes/_authenticated/admin.subscribers.tsx` (admin view of subscribers)
-- `src/lib/subscriber.functions.ts`
+- 🔥 Hearth Hub → **Overview**
+- 🌈 The Chosen Family → **IAM**
+- 🍯 Serving Coin → **Financial Dashboard**
+- ☕ Spill the Tea → **Application Log**
+- 🎟️ Come Through → **Invitations**
 
-**Edit `src/routes/_authenticated.tsx`**: drop the subscriber branch — no `/me` redirect, no `/me/welcome` onboarding gate, no subscriber nav (Saved / Settings). Header collapses to realtor + admin links only. `homeLink` becomes `/dashboard`.
+Page titles / headings updated to match in:
+- `admin.users.tsx` → heading "Identity & Access Management"
+- `admin.finance.tsx` → "Financial Dashboard"
+- `admin.events.tsx` → "Application Log"
+- `admin.invite-codes.tsx` → "Invitations"
 
-**Edit `src/lib/auth.tsx`**: remove `subscriber` from `Role`, drop `subscriberProfile` state and its fetch, drop `isSubscriber`. Keep `admin` + `realtor`.
+"New packet" → "New Handbook" everywhere it appears:
+- `src/routes/_authenticated.tsx` (top nav button)
+- `src/routes/_authenticated/packets.index.tsx` (CTA)
+- `src/routes/_authenticated/packets.new.tsx` (eyebrow / page title)
+- `src/routes/_authenticated/settings.tsx` (placeholder copy)
 
-**Edit `src/routes/_authenticated/admin.tsx`**: remove the "Subscribers" tab link.
+## 2. Role Model: 4 Tiers
 
-**Database migration** — update `handle_new_user()` so signups WITHOUT an invite code are rejected (rather than silently becoming a subscriber). New behavior: trigger raises an exception unless a valid invite code is present in `raw_user_meta_data`. The `subscriber` enum value, `subscriber_profiles`, `marketing_subscriptions`, and `saved_items` tables stay in place (data preservation, no destructive drops in this pass) but are no longer written to from app code. Flag: if you'd rather hard-drop those tables, say so and I'll add it.
+Migration extends the `app_role` enum and re-buckets existing users:
 
-## 2. Drop Google sign-in
+```text
+super_admin    (eric@, ted@ — full control, IAM access)
+realtor_admin  (manages a brokerage/team)
+realtor_agent  (default for invite-code signups; replaces "realtor")
+sponsor_user   (business sponsor accounts)
+```
 
-**Edit `src/routes/login.tsx`**: remove the "Continue with Google" button, the `onGoogle` handler, and the divider. Restructure: realtor sign-in (email/password) is the primary form; "I have an invite code" toggle below it for new realtor signups. Update copy from "New here? Sign in with Google…" to realtor-focused.
+- `ALTER TYPE app_role ADD VALUE IF NOT EXISTS` for the 3 new values.
+- Backfill: existing `admin` rows → also insert `super_admin`; existing `realtor` rows → also insert `realtor_agent`. Keep legacy values around so RLS doesn't break mid-deploy.
+- Update `handle_new_user()` and `claim_invite_code()` to assign `realtor_agent`.
+- RLS policies referencing `'admin'` updated to accept `super_admin`/`realtor_admin` where appropriate. IAM-mutating policies (user_roles, invite codes) remain **super_admin only**.
 
-**Edit `src/lib/auth.tsx`**: remove `signInWithGoogle` from the context type, the provider value, and the implementation.
+`src/lib/auth.tsx`: extend `Role` union, add `isSuperAdmin`, `isRealtorAdmin`, `isRealtorAgent`, `isSponsor`. Keep `isAdmin = super_admin || realtor_admin` for back-compat. Gate `/admin/users` and `/admin/invite-codes` on `isSuperAdmin` only.
 
-**Call `supabase--configure_social_auth`** with `providers: []` and `disable_providers: ["google"]` to disable the Google provider in Lovable Cloud auth settings.
+## 3. Server-Side IAM Hardening (`src/lib/admin.functions.ts`)
 
-## 3. Build a real /sponsor page
+- New `assertSuperAdmin` used by `adminCreateUser`, `adminSetRole`, `adminResetPassword`, `adminDeleteUser`, `adminInviteUser`, `adminResendInvite`, `adminSetUserActive`.
+- `adminListUsers` stays admin-tier; mutations are super-admin only.
+- `CreateUserSchema`: replace `is_admin: boolean` with `role: z.enum(["super_admin","realtor_admin","realtor_agent","sponsor_user"])`.
+- Switch new-user provisioning to **`auth.admin.inviteUserByEmail(email, { data: { full_name, assigned_role }, redirectTo })`** so Supabase sends the invite email; then upsert profile + assigned role.
+- `adminResendInvite({ user_id })` re-issues the invite email via `auth.admin.inviteUserByEmail`.
+- **`adminSetUserActive({ user_id, active })`** — calls `auth.admin.updateUserById(id, { ban_duration: active ? "none" : "876000h" })` to deactivate / reactivate. Server prevents self-deactivation and deactivating the last active super admin.
+- `adminListUsers` returns extra fields used by the UI: `email_confirmed_at`, `banned_until`, `invited_at`.
 
-New file `src/routes/sponsor.tsx` with proper SEO `head()`. Sections:
-1. **Hero** — "Get in front of every new homeowner in your town." Subhead: how listings appear inside packets. CTA "Get listed" → mailto.
-2. **Why it works** — 3 bullets: captive audience (every closing in your town), warm intro (presented by the buyer's realtor), zero ad noise (curated, not algorithmic).
-3. **Tiers** — render from `sponsor_tiers` table (already publicly readable: `name`, `price_monthly`, `display_priority`, `key`). Show what each tier gets: directory placement priority, featured card vs. plain listing, coupon, photo. Use a static `TIER_BENEFITS` map keyed off `key` for the bullet lists since the table doesn't store them.
-4. **What's included visual** — small mock business card showing how a sponsor entry renders inside a packet (reuse styling from `BusinessCard`).
-5. **CTA band** — "Claim your category in your town" → `mailto:info@hearthhandbook.com?subject=Sponsor%20listing%20inquiry`.
+## 4. IAM UI (`src/routes/_authenticated/admin.users.tsx`)
 
-**Wire it up**:
-- `src/components/site-header.tsx`: change the "Get Listed" button from `<a href="/#sponsor">` to `<Link to="/sponsor">`. Add a "Sponsor" nav link too.
-- `src/components/site-footer.tsx`: change "Sponsor tiers" anchor to `<Link to="/sponsor">`.
-- `src/routes/index.tsx`: the in-page `#sponsor` band's "Get listed" CTA points to `/sponsor` instead of mailto, and we keep the band as a teaser on the home page.
-- `src/routes/sitemap[.]xml.ts`: add `/sponsor` entry.
-- `public/llms.txt`: add `/sponsor` to the page list.
+- Heading: "Identity & Access Management".
+- "New user" dialog (super-admin only):
+  - Full name, Email
+  - **Role** dropdown (required): Super Admin / Realtor Admin / Realtor Agent / Sponsor User
+  - Password field removed; copy: "We'll email an invitation with a setup link."
+  - On success: `qc.setQueryData(["admin-users"], prev => [newUser, ...prev])` for instant insert + `invalidateQueries` for reconciliation. Toast success/error.
+- Replace single Admin toggle with a **Role** Select per row → `adminSetRole`.
+- **Last Sign In** logic:
+  - `!confirmed` → "Pending Verification"
+  - `confirmed && !last_sign_in_at` → "N/A"
+  - else → formatted timestamp
+- **Status** column (priority order):
+  1. `banned_until > now` → **Disabled**
+  2. `invited_at && !confirmed` → **Pending Invitation**
+  3. `!confirmed` → **Pending Verification**
+  4. else → **Active**
+- Row actions menu (super-admin only):
+  - **Resend Invitation** (when status is Pending Invitation/Verification)
+  - **Reset password**
+  - **Deactivate user** / **Reactivate user** (toggles based on current status; confirms before deactivating)
+  - **Delete** (server blocks deleting self or last super admin)
 
-## 4. About page rewrite (realtor-first)
+## 5. Reactive Updates
 
-Remaining consumer copy to fix in `src/routes/about.tsx`:
-- Hero subhead: change from "Meet the locals, grab a coupon, and feel at home — wherever you land. Hearth Handbook is a hand-curated, community-first guide built for the people who actually live, work and visit each town we cover." → realtor-pitched: closing-gift product for buyers, made by realtors.
-- "By the numbers" panel — replace consumer stats with realtor-relevant ones (Towns covered: 8, Sponsor categories: 12+, Buyers reached: TBD or drop the third stat).
-- "Free for residents, forever" card → "Free for buyers, forever" (still true — buyers don't pay, realtors do).
-- "Built for Wisconsin, by Wisconsinites" story paragraph: keep the printed-welcome-packet origin (it's true and on-brand) but reframe the destination as "a realtor toolkit so every closing comes with a beautiful welcome."
-- Roadmap section stays.
-- "Want your town next?" CTA stays but reword for realtors ("Want to bring Hearth Handbook to your county? We'd love to hear from you.").
+All mutations use `useMutation` with `onSuccess: invalidateQueries(["admin-users"])`, plus optimistic insert on create. No manual refresh.
 
-## 5. Tiny landing tweak
+## 6. Acceptance
 
-Update home `#sponsor` band CTA href from `mailto:` to `<Link to="/sponsor">` so users can read the pitch first instead of being thrown into their email client.
+- Eric & Ted = Super Admin; everyone else `realtor_agent`.
+- Only super admins see New User, role dropdown, role Select, deactivate, delete.
+- Creating a user emails the invite; row appears immediately.
+- Status reflects Disabled / Pending Invitation / Pending Verification / Active.
+- Deactivate flips the user's status to Disabled and blocks login until reactivated.
+- Last Sign In follows the 3-state rule.
+- All tabs and page titles use new names; emojis removed; "New packet" reads "New Handbook" throughout.
 
-## Out of scope / flagged
-- Subscriber data tables (`subscriber_profiles`, `marketing_subscriptions`, `saved_items`) and the `subscriber` enum value remain in DB. Tell me if you want them dropped — I'll write a destructive migration.
-- `validate_invite_code` / `claim_invite_code` RPCs already gate realtor signups; no change needed there.
+## Technical notes
+
+- Deactivation uses Supabase `ban_duration` ("876000h" ≈ 100 years). Reactivation passes `"none"`.
+- Supabase's "Invite user" auth template must be enabled; default sender is rate-limited without custom SMTP — failures surface via error toast.
+- `ALTER TYPE ADD VALUE` runs in its own statements before any policy changes (non-transactional).
+- Legacy `'admin'`/`'realtor'` enum values kept for now; a follow-up migration can drop them once nothing references them.

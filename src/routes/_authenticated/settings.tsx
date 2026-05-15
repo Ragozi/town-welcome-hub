@@ -157,7 +157,7 @@ function Settings() {
             value={thankYou}
             onChange={(e) => setThankYou(e.target.value)}
             rows={3}
-            placeholder="Pre-fills the welcome note on every new packet."
+            placeholder="Pre-fills the welcome note on every new handbook."
           />
         </Field>
 

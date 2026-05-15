@@ -143,9 +143,9 @@ function NewPacket() {
       </div>
 
       <div>
-        <p className="eyebrow">// New packet</p>
+        <p className="eyebrow">// New Handbook</p>
         <h1 className="font-display text-3xl font-extrabold uppercase tracking-tight">
-          Create welcome packet
+          Create welcome handbook
         </h1>
       </div>
 

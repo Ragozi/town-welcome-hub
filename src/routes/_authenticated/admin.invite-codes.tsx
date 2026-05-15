@@ -112,8 +112,8 @@ function InviteCodesPage() {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="font-display text-xl font-extrabold uppercase tracking-tight">Invite codes</h2>
-          <p className="text-sm text-muted-foreground">Generate single-use codes for new realtors.</p>
+          <h2 className="font-display text-xl font-extrabold uppercase tracking-tight">Invitations</h2>
+          <p className="text-sm text-muted-foreground">Generate single-use invite codes for new realtors.</p>
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>

@@ -3,23 +3,51 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
-async function assertAdmin(userId: string) {
+const ASSIGNABLE_ROLES = [
+  "super_admin",
+  "realtor_admin",
+  "realtor_agent",
+  "sponsor_user",
+] as const;
+type AssignableRole = (typeof ASSIGNABLE_ROLES)[number];
+
+async function assertSuperAdmin(userId: string) {
   const { data, error } = await supabaseAdmin
     .from("user_roles")
     .select("role")
     .eq("user_id", userId)
-    .eq("role", "admin")
+    .eq("role", "super_admin")
     .maybeSingle();
   if (error || !data) {
+    throw new Response("Forbidden — Super Admin only", { status: 403 });
+  }
+}
+
+async function assertAdminTier(userId: string) {
+  const { data, error } = await supabaseAdmin
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", userId)
+    .in("role", ["super_admin", "realtor_admin"]);
+  if (error || !data || data.length === 0) {
     throw new Response("Forbidden", { status: 403 });
   }
 }
 
-// ----- Users / Realtors -----
+function siteOriginFromRequest(): string {
+  // Read from env var with sensible fallbacks. Used as redirectTo for invites.
+  return (
+    process.env.PUBLIC_SITE_URL ??
+    process.env.SITE_URL ??
+    "https://hearthhandbook.com"
+  );
+}
+
+// ----- Users -----
 export const adminListUsers = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    await assertAdmin(context.userId);
+    await assertAdminTier(context.userId);
 
     const { data: usersResp, error } = await supabaseAdmin.auth.admin.listUsers({
       page: 1,
@@ -48,43 +76,56 @@ export const adminListUsers = createServerFn({ method: "GET" })
     }
 
     return usersResp.users
-      .map((u) => ({
-        id: u.id,
-        email: u.email ?? "",
-        created_at: u.created_at,
-        last_sign_in_at: u.last_sign_in_at ?? null,
-        confirmed: !!u.email_confirmed_at,
-        roles: rolesByUser.get(u.id) ?? [],
-        profile: profByUser.get(u.id) ?? null,
-        packet_count: packetCountByUser.get(u.id) ?? 0,
-      }))
+      .map((u) => {
+        const banned = (u as any).banned_until ?? null;
+        const invited = (u as any).invited_at ?? null;
+        return {
+          id: u.id,
+          email: u.email ?? "",
+          created_at: u.created_at,
+          last_sign_in_at: u.last_sign_in_at ?? null,
+          email_confirmed_at: u.email_confirmed_at ?? null,
+          confirmed: !!u.email_confirmed_at,
+          invited_at: invited,
+          banned_until: banned,
+          roles: rolesByUser.get(u.id) ?? [],
+          profile: profByUser.get(u.id) ?? null,
+          packet_count: packetCountByUser.get(u.id) ?? 0,
+        };
+      })
       .sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at));
   });
 
-const CreateUserSchema = z.object({
+const InviteUserSchema = z.object({
   email: z.string().email(),
   full_name: z.string().min(1).max(120),
-  password: z.string().min(8).max(128),
-  is_admin: z.boolean(),
+  role: z.enum(ASSIGNABLE_ROLES),
 });
 
-export const adminCreateUser = createServerFn({ method: "POST" })
+export const adminInviteUser = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => CreateUserSchema.parse(input))
+  .inputValidator((input: unknown) => InviteUserSchema.parse(input))
   .handler(async ({ data, context }) => {
-    await assertAdmin(context.userId);
+    await assertSuperAdmin(context.userId);
 
-    const { data: created, error } = await supabaseAdmin.auth.admin.createUser({
-      email: data.email,
-      password: data.password,
-      email_confirm: true,
-      user_metadata: { full_name: data.full_name },
-    });
-    if (error || !created.user) {
-      throw new Response(error?.message ?? "Could not create user", { status: 400 });
+    const redirectTo = `${siteOriginFromRequest()}/login?welcome=1`;
+    const { data: invited, error } = await supabaseAdmin.auth.admin.inviteUserByEmail(
+      data.email,
+      {
+        redirectTo,
+        data: {
+          full_name: data.full_name,
+          assigned_role: data.role,
+        },
+      },
+    );
+    if (error || !invited?.user) {
+      throw new Response(error?.message ?? "Could not invite user", { status: 400 });
     }
-    const uid = created.user.id;
+    const uid = invited.user.id;
 
+    // Profile + role are created by handle_new_user trigger using assigned_role,
+    // but we also do an explicit upsert in case the trigger ordering changes.
     await supabaseAdmin.from("profiles").upsert(
       {
         user_id: uid,
@@ -94,52 +135,131 @@ export const adminCreateUser = createServerFn({ method: "POST" })
       },
       { onConflict: "user_id" },
     );
-    await supabaseAdmin.from("user_roles").upsert(
-      { user_id: uid, role: "realtor" },
-      { onConflict: "user_id,role" },
+    await supabaseAdmin
+      .from("user_roles")
+      .upsert({ user_id: uid, role: data.role }, { onConflict: "user_id,role" });
+
+    return {
+      id: uid,
+      email: data.email,
+      created_at: invited.user.created_at,
+      last_sign_in_at: null,
+      email_confirmed_at: null,
+      confirmed: false,
+      invited_at: (invited.user as any).invited_at ?? new Date().toISOString(),
+      banned_until: null,
+      roles: [data.role],
+      profile: { user_id: uid, full_name: data.full_name, brokerage_name: null, referral_slug: null, phone: null },
+      packet_count: 0,
+    };
+  });
+
+const ResendSchema = z.object({ user_id: z.string().uuid() });
+
+export const adminResendInvite = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => ResendSchema.parse(input))
+  .handler(async ({ data, context }) => {
+    await assertSuperAdmin(context.userId);
+
+    const { data: u, error: getErr } = await supabaseAdmin.auth.admin.getUserById(
+      data.user_id,
     );
-    if (data.is_admin) {
-      await supabaseAdmin.from("user_roles").upsert(
-        { user_id: uid, role: "admin" },
-        { onConflict: "user_id,role" },
-      );
+    if (getErr || !u?.user?.email) {
+      throw new Response("User not found", { status: 404 });
     }
-    return { ok: true, user_id: uid };
+
+    const redirectTo = `${siteOriginFromRequest()}/login?welcome=1`;
+    const { error } = await supabaseAdmin.auth.admin.inviteUserByEmail(u.user.email, {
+      redirectTo,
+      data: u.user.user_metadata ?? {},
+    });
+    if (error) throw new Response(error.message, { status: 400 });
+    return { ok: true };
   });
 
 const SetRoleSchema = z.object({
   user_id: z.string().uuid(),
-  role: z.enum(["admin", "realtor"]),
-  enable: z.boolean(),
+  role: z.enum(ASSIGNABLE_ROLES),
 });
 
 export const adminSetRole = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => SetRoleSchema.parse(input))
   .handler(async ({ data, context }) => {
-    await assertAdmin(context.userId);
+    await assertSuperAdmin(context.userId);
 
-    if (data.enable) {
-      await supabaseAdmin
+    // Demoting from super_admin? Make sure we keep at least one.
+    const { data: existing } = await supabaseAdmin
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", data.user_id);
+    const wasSuper = (existing ?? []).some((r) => r.role === "super_admin");
+    if (wasSuper && data.role !== "super_admin") {
+      const { count } = await supabaseAdmin
         .from("user_roles")
-        .upsert({ user_id: data.user_id, role: data.role }, { onConflict: "user_id,role" });
-    } else {
-      // Prevent removing the last admin
-      if (data.role === "admin") {
-        const { count } = await supabaseAdmin
-          .from("user_roles")
-          .select("*", { count: "exact", head: true })
-          .eq("role", "admin");
-        if ((count ?? 0) <= 1) {
-          throw new Response("Cannot remove the last admin", { status: 400 });
+        .select("*", { count: "exact", head: true })
+        .eq("role", "super_admin");
+      if ((count ?? 0) <= 1) {
+        throw new Response("Cannot remove the last Super Admin", { status: 400 });
+      }
+    }
+
+    // Replace any assignable role with the new single role for this user.
+    await supabaseAdmin
+      .from("user_roles")
+      .delete()
+      .eq("user_id", data.user_id)
+      .in("role", ASSIGNABLE_ROLES as unknown as AssignableRole[]);
+
+    await supabaseAdmin
+      .from("user_roles")
+      .upsert({ user_id: data.user_id, role: data.role }, { onConflict: "user_id,role" });
+
+    return { ok: true };
+  });
+
+const SetActiveSchema = z.object({
+  user_id: z.string().uuid(),
+  active: z.boolean(),
+});
+
+export const adminSetUserActive = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => SetActiveSchema.parse(input))
+  .handler(async ({ data, context }) => {
+    await assertSuperAdmin(context.userId);
+
+    if (!data.active && data.user_id === context.userId) {
+      throw new Response("You cannot deactivate your own account", { status: 400 });
+    }
+
+    if (!data.active) {
+      // Block deactivating the last active super admin.
+      const { data: superRows } = await supabaseAdmin
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "super_admin");
+      const superIds = (superRows ?? []).map((r) => r.user_id);
+      if (superIds.includes(data.user_id)) {
+        const { data: users } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 200 });
+        const activeSupers = (users?.users ?? []).filter(
+          (u) =>
+            superIds.includes(u.id) &&
+            !((u as any).banned_until && new Date((u as any).banned_until) > new Date()),
+        );
+        if (activeSupers.length <= 1) {
+          throw new Response("Cannot deactivate the last active Super Admin", {
+            status: 400,
+          });
         }
       }
-      await supabaseAdmin
-        .from("user_roles")
-        .delete()
-        .eq("user_id", data.user_id)
-        .eq("role", data.role);
     }
+
+    const { error } = await supabaseAdmin.auth.admin.updateUserById(data.user_id, {
+      ban_duration: data.active ? "none" : "876000h",
+    } as any);
+    if (error) throw new Response(error.message, { status: 400 });
     return { ok: true };
   });
 
@@ -152,7 +272,7 @@ export const adminResetPassword = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => ResetPwSchema.parse(input))
   .handler(async ({ data, context }) => {
-    await assertAdmin(context.userId);
+    await assertSuperAdmin(context.userId);
     const { error } = await supabaseAdmin.auth.admin.updateUserById(data.user_id, {
       password: data.password,
     });
@@ -166,9 +286,23 @@ export const adminDeleteUser = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => DeleteUserSchema.parse(input))
   .handler(async ({ data, context }) => {
-    await assertAdmin(context.userId);
+    await assertSuperAdmin(context.userId);
     if (data.user_id === context.userId) {
       throw new Response("You cannot delete your own account", { status: 400 });
+    }
+    // Block deleting the last super admin
+    const { data: roles } = await supabaseAdmin
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", data.user_id);
+    if ((roles ?? []).some((r) => r.role === "super_admin")) {
+      const { count } = await supabaseAdmin
+        .from("user_roles")
+        .select("*", { count: "exact", head: true })
+        .eq("role", "super_admin");
+      if ((count ?? 0) <= 1) {
+        throw new Response("Cannot delete the last Super Admin", { status: 400 });
+      }
     }
     const { error } = await supabaseAdmin.auth.admin.deleteUser(data.user_id);
     if (error) throw new Response(error.message, { status: 400 });
@@ -187,7 +321,7 @@ export const adminGetMetrics = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => RangeSchema.parse(input))
   .handler(async ({ data, context }) => {
-    if (data.scope === "admin") await assertAdmin(context.userId);
+    if (data.scope === "admin") await assertAdminTier(context.userId);
 
     const days = data.days;
     const end = new Date();
@@ -256,7 +390,6 @@ export const adminGetMetrics = createServerFn({ method: "POST" })
       bizClicks: countBy(PE, "business_click") + countBy(PE, "sponsor_click"),
     };
 
-    // Daily series
     const dayKey = (d: string) => new Date(d).toISOString().slice(0, 10);
     const days_arr: string[] = [];
     for (let i = 0; i < days; i++) {
@@ -277,17 +410,14 @@ export const adminGetMetrics = createServerFn({ method: "POST" })
       };
     });
 
-    // Source breakdown
     const sourceMap: Record<string, number> = {};
     for (const e of E) sourceMap[e.source] = (sourceMap[e.source] ?? 0) + 1;
     const sources = Object.entries(sourceMap).map(([name, value]) => ({ name, value }));
 
-    // Device split
     const deviceMap: Record<string, number> = {};
     for (const e of E) deviceMap[e.device] = (deviceMap[e.device] ?? 0) + 1;
     const devices = Object.entries(deviceMap).map(([name, value]) => ({ name, value }));
 
-    // Geo
     const geoMap = new Map<string, number>();
     for (const e of E) {
       if (!e.ip_city && !e.ip_region) continue;
@@ -299,7 +429,6 @@ export const adminGetMetrics = createServerFn({ method: "POST" })
       .sort((a, b) => b.count - a.count)
       .slice(0, 10);
 
-    // Top businesses (from clicks metadata.business_id)
     const bizCounts = new Map<string, { name: string; count: number }>();
     for (const e of E) {
       if (e.event_type !== "business_click" && e.event_type !== "sponsor_click") continue;
@@ -314,7 +443,6 @@ export const adminGetMetrics = createServerFn({ method: "POST" })
       .sort((a, b) => b.count - a.count)
       .slice(0, 10);
 
-    // Top realtors (admin only)
     let topRealtors: { name: string; packets: number; views: number; referrals: number }[] = [];
     if (data.scope === "admin") {
       const realtorAgg = new Map<string, { packets: number; views: number; referrals: number }>();
@@ -347,7 +475,6 @@ export const adminGetMetrics = createServerFn({ method: "POST" })
       }
     }
 
-    // Top towns
     const townAgg = new Map<string, { packets: number; views: number }>();
     for (const p of Pk) {
       if (!p.town_id) continue;
@@ -378,7 +505,6 @@ export const adminGetMetrics = createServerFn({ method: "POST" })
         .slice(0, 10);
     }
 
-    // Funnel
     const funnel = [
       { stage: "Packets created", value: totals.packets },
       { stage: "PDFs downloaded", value: totals.pdfs },
@@ -414,7 +540,7 @@ export const getPacketTimeline = createServerFn({ method: "POST" })
       .maybeSingle();
     if (!packet) throw new Response("Not found", { status: 404 });
     if (packet.realtor_id !== context.userId) {
-      await assertAdmin(context.userId);
+      await assertAdminTier(context.userId);
     }
 
     const { data: events } = await supabaseAdmin
@@ -448,7 +574,7 @@ export const adminListEvents = createServerFn({ method: "POST" })
     z.object({ limit: z.number().int().min(1).max(500).default(200) }).parse(input),
   )
   .handler(async ({ data, context }) => {
-    await assertAdmin(context.userId);
+    await assertAdminTier(context.userId);
     const { data: events } = await supabaseAdmin
       .from("packet_events")
       .select("*")
