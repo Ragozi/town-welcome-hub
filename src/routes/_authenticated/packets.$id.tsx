@@ -50,6 +50,7 @@ function PacketDetail() {
   const pdfDownloadUrl =
     packet && tokenQuery ? `/api/packet-pdf/${packet.slug}?${tokenQuery}&download=1` : "";
   const pdfShareUrl = packet && tokenQuery ? `${packetPdfUrl(packet.slug)}?${tokenQuery}` : "";
+  const liveUrl = useMemo(() => (packet ? packetUrl(packet.slug) : ""), [packet]);
 
   if (isLoading) {
     return (
