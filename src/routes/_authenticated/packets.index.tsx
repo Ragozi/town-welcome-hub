@@ -28,7 +28,7 @@ function PacketsList() {
           </h1>
         </div>
         <Button asChild className="h-11 rounded-full bg-primary text-primary-foreground hover:bg-primary/90">
-          <Link to="/packets/new"><FilePlus2 className="mr-1 h-4 w-4" /> New packet</Link>
+          <Link to="/packets/new"><FilePlus2 className="mr-1 h-4 w-4" /> New Handbook</Link>
         </Button>
       </div>
 

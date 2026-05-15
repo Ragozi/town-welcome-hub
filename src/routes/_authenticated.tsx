@@ -46,7 +46,7 @@ function AuthLayout() {
                     <span className="inline-flex items-center gap-1.5"><LayoutDashboard className="h-4 w-4" /> Dashboard</span>
                   </Link>
                   <Link to="/packets/new" className="hover:text-foreground" activeProps={{ className: "text-foreground" }}>
-                    <span className="inline-flex items-center gap-1.5"><FilePlus2 className="h-4 w-4" /> New packet</span>
+                    <span className="inline-flex items-center gap-1.5"><FilePlus2 className="h-4 w-4" /> New Handbook</span>
                   </Link>
                   <Link to="/settings" className="hover:text-foreground" activeProps={{ className: "text-foreground" }}>
                     <span className="inline-flex items-center gap-1.5"><Settings className="h-4 w-4" /> Branding</span>

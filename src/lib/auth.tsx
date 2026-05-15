@@ -16,7 +16,7 @@ type Profile = {
   thank_you_message: string | null;
 };
 
-export type Role = "admin" | "realtor" | null;
+export type Role = "super_admin" | "realtor_admin" | "realtor_agent" | "sponsor_user" | null;
 
 type AuthCtx = {
   session: Session | null;
@@ -24,6 +24,7 @@ type AuthCtx = {
   profile: Profile | null;
   role: Role;
   isAdmin: boolean;
+  isSuperAdmin: boolean;
   isRealtor: boolean;
   loading: boolean;
   refreshProfile: () => Promise<void>;
@@ -40,8 +41,10 @@ type AuthCtx = {
 const Ctx = createContext<AuthCtx | null>(null);
 
 function pickRole(roles: string[]): Role {
-  if (roles.includes("admin")) return "admin";
-  if (roles.includes("realtor")) return "realtor";
+  if (roles.includes("super_admin")) return "super_admin";
+  if (roles.includes("realtor_admin")) return "realtor_admin";
+  if (roles.includes("realtor_agent")) return "realtor_agent";
+  if (roles.includes("sponsor_user")) return "sponsor_user";
   return null;
 }
 
@@ -87,8 +90,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     user: session?.user ?? null,
     profile,
     role,
-    isAdmin: role === "admin",
-    isRealtor: role === "realtor" || role === "admin",
+    isAdmin: role === "super_admin" || role === "realtor_admin",
+    isSuperAdmin: role === "super_admin",
+    isRealtor: role === "realtor_agent" || role === "realtor_admin" || role === "super_admin",
     loading,
     refreshProfile: async () => {
       if (session?.user) await loadProfile(session.user.id);

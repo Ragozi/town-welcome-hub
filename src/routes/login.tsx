@@ -47,8 +47,8 @@ function LoginPage() {
 
   useEffect(() => {
     if (loading || !session) return;
-    if (role === "admin") navigate({ to: "/admin" });
-    else if (role === "realtor") navigate({ to: "/dashboard" });
+    if (role === "super_admin" || role === "realtor_admin") navigate({ to: "/admin" });
+    else if (role === "realtor_agent") navigate({ to: "/dashboard" });
   }, [session, role, loading, navigate]);
 
   useEffect(() => {
