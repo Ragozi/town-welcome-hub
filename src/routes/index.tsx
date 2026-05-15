@@ -1,6 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, Bird } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import logoPrimary from "@/assets/brand/logo-primary.png";
+import logoMark from "@/assets/brand/logo-mark.png";
 
 export const Route = createFileRoute("/")({
   head: () => ({
