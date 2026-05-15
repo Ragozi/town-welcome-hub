@@ -1,76 +1,40 @@
 import { createFileRoute, notFound } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { type Business, type Category, type Town, tierPriority } from "@/lib/towns";
-import type { Packet } from "@/lib/packets";
+import { tierPriority } from "@/lib/towns";
+import {
+  getPublicPacket,
+  issuePdfToken,
+  type PublicBusiness,
+  type PublicCategory,
+} from "@/lib/public-packet.functions";
 import { Phone, Globe, MapPin, Mail, Star, Heart, Check } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { logEvent } from "@/lib/tracking.functions";
 import { detectSource, getSessionId, readUtm } from "@/lib/tracking";
 import { getPublicBaseUrl } from "@/lib/public-url";
-import { RequireAuth } from "@/components/require-auth";
-
-type LoaderData = {
-  packet: Packet;
-  realtor: any;
-  town: Town | null;
-  categories: Category[];
-  businesses: Business[];
-};
 
 export const Route = createFileRoute("/p/$slug")({
-  loader: async ({ params }): Promise<LoaderData> => {
-    const { data: packet } = await supabase
-      .from("packets")
-      .select("*")
-      .eq("slug", params.slug)
-      .maybeSingle();
-    if (!packet) throw notFound();
-    const p = packet as Packet;
-
-    const [profileRes, townRes, catRes] = await Promise.all([
-      supabase.from("profiles").select("*").eq("user_id", p.realtor_id).maybeSingle(),
-      p.town_id
-        ? supabase.from("towns").select("*").eq("id", p.town_id).maybeSingle()
-        : Promise.resolve({ data: null }),
-      supabase.from("categories").select("*").order("display_order"),
-    ]);
-
-    const town = (townRes.data ?? null) as Town | null;
-    let businesses: Business[] = [];
-    if (town) {
-      const { data: bizData } = await supabase
-        .from("businesses")
-        .select("*")
-        .eq("town_id", town.id);
-      const all = (bizData ?? []) as Business[];
-      const excluded = new Set<string>(
-        (p as Packet & { excluded_business_ids?: string[] }).excluded_business_ids ?? [],
-      );
-      businesses = all.filter((b) => !excluded.has(b.id));
-    }
-
-    return {
-      packet: p,
-      realtor: profileRes.data,
-      town,
-      categories: (catRes.data ?? []) as Category[],
-      businesses,
-    };
+  loader: async ({ params }) => {
+    const data = await getPublicPacket({ data: { slug: params.slug } });
+    if (!data) throw notFound();
+    return data;
   },
   head: ({ loaderData }) => {
     if (!loaderData) return { meta: [] };
-    const p = loaderData.packet;
     return {
       meta: [
-        { title: `Welcome Home, ${p.buyer_first_name} — Your neighborhood guide` },
+        {
+          title: `Welcome Home, ${loaderData.buyer_first_name} — Your neighborhood guide`,
+        },
         {
           name: "description",
-          content: `A personalized welcome to your new home at ${p.address}.`,
+          content: `A personalized welcome to ${loaderData.location_label ?? "your new neighborhood"}.`,
         },
-        { property: "og:title", content: `Welcome Home, ${p.buyer_first_name}` },
+        { property: "og:title", content: `Welcome Home, ${loaderData.buyer_first_name}` },
         { property: "og:description", content: "Your personalized neighborhood guide." },
-        ...(p.home_photo_url ? [{ property: "og:image", content: p.home_photo_url }] : []),
+        ...(loaderData.home_photo_url
+          ? [{ property: "og:image", content: loaderData.home_photo_url }]
+          : []),
       ],
     };
   },
@@ -82,15 +46,12 @@ export const Route = createFileRoute("/p/$slug")({
       </div>
     </div>
   ),
-  component: () => (
-    <RequireAuth>
-      <BuyerLanding />
-    </RequireAuth>
-  ),
+  component: BuyerLanding,
 });
 
 function BuyerLanding() {
-  const { packet, realtor, town, categories, businesses } = Route.useLoaderData();
+  const packet = Route.useLoaderData();
+  const { realtor, town, categories, businesses } = packet;
   const log = useServerFn(logEvent);
   const [viewSaved, setViewSaved] = useState(false);
 
