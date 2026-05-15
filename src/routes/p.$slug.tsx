@@ -108,31 +108,31 @@ function BuyerLanding() {
     }).catch(() => {});
   };
 
-  const allBiz = businesses as Business[];
+  const allBiz = businesses as PublicBusiness[];
   const allCats = categories as Category[];
 
   const featured = allBiz
-    .filter((b: Business) => b.sponsor_tier !== "none")
+    .filter((b: PublicBusiness) => b.sponsor_tier !== "none")
     .sort(
-      (a: Business, b: Business) =>
+      (a: PublicBusiness, b: PublicBusiness) =>
         tierPriority[b.sponsor_tier] - tierPriority[a.sponsor_tier] ||
         a.featured_order - b.featured_order,
     );
 
   const platinum = featured
-    .filter((b: Business) => b.sponsor_tier === "s_tier" || b.sponsor_tier === "gold")
+    .filter((b: PublicBusiness) => b.sponsor_tier === "s_tier" || b.sponsor_tier === "gold")
     .slice(0, 3);
   const gold = featured.filter(
-    (b: Business) => b.sponsor_tier === "silver" || b.sponsor_tier === "bronze",
+    (b: PublicBusiness) => b.sponsor_tier === "silver" || b.sponsor_tier === "bronze",
   );
 
-  const byCategory = new Map<string, Business[]>();
+  const byCategory = new Map<string, PublicBusiness[]>();
   for (const b of allBiz) {
     const arr = byCategory.get(b.category_id) ?? [];
     arr.push(b);
     byCategory.set(b.category_id, arr);
   }
-  const cats = allCats.filter((c: Category) => (byCategory.get(c.id)?.length ?? 0) > 0);
+  const cats = allCats.filter((c: PublicCategory) => (byCategory.get(c.id)?.length ?? 0) > 0);
 
   const baseUrl = getPublicBaseUrl();
   const referralHref = realtor?.referral_slug
@@ -147,7 +147,7 @@ function BuyerLanding() {
           {packet.home_photo_url ? (
             <img
               src={packet.home_photo_url}
-              alt={packet.address}
+              alt={packet.location_label ?? "Welcome home"}
               className="h-full w-full object-cover"
             />
           ) : (
@@ -166,7 +166,7 @@ function BuyerLanding() {
               {packet.buyer_last_name ? ` & family` : ""}.
             </h1>
             <p className="mt-4 max-w-xl text-base text-background/85 md:text-lg">
-              {packet.address}
+              {packet.location_label}
               {town ? ` · ${town.name}, ${town.state}` : ""}
             </p>
           </div>
@@ -255,7 +255,7 @@ function BuyerLanding() {
               A short list of the places we'd send a friend.
             </p>
             <div className="mt-8 grid gap-5 md:grid-cols-3">
-              {platinum.map((b: Business) => (
+              {platinum.map((b: PublicBusiness) => (
                 <FeaturedCard
                   key={b.id}
                   b={b}
@@ -279,9 +279,9 @@ function BuyerLanding() {
               )}
             </div>
 
-            {cats.map((c: Category) => {
+            {cats.map((c: PublicCategory) => {
               const list = (byCategory.get(c.id) ?? []).sort(
-                (a: Business, b: Business) =>
+                (a: PublicBusiness, b: PublicBusiness) =>
                   tierPriority[b.sponsor_tier] - tierPriority[a.sponsor_tier],
               );
               return (
@@ -295,7 +295,7 @@ function BuyerLanding() {
                     </span>
                   </div>
                   <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    {list.map((b: Business) => (
+                    {list.map((b: PublicBusiness) => (
                       <BusinessRow
                         key={b.id}
                         b={b}
@@ -320,7 +320,7 @@ function BuyerLanding() {
           <section className="mt-16">
             <p className="eyebrow">// Also recommended</p>
             <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {gold.slice(0, 8).map((b: Business) => (
+              {gold.slice(0, 8).map((b: PublicBusiness) => (
                 <BusinessRow
                   key={b.id}
                   b={b}
@@ -395,7 +395,7 @@ function BuyerLanding() {
   );
 }
 
-function FeaturedCard({ b, onClick }: { b: Business; onClick?: () => void }) {
+function FeaturedCard({ b, onClick }: { b: PublicBusiness; onClick?: () => void }) {
   return (
     <div
       onClick={onClick}
@@ -449,7 +449,7 @@ function FeaturedCard({ b, onClick }: { b: Business; onClick?: () => void }) {
   );
 }
 
-function BusinessRow({ b, onClick }: { b: Business; onClick?: () => void }) {
+function BusinessRow({ b, onClick }: { b: PublicBusiness; onClick?: () => void }) {
   return (
     <div onClick={onClick} className="rounded-2xl border border-border bg-card p-4">
       <div className="flex items-start justify-between gap-2">
