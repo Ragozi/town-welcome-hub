@@ -94,16 +94,16 @@ function LoginPage() {
   return (
     <div className="min-h-screen bg-background">
       <div className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-5 py-12">
-        <Link to="/" className="font-display mb-10 text-center text-xl font-extrabold tracking-tight">
-          HEARTH HANDBOOK<span className="text-primary">.</span>
+        <Link to="/" aria-label="Hearth Handbook home" className="mb-8 flex justify-center">
+          <img src={logoPrimary} alt="Hearth Handbook" width={280} height={188} className="h-auto w-64" />
         </Link>
 
         <div className="rounded-3xl border border-border bg-card p-8 shadow-[var(--shadow-soft)]">
-          <h1 className="font-display text-2xl font-extrabold uppercase tracking-tight">
+          <h1 className="font-display text-3xl font-semibold tracking-wide">
             Realtor sign in
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Build personalized welcome packets for your buyers.
+            Feel at home, from the start. Build personalized welcome packets for your buyers.
           </p>
 
           <form onSubmit={onSignIn} className="mt-6 space-y-4" suppressHydrationWarning>
