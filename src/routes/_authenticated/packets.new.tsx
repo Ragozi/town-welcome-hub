@@ -37,7 +37,7 @@ const LIFESTYLE_OPTIONS = [
   "Retirees", "Newlyweds", "Relocating from out of state",
 ];
 
-type Step = 1 | 2 | 3 | 4;
+type Step = 1 | 2 | 3 | 4 | 5;
 
 function NewPacket() {
   const { user, profile } = useAuth();
@@ -98,6 +98,14 @@ function NewPacket() {
   const [hasPets, setHasPets] = useState(false);
   const [interests, setInterests] = useState<string[]>([]);
   const [lifestyle, setLifestyle] = useState<string[]>([]);
+  const [excludedIds, setExcludedIds] = useState<Set<string>>(new Set());
+
+  const previewFn = useServerFn(previewTownBusinesses);
+  const previewQ = useQuery({
+    queryKey: ["packet-preview", townId],
+    enabled: step === 4 && !!townId,
+    queryFn: () => previewFn({ data: { townId } }),
+  });
 
   const toggle = (arr: string[], v: string) =>
     arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v];
