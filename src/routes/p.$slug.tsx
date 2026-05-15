@@ -1,76 +1,40 @@
 import { createFileRoute, notFound } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { type Business, type Category, type Town, tierPriority } from "@/lib/towns";
-import type { Packet } from "@/lib/packets";
+import { tierPriority } from "@/lib/towns";
+import {
+  getPublicPacket,
+  issuePdfToken,
+  type PublicBusiness,
+  type PublicCategory,
+} from "@/lib/public-packet.functions";
 import { Phone, Globe, MapPin, Mail, Star, Heart, Check } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { logEvent } from "@/lib/tracking.functions";
 import { detectSource, getSessionId, readUtm } from "@/lib/tracking";
 import { getPublicBaseUrl } from "@/lib/public-url";
-import { RequireAuth } from "@/components/require-auth";
-
-type LoaderData = {
-  packet: Packet;
-  realtor: any;
-  town: Town | null;
-  categories: Category[];
-  businesses: Business[];
-};
 
 export const Route = createFileRoute("/p/$slug")({
-  loader: async ({ params }): Promise<LoaderData> => {
-    const { data: packet } = await supabase
-      .from("packets")
-      .select("*")
-      .eq("slug", params.slug)
-      .maybeSingle();
-    if (!packet) throw notFound();
-    const p = packet as Packet;
-
-    const [profileRes, townRes, catRes] = await Promise.all([
-      supabase.from("profiles").select("*").eq("user_id", p.realtor_id).maybeSingle(),
-      p.town_id
-        ? supabase.from("towns").select("*").eq("id", p.town_id).maybeSingle()
-        : Promise.resolve({ data: null }),
-      supabase.from("categories").select("*").order("display_order"),
-    ]);
-
-    const town = (townRes.data ?? null) as Town | null;
-    let businesses: Business[] = [];
-    if (town) {
-      const { data: bizData } = await supabase
-        .from("businesses")
-        .select("*")
-        .eq("town_id", town.id);
-      const all = (bizData ?? []) as Business[];
-      const excluded = new Set<string>(
-        (p as Packet & { excluded_business_ids?: string[] }).excluded_business_ids ?? [],
-      );
-      businesses = all.filter((b) => !excluded.has(b.id));
-    }
-
-    return {
-      packet: p,
-      realtor: profileRes.data,
-      town,
-      categories: (catRes.data ?? []) as Category[],
-      businesses,
-    };
+  loader: async ({ params }) => {
+    const data = await getPublicPacket({ data: { slug: params.slug } });
+    if (!data) throw notFound();
+    return data;
   },
   head: ({ loaderData }) => {
     if (!loaderData) return { meta: [] };
-    const p = loaderData.packet;
     return {
       meta: [
-        { title: `Welcome Home, ${p.buyer_first_name} — Your neighborhood guide` },
+        {
+          title: `Welcome Home, ${loaderData.buyer_first_name} — Your neighborhood guide`,
+        },
         {
           name: "description",
-          content: `A personalized welcome to your new home at ${p.address}.`,
+          content: `A personalized welcome to ${loaderData.location_label ?? "your new neighborhood"}.`,
         },
-        { property: "og:title", content: `Welcome Home, ${p.buyer_first_name}` },
+        { property: "og:title", content: `Welcome Home, ${loaderData.buyer_first_name}` },
         { property: "og:description", content: "Your personalized neighborhood guide." },
-        ...(p.home_photo_url ? [{ property: "og:image", content: p.home_photo_url }] : []),
+        ...(loaderData.home_photo_url
+          ? [{ property: "og:image", content: loaderData.home_photo_url }]
+          : []),
       ],
     };
   },
@@ -82,15 +46,12 @@ export const Route = createFileRoute("/p/$slug")({
       </div>
     </div>
   ),
-  component: () => (
-    <RequireAuth>
-      <BuyerLanding />
-    </RequireAuth>
-  ),
+  component: BuyerLanding,
 });
 
 function BuyerLanding() {
-  const { packet, realtor, town, categories, businesses } = Route.useLoaderData();
+  const packet = Route.useLoaderData();
+  const { realtor, town, categories, businesses } = packet;
   const log = useServerFn(logEvent);
   const [viewSaved, setViewSaved] = useState(false);
 
@@ -147,31 +108,31 @@ function BuyerLanding() {
     }).catch(() => {});
   };
 
-  const allBiz = businesses as Business[];
-  const allCats = categories as Category[];
+  const allBiz = businesses as PublicBusiness[];
+  const allCats = categories as PublicCategory[];
 
   const featured = allBiz
-    .filter((b: Business) => b.sponsor_tier !== "none")
+    .filter((b: PublicBusiness) => b.sponsor_tier !== "none")
     .sort(
-      (a: Business, b: Business) =>
+      (a: PublicBusiness, b: PublicBusiness) =>
         tierPriority[b.sponsor_tier] - tierPriority[a.sponsor_tier] ||
         a.featured_order - b.featured_order,
     );
 
   const platinum = featured
-    .filter((b: Business) => b.sponsor_tier === "s_tier" || b.sponsor_tier === "gold")
+    .filter((b: PublicBusiness) => b.sponsor_tier === "s_tier" || b.sponsor_tier === "gold")
     .slice(0, 3);
   const gold = featured.filter(
-    (b: Business) => b.sponsor_tier === "silver" || b.sponsor_tier === "bronze",
+    (b: PublicBusiness) => b.sponsor_tier === "silver" || b.sponsor_tier === "bronze",
   );
 
-  const byCategory = new Map<string, Business[]>();
+  const byCategory = new Map<string, PublicBusiness[]>();
   for (const b of allBiz) {
     const arr = byCategory.get(b.category_id) ?? [];
     arr.push(b);
     byCategory.set(b.category_id, arr);
   }
-  const cats = allCats.filter((c: Category) => (byCategory.get(c.id)?.length ?? 0) > 0);
+  const cats = allCats.filter((c: PublicCategory) => (byCategory.get(c.id)?.length ?? 0) > 0);
 
   const baseUrl = getPublicBaseUrl();
   const referralHref = realtor?.referral_slug
@@ -186,7 +147,7 @@ function BuyerLanding() {
           {packet.home_photo_url ? (
             <img
               src={packet.home_photo_url}
-              alt={packet.address}
+              alt={packet.location_label ?? "Welcome home"}
               className="h-full w-full object-cover"
             />
           ) : (
@@ -202,11 +163,10 @@ function BuyerLanding() {
             </p>
             <h1 className="font-display mt-4 text-5xl font-extrabold uppercase leading-[0.92] tracking-tight md:text-7xl">
               {packet.buyer_first_name}
-              {packet.buyer_last_name ? ` & family` : ""}.
+              {packet.buyer_has_partner ? ` & family` : ""}.
             </h1>
             <p className="mt-4 max-w-xl text-base text-background/85 md:text-lg">
-              {packet.address}
-              {town ? ` · ${town.name}, ${town.state}` : ""}
+              {packet.location_label ?? ""}
             </p>
           </div>
         </div>
@@ -294,7 +254,7 @@ function BuyerLanding() {
               A short list of the places we'd send a friend.
             </p>
             <div className="mt-8 grid gap-5 md:grid-cols-3">
-              {platinum.map((b: Business) => (
+              {platinum.map((b: PublicBusiness) => (
                 <FeaturedCard
                   key={b.id}
                   b={b}
@@ -318,9 +278,9 @@ function BuyerLanding() {
               )}
             </div>
 
-            {cats.map((c: Category) => {
+            {cats.map((c: PublicCategory) => {
               const list = (byCategory.get(c.id) ?? []).sort(
-                (a: Business, b: Business) =>
+                (a: PublicBusiness, b: PublicBusiness) =>
                   tierPriority[b.sponsor_tier] - tierPriority[a.sponsor_tier],
               );
               return (
@@ -334,7 +294,7 @@ function BuyerLanding() {
                     </span>
                   </div>
                   <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    {list.map((b: Business) => (
+                    {list.map((b: PublicBusiness) => (
                       <BusinessRow
                         key={b.id}
                         b={b}
@@ -359,7 +319,7 @@ function BuyerLanding() {
           <section className="mt-16">
             <p className="eyebrow">// Also recommended</p>
             <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {gold.slice(0, 8).map((b: Business) => (
+              {gold.slice(0, 8).map((b: PublicBusiness) => (
                 <BusinessRow
                   key={b.id}
                   b={b}
@@ -434,7 +394,7 @@ function BuyerLanding() {
   );
 }
 
-function FeaturedCard({ b, onClick }: { b: Business; onClick?: () => void }) {
+function FeaturedCard({ b, onClick }: { b: PublicBusiness; onClick?: () => void }) {
   return (
     <div
       onClick={onClick}
@@ -488,7 +448,7 @@ function FeaturedCard({ b, onClick }: { b: Business; onClick?: () => void }) {
   );
 }
 
-function BusinessRow({ b, onClick }: { b: Business; onClick?: () => void }) {
+function BusinessRow({ b, onClick }: { b: PublicBusiness; onClick?: () => void }) {
   return (
     <div onClick={onClick} className="rounded-2xl border border-border bg-card p-4">
       <div className="flex items-start justify-between gap-2">

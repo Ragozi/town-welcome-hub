@@ -2,8 +2,10 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { QRCodeSVG } from "qrcode.react";
 import { useMemo, useRef } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { useAuth } from "@/lib/auth";
 import { getPacketById, deletePacket } from "@/lib/packets";
+import { issuePdfToken } from "@/lib/public-packet.functions";
 import { Button } from "@/components/ui/button";
 import {
   ArrowLeft,
@@ -29,6 +31,7 @@ function PacketDetail() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const qrWrapRef = useRef<HTMLDivElement>(null);
+  const issueToken = useServerFn(issuePdfToken);
 
   const { data: packet, isLoading } = useQuery({
     queryKey: ["packet", id],
@@ -36,10 +39,18 @@ function PacketDetail() {
     enabled: !!user,
   });
 
+  const { data: pdfTokenData } = useQuery({
+    queryKey: ["pdf-token", packet?.slug],
+    queryFn: () => issueToken({ data: { slug: packet!.slug } }),
+    enabled: !!packet?.slug,
+    staleTime: 1000 * 60 * 60 * 12, // refresh well before 24h expiry
+  });
+  const tokenQuery = pdfTokenData?.token ? `t=${encodeURIComponent(pdfTokenData.token)}` : "";
+  const pdfPreviewUrl = packet && tokenQuery ? `/api/packet-pdf/${packet.slug}?${tokenQuery}` : "";
+  const pdfDownloadUrl =
+    packet && tokenQuery ? `/api/packet-pdf/${packet.slug}?${tokenQuery}&download=1` : "";
+  const pdfShareUrl = packet && tokenQuery ? `${packetPdfUrl(packet.slug)}?${tokenQuery}` : "";
   const liveUrl = useMemo(() => (packet ? packetUrl(packet.slug) : ""), [packet]);
-  const pdfPreviewUrl = packet ? `/api/packet-pdf/${packet.slug}` : "";
-  const pdfDownloadUrl = packet ? `/api/packet-pdf/${packet.slug}?download=1` : "";
-  const pdfShareUrl = packet ? packetPdfUrl(packet.slug) : "";
 
   if (isLoading) {
     return (
