@@ -191,7 +191,7 @@
 
   .font-display {
     font-family: var(--font-display);
-    letter-spacing: -0.02em;
+    letter-spacing: 0.01em;
   }
 
   .eyebrow {
@@ -199,5 +199,27 @@
     letter-spacing: 0.22em;
     text-transform: uppercase;
     color: color-mix(in oklab, var(--foreground) 65%, transparent);
+  }
+
+  /* Brand tagline — "FEEL AT HOME, FROM THE START." with thin copper rules */
+  .brand-tagline {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-family: var(--font-sans);
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: var(--brand-copper);
+  }
+  .brand-tagline::before,
+  .brand-tagline::after {
+    content: "";
+    flex: 1;
+    min-width: 1.5rem;
+    height: 1px;
+    background: currentColor;
+    opacity: 0.6;
   }
 }
