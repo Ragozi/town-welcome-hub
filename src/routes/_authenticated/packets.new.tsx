@@ -1,9 +1,12 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { useAuth } from "@/lib/auth";
 import { createPacket } from "@/lib/packets";
 import { listTowns } from "@/lib/towns";
+import { previewTownBusinesses } from "@/lib/scraped.functions";
+import { tierPriority, type SponsorTier } from "@/lib/towns";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, ArrowRight, Loader2, Sparkles, Check } from "lucide-react";
+import { ArrowLeft, ArrowRight, Loader2, Sparkles, Check, Eye, EyeOff, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/packets/new")({
