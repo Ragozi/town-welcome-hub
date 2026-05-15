@@ -133,7 +133,8 @@ function NewPacket() {
         lifestyle_tags: lifestyle,
         town_id: townId || null,
         status: "generated",
-      });
+        excluded_business_ids: [...excludedIds],
+      } as never);
       toast.success("Welcome packet created.");
       navigate({ to: "/packets/$id", params: { id: packet.id } });
     } catch (e) {
@@ -150,7 +151,7 @@ function NewPacket() {
         <Link to="/dashboard" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
           <ArrowLeft className="h-4 w-4" /> Back to dashboard
         </Link>
-        <p className="text-sm text-muted-foreground">Step {step} of 4</p>
+        <p className="text-sm text-muted-foreground">Step {step} of 5</p>
       </div>
 
       <div>
@@ -162,7 +163,7 @@ function NewPacket() {
 
       {/* Progress */}
       <div className="flex gap-2">
-        {[1, 2, 3, 4].map((n) => (
+        {[1, 2, 3, 4, 5].map((n) => (
           <div
             key={n}
             className={
