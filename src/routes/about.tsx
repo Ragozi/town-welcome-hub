@@ -303,6 +303,46 @@ function AboutPage() {
         </div>
       </section>
 
+      {/* BRAND */}
+      <section className="mx-auto max-w-6xl px-5 pb-24">
+        <SectionDivider label="The brand" className="mb-8" />
+        <div className="grid gap-8 rounded-3xl border border-border bg-card p-8 md:grid-cols-[auto,1fr] md:p-12">
+          <img
+            src={logoBadge}
+            alt="Hearth Handbook seal"
+            width={180}
+            height={180}
+            className="h-36 w-36 self-center md:h-44 md:w-44"
+          />
+          <div>
+            <h2 className="font-display text-3xl font-semibold tracking-wide">
+              Hearth Handbook
+            </h2>
+            <p className="mt-3 brand-tagline">Feel at home, from the start.</p>
+            <p className="mt-4 max-w-xl text-sm text-muted-foreground">
+              A refined serif wordmark, a hand-drawn fireplace mark, and a
+              warm palette of cream, charcoal, and copper. The whole product
+              is built to feel like a thoughtful housewarming gift.
+            </p>
+            <div className="mt-6 flex flex-wrap gap-3">
+              {[
+                { label: "Cream", v: "var(--brand-cream)", fg: "var(--brand-charcoal)" },
+                { label: "Charcoal", v: "var(--brand-charcoal)", fg: "var(--brand-cream)" },
+                { label: "Copper", v: "var(--brand-copper)", fg: "var(--brand-cream)" },
+              ].map((s) => (
+                <div
+                  key={s.label}
+                  className="flex h-20 w-28 flex-col items-start justify-end rounded-xl border border-border p-3 text-xs font-semibold"
+                  style={{ background: s.v, color: s.fg }}
+                >
+                  {s.label}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
       <SiteFooter />
     </div>
   );
