@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { createHmac, timingSafeEqual } from "crypto";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import type { SponsorTier } from "@/lib/towns";
 
 // ---- Sanitized DTO ----------------------------------------------------------
 
@@ -33,7 +34,7 @@ export type PublicBusiness = {
   website: string | null;
   logo_url: string | null;
   coupon_text: string | null;
-  sponsor_tier: string;
+  sponsor_tier: SponsorTier;
   featured_order: number;
 };
 
