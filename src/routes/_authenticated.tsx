@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { useAuth } from "@/lib/auth";
 import { Loader2, LayoutDashboard, FilePlus2, Settings, LogOut, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import logoHorizontal from "@/assets/brand/logo-horizontal.png";
 
 export const Route = createFileRoute("/_authenticated")({
   component: AuthLayout,
