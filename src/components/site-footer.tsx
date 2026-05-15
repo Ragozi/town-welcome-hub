@@ -1,17 +1,22 @@
 import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Instagram, Facebook, Mail } from "lucide-react";
+import logoMark from "@/assets/brand/logo-mark.png";
 
 export function SiteFooter() {
   return (
-    <footer className="mt-20 bg-[oklch(0.18_0.015_60)] text-[oklch(0.95_0.015_80)]">
+    <footer className="mt-20 bg-[var(--brand-charcoal)] text-[oklch(0.95_0.015_80)]">
       <div className="mx-auto max-w-6xl px-5 py-14">
         <div className="flex flex-col gap-10 md:flex-row md:items-start md:justify-between">
           <div className="max-w-sm">
-            <Link to="/" className="font-display text-2xl font-extrabold tracking-tight">
-              HEARTH HANDBOOK<span className="text-primary">.</span>
+            <Link to="/" aria-label="Hearth Handbook home" className="inline-flex items-center gap-3">
+              <img src={logoMark} alt="" width={40} height={40} className="h-10 w-10" />
+              <span className="font-display text-2xl font-semibold tracking-wide text-white">
+                Hearth Handbook
+              </span>
             </Link>
-            <p className="mt-3 text-sm text-white/70">
+            <p className="mt-3 brand-tagline !text-primary/90">Feel at home, from the start.</p>
+            <p className="mt-4 text-sm text-white/70">
               A digital welcome mat for Wisconsin towns — meet the locals,
               grab a coupon, and feel at home.
             </p>
