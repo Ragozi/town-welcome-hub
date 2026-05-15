@@ -5,7 +5,18 @@ import { useMemo, useRef } from "react";
 import { useAuth } from "@/lib/auth";
 import { getPacketById, deletePacket } from "@/lib/packets";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, ExternalLink, Download, Trash2, Mail, Copy, Loader2, QrCode, FileText, Eye } from "lucide-react";
+import {
+  ArrowLeft,
+  ExternalLink,
+  Download,
+  Trash2,
+  Mail,
+  Copy,
+  Loader2,
+  QrCode,
+  FileText,
+  Eye,
+} from "lucide-react";
 import { toast } from "sonner";
 import { getPublicBaseUrl, packetUrl, packetPdfUrl } from "@/lib/public-url";
 
@@ -25,19 +36,24 @@ function PacketDetail() {
     enabled: !!user,
   });
 
-  const liveUrl = useMemo(
-    () => (packet ? packetUrl(packet.slug) : ""),
-    [packet],
-  );
+  const liveUrl = useMemo(() => (packet ? packetUrl(packet.slug) : ""), [packet]);
   const pdfPreviewUrl = packet ? `/api/packet-pdf/${packet.slug}` : "";
   const pdfDownloadUrl = packet ? `/api/packet-pdf/${packet.slug}?download=1` : "";
   const pdfShareUrl = packet ? packetPdfUrl(packet.slug) : "";
 
   if (isLoading) {
-    return <div className="flex justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
+    return (
+      <div className="flex justify-center py-20">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
   }
   if (!packet) {
-    return <div className="rounded-3xl border border-dashed p-10 text-center text-muted-foreground">Packet not found.</div>;
+    return (
+      <div className="rounded-3xl border border-dashed p-10 text-center text-muted-foreground">
+        Packet not found.
+      </div>
+    );
   }
 
   const onDelete = async () => {
@@ -77,7 +93,10 @@ function PacketDetail() {
 
   return (
     <div className="space-y-8">
-      <Link to="/dashboard" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
+      <Link
+        to="/dashboard"
+        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+      >
         <ArrowLeft className="h-4 w-4" /> Back to dashboard
       </Link>
 
@@ -107,13 +126,21 @@ function PacketDetail() {
             {(packet.interests.length > 0 || packet.lifestyle_tags.length > 0) && (
               <div className="mt-6 flex flex-wrap gap-2">
                 {[...packet.interests, ...packet.lifestyle_tags].map((t) => (
-                  <span key={t} className="inline-flex rounded-full bg-secondary px-3 py-1 text-xs font-medium">{t}</span>
+                  <span
+                    key={t}
+                    className="inline-flex rounded-full bg-secondary px-3 py-1 text-xs font-medium"
+                  >
+                    {t}
+                  </span>
                 ))}
               </div>
             )}
 
             <div className="mt-8 flex flex-wrap gap-3">
-              <Button asChild className="rounded-full bg-primary text-primary-foreground hover:bg-primary/90">
+              <Button
+                asChild
+                className="rounded-full bg-primary text-primary-foreground hover:bg-primary/90"
+              >
                 <a href={liveUrl} target="_blank" rel="noreferrer">
                   <ExternalLink className="mr-1 h-4 w-4" /> Open buyer page
                 </a>
@@ -130,12 +157,18 @@ function PacketDetail() {
               </Button>
               {packet.buyer_email && (
                 <Button variant="outline" className="rounded-full" asChild>
-                  <a href={`mailto:${packet.buyer_email}?subject=Welcome%20Home&body=${encodeURIComponent(`Welcome home! Here's your personalized neighborhood guide:\n\n${liveUrl}`)}`}>
+                  <a
+                    href={`mailto:${packet.buyer_email}?subject=Welcome%20Home&body=${encodeURIComponent(`Welcome home! Here's your personalized neighborhood guide:\n\n${liveUrl}`)}`}
+                  >
                     <Mail className="mr-1 h-4 w-4" /> Email buyer
                   </a>
                 </Button>
               )}
-              <Button variant="ghost" className="rounded-full text-muted-foreground hover:text-destructive" onClick={onDelete}>
+              <Button
+                variant="ghost"
+                className="rounded-full text-muted-foreground hover:text-destructive"
+                onClick={onDelete}
+              >
                 <Trash2 className="mr-1 h-4 w-4" /> Delete
               </Button>
             </div>
@@ -146,14 +179,24 @@ function PacketDetail() {
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="eyebrow">// PDF preview</p>
-                <h2 className="font-display mt-1 text-lg font-extrabold uppercase tracking-tight">Closing-day packet</h2>
+                <h2 className="font-display mt-1 text-lg font-extrabold uppercase tracking-tight">
+                  Closing-day packet
+                </h2>
               </div>
               <div className="flex flex-wrap gap-2">
                 <Button asChild variant="outline" size="sm" className="rounded-full">
-                  <a href={pdfPreviewUrl} target="_blank" rel="noreferrer"><Eye className="mr-1 h-4 w-4" /> Open</a>
+                  <a href={pdfPreviewUrl} target="_blank" rel="noreferrer">
+                    <Eye className="mr-1 h-4 w-4" /> Open
+                  </a>
                 </Button>
-                <Button asChild size="sm" className="rounded-full bg-primary text-primary-foreground hover:bg-primary/90">
-                  <a href={pdfDownloadUrl}><Download className="mr-1 h-4 w-4" /> Download</a>
+                <Button
+                  asChild
+                  size="sm"
+                  className="rounded-full bg-primary text-primary-foreground hover:bg-primary/90"
+                >
+                  <a href={pdfDownloadUrl}>
+                    <Download className="mr-1 h-4 w-4" /> Download
+                  </a>
                 </Button>
               </div>
             </div>
@@ -166,7 +209,10 @@ function PacketDetail() {
               />
             </div>
             <p className="mt-2 break-all text-xs text-muted-foreground">
-              Direct link: <a href={pdfShareUrl || pdfPreviewUrl} className="hover:text-foreground">{pdfShareUrl || pdfPreviewUrl}</a>
+              Direct link:{" "}
+              <a href={pdfShareUrl || pdfPreviewUrl} className="hover:text-foreground">
+                {pdfShareUrl || pdfPreviewUrl}
+              </a>
             </p>
           </div>
         </div>
@@ -178,7 +224,12 @@ function PacketDetail() {
               <p className="eyebrow !mb-0">// Buyer QR</p>
             </div>
             <div ref={qrWrapRef} className="mt-4 flex justify-center rounded-2xl bg-background p-5">
-              <QRCodeSVG value={liveUrl || `/p/${packet.slug}`} size={220} level="M" includeMargin />
+              <QRCodeSVG
+                value={liveUrl || `/p/${packet.slug}`}
+                size={220}
+                level="M"
+                includeMargin
+              />
             </div>
             <p className="mt-3 break-all text-center text-xs text-muted-foreground">{liveUrl}</p>
             <div className="mt-4 grid grid-cols-2 gap-2">
@@ -202,15 +253,30 @@ function PacketDetail() {
           <div className="rounded-3xl border border-border bg-foreground p-6 text-background shadow-[var(--shadow-soft)]">
             <div className="flex items-center gap-2">
               <FileText className="h-4 w-4 text-primary" />
-              <p className="text-xs font-semibold uppercase tracking-wider text-background/60">// Share</p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-background/60">
+                // Share
+              </p>
             </div>
-            <p className="mt-2 text-sm text-background/80">Send the packet link or the printable PDF.</p>
+            <p className="mt-2 text-sm text-background/80">
+              Send the packet link or the printable PDF.
+            </p>
             <div className="mt-4 space-y-2">
-              <Button asChild className="w-full rounded-full bg-primary text-primary-foreground hover:bg-primary/90">
-                <a href={pdfDownloadUrl}><Download className="mr-1 h-4 w-4" /> Download PDF</a>
+              <Button
+                asChild
+                className="w-full rounded-full bg-primary text-primary-foreground hover:bg-primary/90"
+              >
+                <a href={pdfDownloadUrl}>
+                  <Download className="mr-1 h-4 w-4" /> Download PDF
+                </a>
               </Button>
-              <Button asChild variant="outline" className="w-full rounded-full border-background/20 bg-transparent text-background hover:bg-background/10">
-                <a href={liveUrl} target="_blank" rel="noreferrer"><ExternalLink className="mr-1 h-4 w-4" /> Open buyer page</a>
+              <Button
+                asChild
+                variant="outline"
+                className="w-full rounded-full border-background/20 bg-transparent text-background hover:bg-background/10"
+              >
+                <a href={liveUrl} target="_blank" rel="noreferrer">
+                  <ExternalLink className="mr-1 h-4 w-4" /> Open buyer page
+                </a>
               </Button>
             </div>
             {!getPublicBaseUrl() && (
@@ -228,7 +294,9 @@ function PacketDetail() {
 function Info({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-2xl border border-border bg-secondary/30 px-4 py-3">
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+        {label}
+      </p>
       <p className="mt-1 text-sm font-medium">{value}</p>
     </div>
   );

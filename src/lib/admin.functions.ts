@@ -3,12 +3,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
-const ASSIGNABLE_ROLES = [
-  "super_admin",
-  "realtor_admin",
-  "realtor_agent",
-  "sponsor_user",
-] as const;
+const ASSIGNABLE_ROLES = ["super_admin", "realtor_admin", "realtor_agent", "sponsor_user"] as const;
 type AssignableRole = (typeof ASSIGNABLE_ROLES)[number];
 
 async function assertSuperAdmin(userId: string) {
@@ -36,11 +31,7 @@ async function assertAdminTier(userId: string) {
 
 function siteOriginFromRequest(): string {
   // Read from env var with sensible fallbacks. Used as redirectTo for invites.
-  return (
-    process.env.PUBLIC_SITE_URL ??
-    process.env.SITE_URL ??
-    "https://hearthhandbook.com"
-  );
+  return process.env.PUBLIC_SITE_URL ?? process.env.SITE_URL ?? "https://hearthhandbook.com";
 }
 
 // ----- Users -----
@@ -58,7 +49,10 @@ export const adminListUsers = createServerFn({ method: "GET" })
     const userIds = usersResp.users.map((u) => u.id);
     const [{ data: roles }, { data: profiles }, { data: packetCounts }] = await Promise.all([
       supabaseAdmin.from("user_roles").select("user_id, role").in("user_id", userIds),
-      supabaseAdmin.from("profiles").select("user_id, full_name, brokerage_name, referral_slug, phone").in("user_id", userIds),
+      supabaseAdmin
+        .from("profiles")
+        .select("user_id, full_name, brokerage_name, referral_slug, phone")
+        .in("user_id", userIds),
       supabaseAdmin.from("packets").select("realtor_id").in("realtor_id", userIds),
     ]);
 
@@ -109,16 +103,13 @@ export const adminInviteUser = createServerFn({ method: "POST" })
     await assertSuperAdmin(context.userId);
 
     const redirectTo = `${siteOriginFromRequest()}/login?welcome=1`;
-    const { data: invited, error } = await supabaseAdmin.auth.admin.inviteUserByEmail(
-      data.email,
-      {
-        redirectTo,
-        data: {
-          full_name: data.full_name,
-          assigned_role: data.role,
-        },
+    const { data: invited, error } = await supabaseAdmin.auth.admin.inviteUserByEmail(data.email, {
+      redirectTo,
+      data: {
+        full_name: data.full_name,
+        assigned_role: data.role,
       },
-    );
+    });
     if (error || !invited?.user) {
       throw new Response(error?.message ?? "Could not invite user", { status: 400 });
     }
@@ -149,7 +140,13 @@ export const adminInviteUser = createServerFn({ method: "POST" })
       invited_at: (invited.user as any).invited_at ?? new Date().toISOString(),
       banned_until: null,
       roles: [data.role],
-      profile: { user_id: uid, full_name: data.full_name, brokerage_name: null, referral_slug: null, phone: null },
+      profile: {
+        user_id: uid,
+        full_name: data.full_name,
+        brokerage_name: null,
+        referral_slug: null,
+        phone: null,
+      },
       packet_count: 0,
     };
   });
@@ -162,9 +159,7 @@ export const adminResendInvite = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertSuperAdmin(context.userId);
 
-    const { data: u, error: getErr } = await supabaseAdmin.auth.admin.getUserById(
-      data.user_id,
-    );
+    const { data: u, error: getErr } = await supabaseAdmin.auth.admin.getUserById(data.user_id);
     if (getErr || !u?.user?.email) {
       throw new Response("User not found", { status: 404 });
     }
@@ -340,7 +335,9 @@ export const adminGetMetrics = createServerFn({ method: "POST" })
     const buildEventsQuery = (from: string, to: string) => {
       let q = supabaseAdmin
         .from("packet_events")
-        .select("event_type, source, device, ip_country, ip_region, ip_city, created_at, packet_id, realtor_id, town_id, metadata")
+        .select(
+          "event_type, source, device, ip_country, ip_region, ip_city, created_at, packet_id, realtor_id, town_id, metadata",
+        )
         .gte("created_at", from)
         .lt("created_at", to);
       if (realtorFilter) q = q.eq("realtor_id", realtorFilter);
@@ -359,12 +356,13 @@ export const adminGetMetrics = createServerFn({ method: "POST" })
       return q;
     };
 
-    const [{ data: events }, { data: prevEvents }, { data: packetsCur }, { data: packetsPrev }] = await Promise.all([
-      buildEventsQuery(isoStart, isoEnd),
-      buildEventsQuery(isoPrevStart, isoPrevEnd),
-      buildPacketsQuery(isoStart, isoEnd),
-      buildPacketsQuery(isoPrevStart, isoPrevEnd),
-    ]);
+    const [{ data: events }, { data: prevEvents }, { data: packetsCur }, { data: packetsPrev }] =
+      await Promise.all([
+        buildEventsQuery(isoStart, isoEnd),
+        buildEventsQuery(isoPrevStart, isoPrevEnd),
+        buildPacketsQuery(isoStart, isoEnd),
+        buildPacketsQuery(isoPrevStart, isoPrevEnd),
+      ]);
 
     const E = events ?? [];
     const PE = prevEvents ?? [];
@@ -562,7 +560,8 @@ export const getPacketTimeline = createServerFn({ method: "POST" })
       else if (e.event_type === "qr_scanned") counts.qr += 1;
       else if (e.event_type === "landing_view") counts.views += 1;
       else if (e.event_type === "referral_click") counts.referrals += 1;
-      else if (e.event_type === "business_click" || e.event_type === "sponsor_click") counts.bizClicks += 1;
+      else if (e.event_type === "business_click" || e.event_type === "sponsor_click")
+        counts.bizClicks += 1;
     }
 
     return { events: events ?? [], counts };

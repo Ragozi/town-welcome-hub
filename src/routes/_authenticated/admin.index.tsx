@@ -6,10 +6,36 @@ import { adminGetMetrics } from "@/lib/admin.functions";
 import { generateQaHandbook, getQaHandbook } from "@/lib/scraped.functions";
 import { useAuth } from "@/lib/auth";
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
-  PieChart, Pie, Cell, BarChart, Bar,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+  PieChart,
+  Pie,
+  Cell,
+  BarChart,
+  Bar,
 } from "recharts";
-import { ArrowDown, ArrowUp, Download, FileText, MapPin, MousePointerClick, QrCode, Users2, Loader2, ShieldAlert, LogIn, Beaker, ExternalLink, RefreshCw } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowUp,
+  Download,
+  FileText,
+  MapPin,
+  MousePointerClick,
+  QrCode,
+  Users2,
+  Loader2,
+  ShieldAlert,
+  LogIn,
+  Beaker,
+  ExternalLink,
+  RefreshCw,
+} from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/admin/")({
@@ -36,7 +62,11 @@ function AdminOverview() {
   });
 
   if (authLoading) {
-    return <div className="flex justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
+    return (
+      <div className="flex justify-center py-20">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
   }
 
   if (!session) {
@@ -45,7 +75,14 @@ function AdminOverview() {
         icon={LogIn}
         title="Sign in required"
         body="Your session has expired or you're not signed in. Please sign in again to view admin metrics."
-        action={<Link to="/login" className="inline-flex items-center gap-2 rounded-full bg-foreground px-4 py-2 text-sm font-semibold text-background hover:opacity-90"><LogIn className="h-4 w-4" /> Go to sign in</Link>}
+        action={
+          <Link
+            to="/login"
+            className="inline-flex items-center gap-2 rounded-full bg-foreground px-4 py-2 text-sm font-semibold text-background hover:opacity-90"
+          >
+            <LogIn className="h-4 w-4" /> Go to sign in
+          </Link>
+        }
       />
     );
   }
@@ -62,11 +99,12 @@ function AdminOverview() {
 
   if (error) {
     const status = (error as any)?.status;
-    const msg = status === 401
-      ? "Your session expired. Please sign in again."
-      : status === 403
-      ? "You don't have permission to view these metrics."
-      : "We couldn't load metrics. The backend returned an error.";
+    const msg =
+      status === 401
+        ? "Your session expired. Please sign in again."
+        : status === 403
+          ? "You don't have permission to view these metrics."
+          : "We couldn't load metrics. The backend returned an error.";
     return (
       <EmptyState
         icon={ShieldAlert}
@@ -74,8 +112,20 @@ function AdminOverview() {
         body={msg}
         action={
           <div className="flex gap-2">
-            <button onClick={() => refetch()} className="rounded-full border border-border px-4 py-2 text-sm font-semibold hover:bg-foreground/5">Try again</button>
-            {status === 401 && <Link to="/login" className="rounded-full bg-foreground px-4 py-2 text-sm font-semibold text-background">Sign in</Link>}
+            <button
+              onClick={() => refetch()}
+              className="rounded-full border border-border px-4 py-2 text-sm font-semibold hover:bg-foreground/5"
+            >
+              Try again
+            </button>
+            {status === 401 && (
+              <Link
+                to="/login"
+                className="rounded-full bg-foreground px-4 py-2 text-sm font-semibold text-background"
+              >
+                Sign in
+              </Link>
+            )}
           </div>
         }
       />
@@ -83,21 +133,28 @@ function AdminOverview() {
   }
 
   if (isLoading || !data) {
-    return <div className="flex justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
+    return (
+      <div className="flex justify-center py-20">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
   }
-
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">Last {days} days vs. previous {days} days</p>
+        <p className="text-sm text-muted-foreground">
+          Last {days} days vs. previous {days} days
+        </p>
         <div className="flex gap-1 rounded-full border border-border p-1">
           {RANGES.map((r) => (
             <button
               key={r.days}
               onClick={() => setDays(r.days)}
               className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                days === r.days ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground"
+                days === r.days
+                  ? "bg-foreground text-background"
+                  : "text-muted-foreground hover:text-foreground"
               }`}
             >
               {r.label}
@@ -110,17 +167,45 @@ function AdminOverview() {
 
       {/* KPI cards */}
       <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-6">
-        <KpiCard label="Packets" value={data.totals.packets} prev={data.prev.packets} icon={FileText} />
-        <KpiCard label="PDF downloads" value={data.totals.pdfs} prev={data.prev.pdfs} icon={Download} />
+        <KpiCard
+          label="Packets"
+          value={data.totals.packets}
+          prev={data.prev.packets}
+          icon={FileText}
+        />
+        <KpiCard
+          label="PDF downloads"
+          value={data.totals.pdfs}
+          prev={data.prev.pdfs}
+          icon={Download}
+        />
         <KpiCard label="QR scans" value={data.totals.qr} prev={data.prev.qr} icon={QrCode} />
-        <KpiCard label="Landing views" value={data.totals.views} prev={data.prev.views} icon={Users2} />
-        <KpiCard label="Referral clicks" value={data.totals.referrals} prev={data.prev.referrals} icon={MousePointerClick} highlight />
-        <KpiCard label="Business clicks" value={data.totals.bizClicks} prev={data.prev.bizClicks} icon={MapPin} />
+        <KpiCard
+          label="Landing views"
+          value={data.totals.views}
+          prev={data.prev.views}
+          icon={Users2}
+        />
+        <KpiCard
+          label="Referral clicks"
+          value={data.totals.referrals}
+          prev={data.prev.referrals}
+          icon={MousePointerClick}
+          highlight
+        />
+        <KpiCard
+          label="Business clicks"
+          value={data.totals.bizClicks}
+          prev={data.prev.bizClicks}
+          icon={MapPin}
+        />
       </div>
 
       {/* Activity over time */}
       <div className="rounded-3xl border border-border bg-card p-6 shadow-[var(--shadow-soft)]">
-        <h3 className="font-display mb-4 text-lg font-extrabold uppercase tracking-tight">Activity over time</h3>
+        <h3 className="font-display mb-4 text-lg font-extrabold uppercase tracking-tight">
+          Activity over time
+        </h3>
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={data.series}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e7d9c5" />
@@ -131,7 +216,13 @@ function AdminOverview() {
             <Line type="monotone" dataKey="views" stroke="#FF6B00" strokeWidth={2} dot={false} />
             <Line type="monotone" dataKey="qr" stroke="#7C9885" strokeWidth={2} dot={false} />
             <Line type="monotone" dataKey="pdfs" stroke="#E8B14F" strokeWidth={2} dot={false} />
-            <Line type="monotone" dataKey="referrals" stroke="#C73E3A" strokeWidth={2} dot={false} />
+            <Line
+              type="monotone"
+              dataKey="referrals"
+              stroke="#C73E3A"
+              strokeWidth={2}
+              dot={false}
+            />
           </LineChart>
         </ResponsiveContainer>
       </div>
@@ -139,20 +230,26 @@ function AdminOverview() {
       <div className="grid gap-4 lg:grid-cols-2">
         {/* Funnel */}
         <div className="rounded-3xl border border-border bg-card p-6 shadow-[var(--shadow-soft)]">
-          <h3 className="font-display mb-4 text-lg font-extrabold uppercase tracking-tight">Conversion funnel</h3>
+          <h3 className="font-display mb-4 text-lg font-extrabold uppercase tracking-tight">
+            Conversion funnel
+          </h3>
           <div className="space-y-2">
             {data.funnel.map((s, i) => {
               const max = data.funnel[0].value || 1;
               const pct = Math.max(2, Math.round((s.value / max) * 100));
-              const conv = i === 0 ? null : data.funnel[i - 1].value
-                ? Math.round((s.value / data.funnel[i - 1].value) * 100)
-                : 0;
+              const conv =
+                i === 0
+                  ? null
+                  : data.funnel[i - 1].value
+                    ? Math.round((s.value / data.funnel[i - 1].value) * 100)
+                    : 0;
               return (
                 <div key={s.stage}>
                   <div className="flex items-center justify-between text-sm">
                     <span className="font-medium">{s.stage}</span>
                     <span className="text-muted-foreground">
-                      {s.value.toLocaleString()}{conv != null && ` · ${conv}%`}
+                      {s.value.toLocaleString()}
+                      {conv != null && ` · ${conv}%`}
                     </span>
                   </div>
                   <div className="mt-1 h-3 overflow-hidden rounded-full bg-secondary">
@@ -166,14 +263,25 @@ function AdminOverview() {
 
         {/* Source donut */}
         <div className="rounded-3xl border border-border bg-card p-6 shadow-[var(--shadow-soft)]">
-          <h3 className="font-display mb-4 text-lg font-extrabold uppercase tracking-tight">Traffic source</h3>
+          <h3 className="font-display mb-4 text-lg font-extrabold uppercase tracking-tight">
+            Traffic source
+          </h3>
           {data.sources.length === 0 ? (
             <p className="text-sm text-muted-foreground">No events yet.</p>
           ) : (
             <ResponsiveContainer width="100%" height={240}>
               <PieChart>
-                <Pie data={data.sources} dataKey="value" nameKey="name" innerRadius={50} outerRadius={90} paddingAngle={2}>
-                  {data.sources.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                <Pie
+                  data={data.sources}
+                  dataKey="value"
+                  nameKey="name"
+                  innerRadius={50}
+                  outerRadius={90}
+                  paddingAngle={2}
+                >
+                  {data.sources.map((_, i) => (
+                    <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                  ))}
                 </Pie>
                 <Tooltip />
                 <Legend />
@@ -186,7 +294,9 @@ function AdminOverview() {
       <div className="grid gap-4 lg:grid-cols-2">
         {/* Devices */}
         <div className="rounded-3xl border border-border bg-card p-6 shadow-[var(--shadow-soft)]">
-          <h3 className="font-display mb-4 text-lg font-extrabold uppercase tracking-tight">Device split</h3>
+          <h3 className="font-display mb-4 text-lg font-extrabold uppercase tracking-tight">
+            Device split
+          </h3>
           {data.devices.length === 0 ? (
             <p className="text-sm text-muted-foreground">No data.</p>
           ) : (
@@ -204,9 +314,13 @@ function AdminOverview() {
 
         {/* Geo */}
         <div className="rounded-3xl border border-border bg-card p-6 shadow-[var(--shadow-soft)]">
-          <h3 className="font-display mb-4 text-lg font-extrabold uppercase tracking-tight">Top locations</h3>
+          <h3 className="font-display mb-4 text-lg font-extrabold uppercase tracking-tight">
+            Top locations
+          </h3>
           {data.geo.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Geo headers not present in this environment yet — data will populate in production.</p>
+            <p className="text-sm text-muted-foreground">
+              Geo headers not present in this environment yet — data will populate in production.
+            </p>
           ) : (
             <ul className="divide-y divide-border text-sm">
               {data.geo.map((g) => (
@@ -221,24 +335,45 @@ function AdminOverview() {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
-        <Leaderboard title="Top realtors (by referrals)" rows={data.topRealtors.map((r) => ({
-          name: r.name, primary: r.referrals, secondary: `${r.packets} packets · ${r.views} views`,
-        }))} />
-        <Leaderboard title="Top towns" rows={data.topTowns.map((t) => ({
-          name: t.name, primary: t.views, secondary: `${t.packets} packets`,
-        }))} />
-        <Leaderboard title="Top businesses (clicks)" rows={data.topBusinesses.map((b) => ({
-          name: b.name, primary: b.count, secondary: "clicks",
-        }))} />
+        <Leaderboard
+          title="Top realtors (by referrals)"
+          rows={data.topRealtors.map((r) => ({
+            name: r.name,
+            primary: r.referrals,
+            secondary: `${r.packets} packets · ${r.views} views`,
+          }))}
+        />
+        <Leaderboard
+          title="Top towns"
+          rows={data.topTowns.map((t) => ({
+            name: t.name,
+            primary: t.views,
+            secondary: `${t.packets} packets`,
+          }))}
+        />
+        <Leaderboard
+          title="Top businesses (clicks)"
+          rows={data.topBusinesses.map((b) => ({
+            name: b.name,
+            primary: b.count,
+            secondary: "clicks",
+          }))}
+        />
       </div>
     </div>
   );
 }
 
 function KpiCard({
-  label, value, prev, icon: Icon, highlight,
+  label,
+  value,
+  prev,
+  icon: Icon,
+  highlight,
 }: {
-  label: string; value: number; prev: number;
+  label: string;
+  value: number;
+  prev: number;
   icon: React.ComponentType<{ className?: string }>;
   highlight?: boolean;
 }) {
@@ -252,11 +387,15 @@ function KpiCard({
       title={`Previous: ${prev.toLocaleString()}`}
     >
       <div className="flex items-start justify-between">
-        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
+        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          {label}
+        </p>
         <Icon className="h-4 w-4 text-primary" />
       </div>
       <p className="font-display mt-3 text-3xl font-extrabold">{value.toLocaleString()}</p>
-      <p className={`mt-1 inline-flex items-center gap-1 text-xs font-semibold ${up ? "text-[color:var(--wi-pine)]" : "text-[color:var(--wi-cranberry)]"}`}>
+      <p
+        className={`mt-1 inline-flex items-center gap-1 text-xs font-semibold ${up ? "text-[color:var(--wi-pine)]" : "text-[color:var(--wi-cranberry)]"}`}
+      >
         {up ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
         {Math.abs(delta)}% vs prev
       </p>
@@ -265,10 +404,15 @@ function KpiCard({
 }
 
 function EmptyState({
-  icon: Icon, title, body, action,
+  icon: Icon,
+  title,
+  body,
+  action,
 }: {
   icon: React.ComponentType<{ className?: string }>;
-  title: string; body: string; action?: React.ReactNode;
+  title: string;
+  body: string;
+  action?: React.ReactNode;
 }) {
   return (
     <div className="rounded-3xl border border-border bg-card p-10 text-center shadow-[var(--shadow-soft)]">
@@ -300,7 +444,9 @@ function Leaderboard({
                 <p className="truncate font-medium">{r.name}</p>
                 <p className="text-xs text-muted-foreground">{r.secondary}</p>
               </div>
-              <span className="font-display text-lg font-extrabold">{r.primary.toLocaleString()}</span>
+              <span className="font-display text-lg font-extrabold">
+                {r.primary.toLocaleString()}
+              </span>
             </li>
           ))}
         </ul>
@@ -334,12 +480,18 @@ function QaHandbookCard() {
             <Beaker className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <h3 className="font-display text-lg font-extrabold uppercase tracking-tight">QA Handbook</h3>
+            <h3 className="font-display text-lg font-extrabold uppercase tracking-tight">
+              QA Handbook
+            </h3>
             <p className="mt-1 text-sm text-muted-foreground">
-              A persistent test packet at <code className="rounded bg-background px-1 py-0.5 text-xs">/p/qa-sample</code> for reviewing layout end-to-end.
+              A persistent test packet at{" "}
+              <code className="rounded bg-background px-1 py-0.5 text-xs">/p/qa-sample</code> for
+              reviewing layout end-to-end.
             </p>
             {data?.updated_at && (
-              <p className="mt-1 text-xs text-muted-foreground">Last generated {new Date(data.updated_at).toLocaleString()}</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Last generated {new Date(data.updated_at).toLocaleString()}
+              </p>
             )}
           </div>
         </div>
@@ -359,7 +511,11 @@ function QaHandbookCard() {
             disabled={mut.isPending || isLoading}
             className="inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-xs font-semibold uppercase tracking-wider text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
           >
-            {mut.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+            {mut.isPending ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <RefreshCw className="h-3.5 w-3.5" />
+            )}
             {data ? "Regenerate" : "Generate"}
           </button>
         </div>
@@ -367,4 +523,3 @@ function QaHandbookCard() {
     </div>
   );
 }
-

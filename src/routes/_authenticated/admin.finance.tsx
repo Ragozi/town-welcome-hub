@@ -3,21 +3,43 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState, useMemo } from "react";
 import {
-  listSponsorSubs, createSponsorSub, updateSponsorSub, deleteSponsorSub,
-  listExpenses, createExpense, deleteExpense,
+  listSponsorSubs,
+  createSponsorSub,
+  updateSponsorSub,
+  deleteSponsorSub,
+  listExpenses,
+  createExpense,
+  deleteExpense,
 } from "@/lib/finance.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Loader2, Plus, Trash2, TrendingUp, TrendingDown, Wallet, Users as UsersIcon } from "lucide-react";
+import {
+  Loader2,
+  Plus,
+  Trash2,
+  TrendingUp,
+  TrendingDown,
+  Wallet,
+  Users as UsersIcon,
+} from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/admin/finance")({
   component: FinancePage,
@@ -72,16 +94,37 @@ function FinancePage() {
   return (
     <div className="space-y-8">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard icon={<TrendingUp className="h-4 w-4" />} label="MRR" value={fmt(stats.mrr)} sub={`${fmt(stats.arr)} ARR`} />
-        <StatCard icon={<UsersIcon className="h-4 w-4" />} label="Active sponsors" value={String(stats.activeSponsors)} />
-        <StatCard icon={<TrendingDown className="h-4 w-4" />} label="Monthly expenses" value={fmt(stats.monthlyExpenses)} sub={`${fmt(stats.ytdExpenses)} YTD`} />
-        <StatCard icon={<Wallet className="h-4 w-4" />} label="Net monthly" value={fmt(stats.netMonthly)} highlight={stats.netMonthly >= 0} />
+        <StatCard
+          icon={<TrendingUp className="h-4 w-4" />}
+          label="MRR"
+          value={fmt(stats.mrr)}
+          sub={`${fmt(stats.arr)} ARR`}
+        />
+        <StatCard
+          icon={<UsersIcon className="h-4 w-4" />}
+          label="Active sponsors"
+          value={String(stats.activeSponsors)}
+        />
+        <StatCard
+          icon={<TrendingDown className="h-4 w-4" />}
+          label="Monthly expenses"
+          value={fmt(stats.monthlyExpenses)}
+          sub={`${fmt(stats.ytdExpenses)} YTD`}
+        />
+        <StatCard
+          icon={<Wallet className="h-4 w-4" />}
+          label="Net monthly"
+          value={fmt(stats.netMonthly)}
+          highlight={stats.netMonthly >= 0}
+        />
       </div>
 
       {/* Sponsor subscriptions */}
       <section className="space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="font-display text-xl font-bold uppercase tracking-tight">Sponsor revenue</h2>
+          <h2 className="font-display text-xl font-bold uppercase tracking-tight">
+            Sponsor revenue
+          </h2>
           <NewSubDialog onSaved={refresh} />
         </div>
         <div className="overflow-hidden rounded-3xl border border-border bg-card shadow-[var(--shadow-soft)]">
@@ -101,7 +144,11 @@ function FinancePage() {
                 <SubRow key={s.id} sub={s} onChanged={refresh} />
               ))}
               {(subs.data ?? []).length === 0 && (
-                <tr><td colSpan={6} className="px-5 py-8 text-center text-muted-foreground">No sponsors yet.</td></tr>
+                <tr>
+                  <td colSpan={6} className="px-5 py-8 text-center text-muted-foreground">
+                    No sponsors yet.
+                  </td>
+                </tr>
               )}
             </tbody>
           </table>
@@ -132,7 +179,11 @@ function FinancePage() {
                 <ExpenseRow key={e.id} exp={e} onChanged={refresh} />
               ))}
               {(exps.data ?? []).length === 0 && (
-                <tr><td colSpan={7} className="px-5 py-8 text-center text-muted-foreground">No expenses logged yet.</td></tr>
+                <tr>
+                  <td colSpan={7} className="px-5 py-8 text-center text-muted-foreground">
+                    No expenses logged yet.
+                  </td>
+                </tr>
               )}
             </tbody>
           </table>
@@ -142,9 +193,23 @@ function FinancePage() {
   );
 }
 
-function StatCard({ icon, label, value, sub, highlight }: { icon: React.ReactNode; label: string; value: string; sub?: string; highlight?: boolean }) {
+function StatCard({
+  icon,
+  label,
+  value,
+  sub,
+  highlight,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  sub?: string;
+  highlight?: boolean;
+}) {
   return (
-    <div className={`rounded-3xl border border-border bg-card p-5 shadow-[var(--shadow-soft)] ${highlight === false ? "border-destructive/40" : ""}`}>
+    <div
+      className={`rounded-3xl border border-border bg-card p-5 shadow-[var(--shadow-soft)] ${highlight === false ? "border-destructive/40" : ""}`}
+    >
       <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground">
         {icon} {label}
       </div>
@@ -163,13 +228,20 @@ function SubRow({ sub, onChanged }: { sub: any; onChanged: () => void }) {
       await update({ data: { id: sub.id, patch: { status: status as any } } });
       toast.success("Updated");
       onChanged();
-    } catch (e) { toast.error((e as Error).message); }
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
   };
 
   const onDelete = async () => {
     if (!confirm(`Delete sponsor ${sub.business_name}?`)) return;
-    try { await del({ data: { id: sub.id } }); toast.success("Deleted"); onChanged(); }
-    catch (e) { toast.error((e as Error).message); }
+    try {
+      await del({ data: { id: sub.id } });
+      toast.success("Deleted");
+      onChanged();
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
   };
 
   return (
@@ -182,7 +254,9 @@ function SubRow({ sub, onChanged }: { sub: any; onChanged: () => void }) {
       <td className="px-5 py-4 font-medium">{fmt(Number(sub.monthly_amount))}</td>
       <td className="px-5 py-4">
         <Select value={sub.status} onValueChange={setStatus}>
-          <SelectTrigger className="h-8 w-32"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="h-8 w-32">
+            <SelectValue />
+          </SelectTrigger>
           <SelectContent>
             <SelectItem value="active">Active</SelectItem>
             <SelectItem value="paused">Paused</SelectItem>
@@ -192,7 +266,12 @@ function SubRow({ sub, onChanged }: { sub: any; onChanged: () => void }) {
       </td>
       <td className="px-5 py-4 text-muted-foreground">{sub.started_on}</td>
       <td className="px-5 py-4 text-right">
-        <Button variant="ghost" size="sm" onClick={onDelete} className="text-muted-foreground hover:text-destructive">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onDelete}
+          className="text-muted-foreground hover:text-destructive"
+        >
           <Trash2 className="h-4 w-4" />
         </Button>
       </td>
@@ -204,8 +283,13 @@ function ExpenseRow({ exp, onChanged }: { exp: any; onChanged: () => void }) {
   const del = useServerFn(deleteExpense);
   const onDelete = async () => {
     if (!confirm("Delete this expense?")) return;
-    try { await del({ data: { id: exp.id } }); toast.success("Deleted"); onChanged(); }
-    catch (e) { toast.error((e as Error).message); }
+    try {
+      await del({ data: { id: exp.id } });
+      toast.success("Deleted");
+      onChanged();
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
   };
   return (
     <tr className="border-t border-border/60">
@@ -215,10 +299,15 @@ function ExpenseRow({ exp, onChanged }: { exp: any; onChanged: () => void }) {
       <td className="px-5 py-4 text-foreground/70">{exp.description ?? "—"}</td>
       <td className="px-5 py-4 font-medium">{fmt(Number(exp.amount))}</td>
       <td className="px-5 py-4 text-muted-foreground">
-        {exp.is_recurring ? exp.recurring_interval ?? "yes" : "—"}
+        {exp.is_recurring ? (exp.recurring_interval ?? "yes") : "—"}
       </td>
       <td className="px-5 py-4 text-right">
-        <Button variant="ghost" size="sm" onClick={onDelete} className="text-muted-foreground hover:text-destructive">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onDelete}
+          className="text-muted-foreground hover:text-destructive"
+        >
           <Trash2 className="h-4 w-4" />
         </Button>
       </td>
@@ -231,46 +320,104 @@ function NewSubDialog({ onSaved }: { onSaved: () => void }) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [f, setF] = useState({
-    business_name: "", contact_email: "", tier_key: "",
-    monthly_amount: "", started_on: new Date().toISOString().slice(0, 10), notes: "",
+    business_name: "",
+    contact_email: "",
+    tier_key: "",
+    monthly_amount: "",
+    started_on: new Date().toISOString().slice(0, 10),
+    notes: "",
   });
 
   const submit = async () => {
     setBusy(true);
     try {
-      await create({ data: {
-        business_name: f.business_name,
-        contact_email: f.contact_email || null,
-        tier_key: f.tier_key || null,
-        monthly_amount: Number(f.monthly_amount),
-        started_on: f.started_on,
-        status: "active",
-        notes: f.notes || null,
-      } as any });
+      await create({
+        data: {
+          business_name: f.business_name,
+          contact_email: f.contact_email || null,
+          tier_key: f.tier_key || null,
+          monthly_amount: Number(f.monthly_amount),
+          started_on: f.started_on,
+          status: "active",
+          notes: f.notes || null,
+        } as any,
+      });
       toast.success("Sponsor added");
       setOpen(false);
-      setF({ business_name: "", contact_email: "", tier_key: "", monthly_amount: "", started_on: new Date().toISOString().slice(0, 10), notes: "" });
+      setF({
+        business_name: "",
+        contact_email: "",
+        tier_key: "",
+        monthly_amount: "",
+        started_on: new Date().toISOString().slice(0, 10),
+        notes: "",
+      });
       onSaved();
-    } catch (e) { toast.error((e as Error).message); }
-    finally { setBusy(false); }
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="rounded-full bg-primary text-primary-foreground hover:bg-primary/90"><Plus className="mr-1 h-4 w-4" /> Add sponsor</Button>
+        <Button className="rounded-full bg-primary text-primary-foreground hover:bg-primary/90">
+          <Plus className="mr-1 h-4 w-4" /> Add sponsor
+        </Button>
       </DialogTrigger>
       <DialogContent>
-        <DialogHeader><DialogTitle>Add sponsor subscription</DialogTitle></DialogHeader>
+        <DialogHeader>
+          <DialogTitle>Add sponsor subscription</DialogTitle>
+        </DialogHeader>
         <div className="space-y-3">
-          <div><Label>Business name</Label><Input value={f.business_name} onChange={(e) => setF({ ...f, business_name: e.target.value })} /></div>
-          <div><Label>Contact email</Label><Input type="email" value={f.contact_email} onChange={(e) => setF({ ...f, contact_email: e.target.value })} /></div>
-          <div className="grid grid-cols-2 gap-3">
-            <div><Label>Tier</Label><Input placeholder="e.g. Featured" value={f.tier_key} onChange={(e) => setF({ ...f, tier_key: e.target.value })} /></div>
-            <div><Label>Monthly $</Label><Input type="number" step="0.01" value={f.monthly_amount} onChange={(e) => setF({ ...f, monthly_amount: e.target.value })} /></div>
+          <div>
+            <Label>Business name</Label>
+            <Input
+              value={f.business_name}
+              onChange={(e) => setF({ ...f, business_name: e.target.value })}
+            />
           </div>
-          <div><Label>Started on</Label><Input type="date" value={f.started_on} onChange={(e) => setF({ ...f, started_on: e.target.value })} /></div>
-          <div><Label>Notes</Label><Textarea value={f.notes} onChange={(e) => setF({ ...f, notes: e.target.value })} /></div>
+          <div>
+            <Label>Contact email</Label>
+            <Input
+              type="email"
+              value={f.contact_email}
+              onChange={(e) => setF({ ...f, contact_email: e.target.value })}
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label>Tier</Label>
+              <Input
+                placeholder="e.g. Featured"
+                value={f.tier_key}
+                onChange={(e) => setF({ ...f, tier_key: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label>Monthly $</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={f.monthly_amount}
+                onChange={(e) => setF({ ...f, monthly_amount: e.target.value })}
+              />
+            </div>
+          </div>
+          <div>
+            <Label>Started on</Label>
+            <Input
+              type="date"
+              value={f.started_on}
+              onChange={(e) => setF({ ...f, started_on: e.target.value })}
+            />
+          </div>
+          <div>
+            <Label>Notes</Label>
+            <Textarea value={f.notes} onChange={(e) => setF({ ...f, notes: e.target.value })} />
+          </div>
         </div>
         <DialogFooter>
           <Button onClick={submit} disabled={busy || !f.business_name || !f.monthly_amount}>
@@ -287,46 +434,70 @@ function NewExpenseDialog({ onSaved }: { onSaved: () => void }) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [f, setF] = useState({
-    category: "domain", vendor: "", description: "", amount: "",
+    category: "domain",
+    vendor: "",
+    description: "",
+    amount: "",
     occurred_on: new Date().toISOString().slice(0, 10),
-    is_recurring: false, recurring_interval: "monthly" as "monthly" | "yearly",
+    is_recurring: false,
+    recurring_interval: "monthly" as "monthly" | "yearly",
     notes: "",
   });
 
   const submit = async () => {
     setBusy(true);
     try {
-      await create({ data: {
-        category: f.category,
-        vendor: f.vendor || null,
-        description: f.description || null,
-        amount: Number(f.amount),
-        occurred_on: f.occurred_on,
-        is_recurring: f.is_recurring,
-        recurring_interval: f.is_recurring ? f.recurring_interval : null,
-        notes: f.notes || null,
-      } as any });
+      await create({
+        data: {
+          category: f.category,
+          vendor: f.vendor || null,
+          description: f.description || null,
+          amount: Number(f.amount),
+          occurred_on: f.occurred_on,
+          is_recurring: f.is_recurring,
+          recurring_interval: f.is_recurring ? f.recurring_interval : null,
+          notes: f.notes || null,
+        } as any,
+      });
       toast.success("Expense added");
       setOpen(false);
-      setF({ category: "domain", vendor: "", description: "", amount: "", occurred_on: new Date().toISOString().slice(0, 10), is_recurring: false, recurring_interval: "monthly", notes: "" });
+      setF({
+        category: "domain",
+        vendor: "",
+        description: "",
+        amount: "",
+        occurred_on: new Date().toISOString().slice(0, 10),
+        is_recurring: false,
+        recurring_interval: "monthly",
+        notes: "",
+      });
       onSaved();
-    } catch (e) { toast.error((e as Error).message); }
-    finally { setBusy(false); }
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="rounded-full bg-primary text-primary-foreground hover:bg-primary/90"><Plus className="mr-1 h-4 w-4" /> Add expense</Button>
+        <Button className="rounded-full bg-primary text-primary-foreground hover:bg-primary/90">
+          <Plus className="mr-1 h-4 w-4" /> Add expense
+        </Button>
       </DialogTrigger>
       <DialogContent>
-        <DialogHeader><DialogTitle>Add expense</DialogTitle></DialogHeader>
+        <DialogHeader>
+          <DialogTitle>Add expense</DialogTitle>
+        </DialogHeader>
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label>Category</Label>
               <Select value={f.category} onValueChange={(v) => setF({ ...f, category: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="domain">Domain</SelectItem>
                   <SelectItem value="hosting">Hosting</SelectItem>
@@ -338,17 +509,53 @@ function NewExpenseDialog({ onSaved }: { onSaved: () => void }) {
                 </SelectContent>
               </Select>
             </div>
-            <div><Label>Amount $</Label><Input type="number" step="0.01" value={f.amount} onChange={(e) => setF({ ...f, amount: e.target.value })} /></div>
+            <div>
+              <Label>Amount $</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={f.amount}
+                onChange={(e) => setF({ ...f, amount: e.target.value })}
+              />
+            </div>
           </div>
-          <div><Label>Vendor</Label><Input value={f.vendor} onChange={(e) => setF({ ...f, vendor: e.target.value })} /></div>
-          <div><Label>Description</Label><Input value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} /></div>
-          <div><Label>Date</Label><Input type="date" value={f.occurred_on} onChange={(e) => setF({ ...f, occurred_on: e.target.value })} /></div>
+          <div>
+            <Label>Vendor</Label>
+            <Input value={f.vendor} onChange={(e) => setF({ ...f, vendor: e.target.value })} />
+          </div>
+          <div>
+            <Label>Description</Label>
+            <Input
+              value={f.description}
+              onChange={(e) => setF({ ...f, description: e.target.value })}
+            />
+          </div>
+          <div>
+            <Label>Date</Label>
+            <Input
+              type="date"
+              value={f.occurred_on}
+              onChange={(e) => setF({ ...f, occurred_on: e.target.value })}
+            />
+          </div>
           <div className="flex items-center gap-2">
-            <input id="rec" type="checkbox" checked={f.is_recurring} onChange={(e) => setF({ ...f, is_recurring: e.target.checked })} />
-            <Label htmlFor="rec" className="m-0">Recurring</Label>
+            <input
+              id="rec"
+              type="checkbox"
+              checked={f.is_recurring}
+              onChange={(e) => setF({ ...f, is_recurring: e.target.checked })}
+            />
+            <Label htmlFor="rec" className="m-0">
+              Recurring
+            </Label>
             {f.is_recurring && (
-              <Select value={f.recurring_interval} onValueChange={(v) => setF({ ...f, recurring_interval: v as any })}>
-                <SelectTrigger className="h-9 w-32"><SelectValue /></SelectTrigger>
+              <Select
+                value={f.recurring_interval}
+                onValueChange={(v) => setF({ ...f, recurring_interval: v as any })}
+              >
+                <SelectTrigger className="h-9 w-32">
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="monthly">Monthly</SelectItem>
                   <SelectItem value="yearly">Yearly</SelectItem>
@@ -356,7 +563,10 @@ function NewExpenseDialog({ onSaved }: { onSaved: () => void }) {
               </Select>
             )}
           </div>
-          <div><Label>Notes</Label><Textarea value={f.notes} onChange={(e) => setF({ ...f, notes: e.target.value })} /></div>
+          <div>
+            <Label>Notes</Label>
+            <Textarea value={f.notes} onChange={(e) => setF({ ...f, notes: e.target.value })} />
+          </div>
         </div>
         <DialogFooter>
           <Button onClick={submit} disabled={busy || !f.amount}>

@@ -68,30 +68,33 @@ export const scrapeTown = createServerFn({ method: "POST" })
             continue;
           }
           // Skip aggregator/review sites — we want the business' own site
-          if (/yelp|tripadvisor|facebook|instagram|google\.|yellowpages|mapquest|allmenus/i.test(host)) {
+          if (
+            /yelp|tripadvisor|facebook|instagram|google\.|yellowpages|mapquest|allmenus/i.test(host)
+          ) {
             skipped += 1;
             continue;
           }
 
-          const name = (r.title ?? host).split(/[|\-–·]/)[0].trim().slice(0, 200);
+          const name = (r.title ?? host)
+            .split(/[|\-–·]/)[0]
+            .trim()
+            .slice(0, 200);
 
-          const { error: insErr } = await supabaseAdmin
-            .from("scraped_businesses")
-            .upsert(
-              {
-                town_id: town.id,
-                category_id: cat.id,
-                source: "firecrawl_search",
-                source_url: website,
-                source_query: query,
-                name,
-                website,
-                description: r.description ?? null,
-                raw: r as never,
-                last_scraped_at: new Date().toISOString(),
-              },
-              { onConflict: "town_id,website", ignoreDuplicates: false },
-            );
+          const { error: insErr } = await supabaseAdmin.from("scraped_businesses").upsert(
+            {
+              town_id: town.id,
+              category_id: cat.id,
+              source: "firecrawl_search",
+              source_url: website,
+              source_query: query,
+              name,
+              website,
+              description: r.description ?? null,
+              raw: r as never,
+              last_scraped_at: new Date().toISOString(),
+            },
+            { onConflict: "town_id,website", ignoreDuplicates: false },
+          );
           if (insErr) {
             // Unique-index expression conflict can throw; treat as skip
             skipped += 1;
@@ -119,7 +122,9 @@ export const listScrapedForTown = createServerFn({ method: "POST" })
     await assertAdmin(context.userId);
     const { data: rows } = await supabaseAdmin
       .from("scraped_businesses")
-      .select("id, town_id, category_id, source, source_url, source_query, name, address, phone, website, description, logo_url, status, excluded_reason, promoted_business_id, last_scraped_at")
+      .select(
+        "id, town_id, category_id, source, source_url, source_query, name, address, phone, website, description, logo_url, status, excluded_reason, promoted_business_id, last_scraped_at",
+      )
       .eq("town_id", data.townId)
       .order("status")
       .order("name");
@@ -212,7 +217,10 @@ export const adminListTowns = createServerFn({ method: "GET" })
     const { data: counts } = await supabaseAdmin
       .from("scraped_businesses")
       .select("town_id, status");
-    const byTown = new Map<string, { pending: number; included: number; excluded: number; promoted: number }>();
+    const byTown = new Map<
+      string,
+      { pending: number; included: number; excluded: number; promoted: number }
+    >();
     for (const t of towns ?? []) {
       byTown.set(t.id, { pending: 0, included: 0, excluded: 0, promoted: 0 });
     }

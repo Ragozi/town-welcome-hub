@@ -80,10 +80,16 @@ export const TOWN_HERO_OVERRIDES: Record<string, { src: string; fit: "cover" | "
 };
 
 /** Town hero image fallback. */
-export function townHeroImage(slug: string, _name: string): { src: string; fit: "cover" | "contain" } {
+export function townHeroImage(
+  slug: string,
+  _name: string,
+): { src: string; fit: "cover" | "contain" } {
   const override = TOWN_HERO_OVERRIDES[slug];
   if (override) return override;
-  return { src: `https://picsum.photos/seed/${encodeURIComponent(slug)}-wi/900/1200`, fit: "cover" };
+  return {
+    src: `https://picsum.photos/seed/${encodeURIComponent(slug)}-wi/900/1200`,
+    fit: "cover",
+  };
 }
 
 /** Initials for a business — used as ultimate onError fallback. */

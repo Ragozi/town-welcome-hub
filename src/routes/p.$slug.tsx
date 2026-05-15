@@ -44,7 +44,9 @@ export const Route = createFileRoute("/p/$slug")({
         .select("*")
         .eq("town_id", town.id);
       const all = (bizData ?? []) as Business[];
-      const excluded = new Set<string>((p as Packet & { excluded_business_ids?: string[] }).excluded_business_ids ?? []);
+      const excluded = new Set<string>(
+        (p as Packet & { excluded_business_ids?: string[] }).excluded_business_ids ?? [],
+      );
       businesses = all.filter((b) => !excluded.has(b.id));
     }
 
@@ -62,7 +64,10 @@ export const Route = createFileRoute("/p/$slug")({
     return {
       meta: [
         { title: `Welcome Home, ${p.buyer_first_name} — Your neighborhood guide` },
-        { name: "description", content: `A personalized welcome to your new home at ${p.address}.` },
+        {
+          name: "description",
+          content: `A personalized welcome to your new home at ${p.address}.`,
+        },
         { property: "og:title", content: `Welcome Home, ${p.buyer_first_name}` },
         { property: "og:description", content: "Your personalized neighborhood guide." },
         ...(p.home_photo_url ? [{ property: "og:image", content: p.home_photo_url }] : []),
@@ -126,7 +131,10 @@ function BuyerLanding() {
     }
   }, [packet.slug, log]);
 
-  const track = (event_type: "business_click" | "referral_click" | "sponsor_click" | "share_click", metadata: Record<string, unknown> = {}) => {
+  const track = (
+    event_type: "business_click" | "referral_click" | "sponsor_click" | "share_click",
+    metadata: Record<string, unknown> = {},
+  ) => {
     const session = getSessionId();
     log({
       data: {
@@ -150,8 +158,12 @@ function BuyerLanding() {
         a.featured_order - b.featured_order,
     );
 
-  const platinum = featured.filter((b: Business) => b.sponsor_tier === "s_tier" || b.sponsor_tier === "gold").slice(0, 3);
-  const gold = featured.filter((b: Business) => b.sponsor_tier === "silver" || b.sponsor_tier === "bronze");
+  const platinum = featured
+    .filter((b: Business) => b.sponsor_tier === "s_tier" || b.sponsor_tier === "gold")
+    .slice(0, 3);
+  const gold = featured.filter(
+    (b: Business) => b.sponsor_tier === "silver" || b.sponsor_tier === "bronze",
+  );
 
   const byCategory = new Map<string, Business[]>();
   for (const b of allBiz) {
@@ -189,10 +201,12 @@ function BuyerLanding() {
               // Welcome home
             </p>
             <h1 className="font-display mt-4 text-5xl font-extrabold uppercase leading-[0.92] tracking-tight md:text-7xl">
-              {packet.buyer_first_name}{packet.buyer_last_name ? ` & family` : ""}.
+              {packet.buyer_first_name}
+              {packet.buyer_last_name ? ` & family` : ""}.
             </h1>
             <p className="mt-4 max-w-xl text-base text-background/85 md:text-lg">
-              {packet.address}{town ? ` · ${town.name}, ${town.state}` : ""}
+              {packet.address}
+              {town ? ` · ${town.name}, ${town.state}` : ""}
             </p>
           </div>
         </div>
@@ -205,10 +219,18 @@ function BuyerLanding() {
             <div className="flex flex-col items-center gap-6 text-center md:flex-row md:items-center md:gap-8 md:text-left">
               <div className="relative h-28 w-28 shrink-0 overflow-hidden rounded-full bg-foreground text-background ring-4 ring-background shadow-[var(--shadow-soft)] md:h-32 md:w-32">
                 {realtor.headshot_url ? (
-                  <img src={realtor.headshot_url} alt={realtor.full_name} className="h-full w-full object-cover" />
+                  <img
+                    src={realtor.headshot_url}
+                    alt={realtor.full_name}
+                    className="h-full w-full object-cover"
+                  />
                 ) : (
                   <div className="flex h-full w-full items-center justify-center text-2xl font-bold">
-                    {(realtor.full_name ?? "?").split(" ").map((s: string) => s[0]).slice(0, 2).join("")}
+                    {(realtor.full_name ?? "?")
+                      .split(" ")
+                      .map((s: string) => s[0])
+                      .slice(0, 2)
+                      .join("")}
                   </div>
                 )}
               </div>
@@ -219,18 +241,28 @@ function BuyerLanding() {
                 </h2>
                 <div className="mt-2 flex flex-wrap items-center justify-center gap-3 text-sm text-muted-foreground md:justify-start">
                   {realtor.brokerage_logo_url && (
-                    <img src={realtor.brokerage_logo_url} alt={realtor.brokerage_name ?? ""} className="h-6 w-auto object-contain opacity-90" />
+                    <img
+                      src={realtor.brokerage_logo_url}
+                      alt={realtor.brokerage_name ?? ""}
+                      className="h-6 w-auto object-contain opacity-90"
+                    />
                   )}
                   {realtor.brokerage_name && <span>{realtor.brokerage_name}</span>}
                 </div>
                 <div className="mt-5 flex flex-wrap justify-center gap-2 md:justify-start">
                   {realtor.email_public && (
-                    <a href={`mailto:${realtor.email_public}`} className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-4 py-2 text-xs font-medium transition hover:-translate-y-0.5 hover:border-primary/30 hover:text-primary">
+                    <a
+                      href={`mailto:${realtor.email_public}`}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-4 py-2 text-xs font-medium transition hover:-translate-y-0.5 hover:border-primary/30 hover:text-primary"
+                    >
                       <Mail className="h-3.5 w-3.5" /> {realtor.email_public}
                     </a>
                   )}
                   {realtor.phone && (
-                    <a href={`tel:${realtor.phone}`} className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-4 py-2 text-xs font-medium transition hover:-translate-y-0.5 hover:border-primary/30 hover:text-primary">
+                    <a
+                      href={`tel:${realtor.phone}`}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-4 py-2 text-xs font-medium transition hover:-translate-y-0.5 hover:border-primary/30 hover:text-primary"
+                    >
                       <Phone className="h-3.5 w-3.5" /> {realtor.phone}
                     </a>
                   )}
@@ -258,10 +290,16 @@ function BuyerLanding() {
             <h2 className="font-display mt-2 text-3xl font-extrabold uppercase tracking-tight md:text-4xl">
               Hand-picked for you
             </h2>
-            <p className="mt-2 max-w-xl text-foreground/60">A short list of the places we'd send a friend.</p>
+            <p className="mt-2 max-w-xl text-foreground/60">
+              A short list of the places we'd send a friend.
+            </p>
             <div className="mt-8 grid gap-5 md:grid-cols-3">
               {platinum.map((b: Business) => (
-                <FeaturedCard key={b.id} b={b} onClick={() => track("sponsor_click", { business_id: b.id, name: b.name })} />
+                <FeaturedCard
+                  key={b.id}
+                  b={b}
+                  onClick={() => track("sponsor_click", { business_id: b.id, name: b.name })}
+                />
               ))}
             </div>
           </section>
@@ -275,24 +313,39 @@ function BuyerLanding() {
               <h2 className="font-display mt-2 text-3xl font-extrabold uppercase tracking-tight md:text-4xl">
                 Your neighborhood guide
               </h2>
-              {town.hero_blurb && <p className="mt-3 max-w-2xl text-foreground/70">{town.hero_blurb}</p>}
+              {town.hero_blurb && (
+                <p className="mt-3 max-w-2xl text-foreground/70">{town.hero_blurb}</p>
+              )}
             </div>
 
             {cats.map((c: Category) => {
               const list = (byCategory.get(c.id) ?? []).sort(
-                (a: Business, b: Business) => tierPriority[b.sponsor_tier] - tierPriority[a.sponsor_tier],
+                (a: Business, b: Business) =>
+                  tierPriority[b.sponsor_tier] - tierPriority[a.sponsor_tier],
               );
               return (
                 <div key={c.id}>
                   <div className="mb-5 flex items-baseline justify-between border-b border-border pb-3">
-                    <h3 className="font-display text-xl font-extrabold uppercase tracking-tight">{c.name}</h3>
+                    <h3 className="font-display text-xl font-extrabold uppercase tracking-tight">
+                      {c.name}
+                    </h3>
                     <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
                       {list.length} {list.length === 1 ? "spot" : "spots"}
                     </span>
                   </div>
                   <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     {list.map((b: Business) => (
-                      <BusinessRow key={b.id} b={b} onClick={() => track("business_click", { business_id: b.id, name: b.name, category: c.name })} />
+                      <BusinessRow
+                        key={b.id}
+                        b={b}
+                        onClick={() =>
+                          track("business_click", {
+                            business_id: b.id,
+                            name: b.name,
+                            category: c.name,
+                          })
+                        }
+                      />
                     ))}
                   </div>
                 </div>
@@ -307,7 +360,11 @@ function BuyerLanding() {
             <p className="eyebrow">// Also recommended</p>
             <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {gold.slice(0, 8).map((b: Business) => (
-                <BusinessRow key={b.id} b={b} onClick={() => track("sponsor_click", { business_id: b.id, name: b.name })} />
+                <BusinessRow
+                  key={b.id}
+                  b={b}
+                  onClick={() => track("sponsor_click", { business_id: b.id, name: b.name })}
+                />
               ))}
             </div>
           </section>
@@ -333,16 +390,25 @@ function BuyerLanding() {
                   onClick={() => track("referral_click", { referral_slug: realtor.referral_slug })}
                   className="inline-flex h-11 items-center gap-2 rounded-full bg-primary px-6 text-sm font-semibold text-primary-foreground transition hover:-translate-y-0.5 hover:bg-primary/90"
                 >
-                  <Heart className="h-4 w-4" /> Refer a friend to {realtor.full_name?.split(" ")[0] ?? "us"}
+                  <Heart className="h-4 w-4" /> Refer a friend to{" "}
+                  {realtor.full_name?.split(" ")[0] ?? "us"}
                 </a>
               )}
               {realtor.email_public && (
-                <a href={`mailto:${realtor.email_public}`} onClick={() => track("referral_click", { method: "email" })} className="inline-flex h-11 items-center gap-2 rounded-full border border-background/20 px-5 text-sm font-semibold transition hover:-translate-y-0.5 hover:bg-background/10">
+                <a
+                  href={`mailto:${realtor.email_public}`}
+                  onClick={() => track("referral_click", { method: "email" })}
+                  className="inline-flex h-11 items-center gap-2 rounded-full border border-background/20 px-5 text-sm font-semibold transition hover:-translate-y-0.5 hover:bg-background/10"
+                >
                   <Mail className="h-4 w-4" /> Email {realtor.full_name?.split(" ")[0] ?? "agent"}
                 </a>
               )}
               {realtor.phone && (
-                <a href={`tel:${realtor.phone}`} onClick={() => track("referral_click", { method: "phone" })} className="inline-flex h-11 items-center gap-2 rounded-full border border-background/20 px-5 text-sm font-semibold transition hover:-translate-y-0.5 hover:bg-background/10">
+                <a
+                  href={`tel:${realtor.phone}`}
+                  onClick={() => track("referral_click", { method: "phone" })}
+                  className="inline-flex h-11 items-center gap-2 rounded-full border border-background/20 px-5 text-sm font-semibold transition hover:-translate-y-0.5 hover:bg-background/10"
+                >
                   <Phone className="h-4 w-4" /> Call {realtor.full_name?.split(" ")[0]}
                 </a>
               )}
@@ -370,11 +436,16 @@ function BuyerLanding() {
 
 function FeaturedCard({ b, onClick }: { b: Business; onClick?: () => void }) {
   return (
-    <div onClick={onClick} className="group relative overflow-hidden rounded-3xl border border-border bg-card p-6 shadow-[var(--shadow-soft)]">
+    <div
+      onClick={onClick}
+      className="group relative overflow-hidden rounded-3xl border border-border bg-card p-6 shadow-[var(--shadow-soft)]"
+    >
       <div className="absolute right-4 top-4 inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-primary">
         <Star className="h-3 w-3" /> Featured
       </div>
-      {b.logo_url && <img src={b.logo_url} alt={b.name} className="mb-4 h-12 w-auto object-contain" />}
+      {b.logo_url && (
+        <img src={b.logo_url} alt={b.name} className="mb-4 h-12 w-auto object-contain" />
+      )}
       <h3 className="font-display text-lg font-extrabold uppercase tracking-tight">{b.name}</h3>
       {b.subcategory && <p className="text-xs text-muted-foreground">{b.subcategory}</p>}
       {b.description && <p className="mt-2 text-sm text-foreground/80">{b.description}</p>}
@@ -384,9 +455,34 @@ function FeaturedCard({ b, onClick }: { b: Business; onClick?: () => void }) {
         </div>
       )}
       <div className="mt-4 space-y-1.5 text-xs text-muted-foreground">
-        {b.address && <p className="inline-flex items-center gap-1.5"><MapPin className="h-3 w-3" /> {b.address}</p>}
-        {b.phone && <p><a href={`tel:${b.phone}`} className="inline-flex items-center gap-1.5 hover:text-foreground"><Phone className="h-3 w-3" /> {b.phone}</a></p>}
-        {b.website && <p><a href={b.website} target="_blank" rel="noreferrer" onClick={onClick} className="inline-flex items-center gap-1.5 hover:text-foreground"><Globe className="h-3 w-3" /> Visit</a></p>}
+        {b.address && (
+          <p className="inline-flex items-center gap-1.5">
+            <MapPin className="h-3 w-3" /> {b.address}
+          </p>
+        )}
+        {b.phone && (
+          <p>
+            <a
+              href={`tel:${b.phone}`}
+              className="inline-flex items-center gap-1.5 hover:text-foreground"
+            >
+              <Phone className="h-3 w-3" /> {b.phone}
+            </a>
+          </p>
+        )}
+        {b.website && (
+          <p>
+            <a
+              href={b.website}
+              target="_blank"
+              rel="noreferrer"
+              onClick={onClick}
+              className="inline-flex items-center gap-1.5 hover:text-foreground"
+            >
+              <Globe className="h-3 w-3" /> Visit
+            </a>
+          </p>
+        )}
       </div>
     </div>
   );
@@ -397,14 +493,16 @@ function BusinessRow({ b, onClick }: { b: Business; onClick?: () => void }) {
     <div onClick={onClick} className="rounded-2xl border border-border bg-card p-4">
       <div className="flex items-start justify-between gap-2">
         <h4 className="font-semibold leading-tight">{b.name}</h4>
-        {b.sponsor_tier !== "none" && (
-          <Star className="h-3.5 w-3.5 shrink-0 text-primary" />
-        )}
+        {b.sponsor_tier !== "none" && <Star className="h-3.5 w-3.5 shrink-0 text-primary" />}
       </div>
       {b.subcategory && <p className="text-xs text-muted-foreground">{b.subcategory}</p>}
       <div className="mt-2 space-y-1 text-xs text-muted-foreground">
         {b.address && <p>{b.address}</p>}
-        {b.phone && <a href={`tel:${b.phone}`} onClick={onClick} className="block hover:text-foreground">{b.phone}</a>}
+        {b.phone && (
+          <a href={`tel:${b.phone}`} onClick={onClick} className="block hover:text-foreground">
+            {b.phone}
+          </a>
+        )}
       </div>
       {b.coupon_text && (
         <div className="mt-2 text-[11px] font-semibold text-primary">🎟 {b.coupon_text}</div>

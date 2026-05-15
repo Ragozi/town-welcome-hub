@@ -42,7 +42,10 @@ export function packetUrl(slug: string, opts?: { source?: string; request?: Requ
   return `${base}${path}${query}`;
 }
 
-export function packetPdfUrl(slug: string, opts?: { download?: boolean; request?: Request }): string {
+export function packetPdfUrl(
+  slug: string,
+  opts?: { download?: boolean; request?: Request },
+): string {
   const base = getPublicBaseUrl(opts?.request);
   const query = opts?.download ? "?download=1" : "";
   return `${base}/api/packet-pdf/${slug}${query}`;

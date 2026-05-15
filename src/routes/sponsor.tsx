@@ -21,8 +21,7 @@ export const Route = createFileRoute("/sponsor")({
       { property: "og:title", content: "Sponsor a town — Hearth Handbook" },
       {
         property: "og:description",
-        content:
-          "Be the first business new homeowners see when they move to your town.",
+        content: "Be the first business new homeowners see when they move to your town.",
       },
       { property: "og:url", content: "https://hearthhandbook.com/sponsor" },
     ],
@@ -127,10 +126,9 @@ function SponsorPage() {
           <span className="text-primary">your town</span>.
         </h1>
         <p className="mt-6 max-w-2xl text-lg text-foreground/70">
-          Every Hearth Handbook is a personalized welcome packet a realtor hands
-          a buyer at closing. Sponsor a town, and your business shows up inside
-          every one of those packets — with your photo, your offer, and a warm
-          recommendation already built in.
+          Every Hearth Handbook is a personalized welcome packet a realtor hands a buyer at closing.
+          Sponsor a town, and your business shows up inside every one of those packets — with your
+          photo, your offer, and a warm recommendation already built in.
         </p>
         <div className="mt-8 flex flex-wrap gap-3">
           <Button
@@ -197,8 +195,8 @@ function SponsorPage() {
           Pick the level that fits your business.
         </h2>
         <p className="mt-3 max-w-xl text-foreground/70">
-          Pricing is per town, per month. Free directory listings are also
-          available — fill out the form and we'll add you to your category.
+          Pricing is per town, per month. Free directory listings are also available — fill out the
+          form and we'll add you to your category.
         </p>
 
         <div className="mt-8 grid gap-5 md:grid-cols-3">
@@ -226,9 +224,7 @@ function SponsorPage() {
                 key={t.id}
                 className={
                   "relative flex flex-col rounded-3xl border bg-card p-7 shadow-[var(--shadow-soft)] " +
-                  (meta.highlight
-                    ? "border-primary ring-2 ring-primary/15"
-                    : "border-border")
+                  (meta.highlight ? "border-primary ring-2 ring-primary/15" : "border-border")
                 }
               >
                 {meta.highlight && (
@@ -271,7 +267,8 @@ function SponsorPage() {
           <div>
             <span className="eyebrow text-foreground/55">Just want to be in the directory?</span>
             <p className="mt-1 text-sm text-foreground/75">
-              Free listings include name, category and contact info — no photo or coupon. Sorted after sponsors.
+              Free listings include name, category and contact info — no photo or coupon. Sorted
+              after sponsors.
             </p>
           </div>
           <button
@@ -293,20 +290,21 @@ function SponsorPage() {
               Your business, on the kitchen counter.
             </h2>
             <p className="mt-4 text-foreground/70">
-              Featured and Premier sponsors appear in a dedicated row at the top
-              of the category. Basic sponsors sit above free listings with a
-              photo and coupon. Every card links to your site, your phone, and
-              Google Maps in one tap.
+              Featured and Premier sponsors appear in a dedicated row at the top of the category.
+              Basic sponsors sit above free listings with a photo and coupon. Every card links to
+              your site, your phone, and Google Maps in one tap.
             </p>
             <ul className="mt-6 space-y-3 text-sm text-foreground/75">
               <li className="flex items-start gap-3">
                 <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" /> Photo + brand colors
               </li>
               <li className="flex items-start gap-3">
-                <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" /> Coupon with expiration (Featured / Premier)
+                <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" /> Coupon with expiration
+                (Featured / Premier)
               </li>
               <li className="flex items-start gap-3">
-                <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" /> Tap-to-call, tap-to-map, tap-to-website
+                <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" /> Tap-to-call, tap-to-map,
+                tap-to-website
               </li>
             </ul>
           </div>
@@ -316,7 +314,9 @@ function SponsorPage() {
             <article className="w-full max-w-xs overflow-hidden rounded-2xl border border-border bg-card text-card-foreground shadow-[var(--shadow-soft)]">
               <div
                 className="relative aspect-[4/3] w-full"
-                style={{ background: "linear-gradient(135deg, var(--wi-cheddar), var(--wi-sunset))" }}
+                style={{
+                  background: "linear-gradient(135deg, var(--wi-cheddar), var(--wi-sunset))",
+                }}
               >
                 <span className="absolute inset-0 flex items-center justify-center font-display text-4xl font-extrabold tracking-tight text-white">
                   YB
@@ -356,8 +356,8 @@ function SponsorPage() {
           Tell us about your business.
         </h2>
         <p className="mt-3 max-w-xl text-foreground/70">
-          Only one Premier sponsor per category, per town. Send us the details
-          and we'll reply with availability and next steps.
+          Only one Premier sponsor per category, per town. Send us the details and we'll reply with
+          availability and next steps.
         </p>
         <div className="mt-8">
           <SponsorInquiryForm

@@ -55,10 +55,31 @@ const STEPS = [
 ];
 
 const ROADMAP = [
-  { county: "Ozaukee", color: "var(--wi-lake)", status: "Live", towns: "Grafton · Cedarburg · Mequon · Port Washington · Thiensville · Saukville · Fredonia · Belgium" },
-  { county: "Washington", color: "var(--wi-pine)", status: "Coming soon", towns: "West Bend · Hartford · Germantown · Jackson" },
-  { county: "Milwaukee", color: "var(--wi-cranberry)", status: "Coming soon", towns: "Whitefish Bay · Shorewood · Wauwatosa · Bayside" },
-  { county: "Sheboygan", color: "var(--wi-sunset)", status: "On the map", towns: "Sheboygan · Plymouth · Kohler · Elkhart Lake" },
+  {
+    county: "Ozaukee",
+    color: "var(--wi-lake)",
+    status: "Live",
+    towns:
+      "Grafton · Cedarburg · Mequon · Port Washington · Thiensville · Saukville · Fredonia · Belgium",
+  },
+  {
+    county: "Washington",
+    color: "var(--wi-pine)",
+    status: "Coming soon",
+    towns: "West Bend · Hartford · Germantown · Jackson",
+  },
+  {
+    county: "Milwaukee",
+    color: "var(--wi-cranberry)",
+    status: "Coming soon",
+    towns: "Whitefish Bay · Shorewood · Wauwatosa · Bayside",
+  },
+  {
+    county: "Sheboygan",
+    color: "var(--wi-sunset)",
+    status: "On the map",
+    towns: "Sheboygan · Plymouth · Kohler · Elkhart Lake",
+  },
 ];
 
 function AboutPage() {
@@ -79,17 +100,16 @@ function AboutPage() {
           <div>
             <SectionDivider label="Our mission" className="mb-5" />
             <h1 className="font-display max-w-3xl text-4xl font-semibold leading-tight tracking-wide sm:text-6xl">
-              A digital welcome mat for{" "}
-              <span className="text-primary">Wisconsin</span> towns.
+              A digital welcome mat for <span className="text-primary">Wisconsin</span> towns.
             </h1>
             <p className="mt-4 brand-tagline">Feel at home, from the start.</p>
           </div>
         </div>
         <p className="mt-6 max-w-2xl text-lg text-foreground/70">
-          Hearth Handbook is a closing-gift product for realtors. You build a
-          personalized welcome packet for each buyer — a printed QR card and a
-          private live page with a hand-curated guide to their new town. They
-          get the warmest possible welcome. You stay top-of-mind for life.
+          Hearth Handbook is a closing-gift product for realtors. You build a personalized welcome
+          packet for each buyer — a printed QR card and a private live page with a hand-curated
+          guide to their new town. They get the warmest possible welcome. You stay top-of-mind for
+          life.
         </p>
         <div className="mt-8 flex flex-wrap gap-3">
           <Button
@@ -156,9 +176,9 @@ function AboutPage() {
               We're starting where we live.
             </h2>
             <p className="mt-3 max-w-md text-foreground/70">
-              Eight Ozaukee County towns are live with curated guides — from
-              Mequon's lakeshore corridor to the harbor at Port Washington and
-              the small-town pace of Belgium and Fredonia.
+              Eight Ozaukee County towns are live with curated guides — from Mequon's lakeshore
+              corridor to the harbor at Port Washington and the small-town pace of Belgium and
+              Fredonia.
             </p>
             <Button
               asChild
@@ -233,10 +253,9 @@ function AboutPage() {
               by Wisconsinites.
             </h2>
             <p className="mt-4 text-foreground/70">
-              Hearth Handbook started as a printed welcome packet handed to new
-              neighbors in Ozaukee County. We turned it into a realtor toolkit
-              so every closing in our towns can come with a beautiful, personal
-              welcome — without anyone reinventing the wheel.
+              Hearth Handbook started as a printed welcome packet handed to new neighbors in Ozaukee
+              County. We turned it into a realtor toolkit so every closing in our towns can come
+              with a beautiful, personal welcome — without anyone reinventing the wheel.
             </p>
           </div>
           <div className="space-y-4">
@@ -247,8 +266,8 @@ function AboutPage() {
               <div>
                 <h3 className="font-semibold">Local-first curation</h3>
                 <p className="mt-1 text-sm text-foreground/65">
-                  Every business is reviewed by a real person who lives in or
-                  near the town — no scraped listings.
+                  Every business is reviewed by a real person who lives in or near the town — no
+                  scraped listings.
                 </p>
               </div>
             </div>
@@ -259,8 +278,8 @@ function AboutPage() {
               <div>
                 <h3 className="font-semibold">Free for buyers, forever</h3>
                 <p className="mt-1 text-sm text-foreground/65">
-                  Buyers never pay. Realtors and local sponsors keep the lights
-                  on so every welcome packet stays free to the new neighbor.
+                  Buyers never pay. Realtors and local sponsors keep the lights on so every welcome
+                  packet stays free to the new neighbor.
                 </p>
               </div>
             </div>
@@ -271,8 +290,8 @@ function AboutPage() {
               <div>
                 <h3 className="font-semibold">Premium feel, small-town soul</h3>
                 <p className="mt-1 text-sm text-foreground/65">
-                  Designed with the warmth of a brochure on the kitchen
-                  counter, and the polish of a national magazine.
+                  Designed with the warmth of a brochure on the kitchen counter, and the polish of a
+                  national magazine.
                 </p>
               </div>
             </div>
@@ -315,14 +334,12 @@ function AboutPage() {
             className="h-36 w-36 self-center md:h-44 md:w-44"
           />
           <div>
-            <h2 className="font-display text-3xl font-semibold tracking-wide">
-              Hearth Handbook
-            </h2>
+            <h2 className="font-display text-3xl font-semibold tracking-wide">Hearth Handbook</h2>
             <p className="mt-3 brand-tagline">Feel at home, from the start.</p>
             <p className="mt-4 max-w-xl text-sm text-muted-foreground">
-              A refined serif wordmark, a hand-drawn fireplace mark, and a
-              warm palette of cream, charcoal, and copper. The whole product
-              is built to feel like a thoughtful housewarming gift.
+              A refined serif wordmark, a hand-drawn fireplace mark, and a warm palette of cream,
+              charcoal, and copper. The whole product is built to feel like a thoughtful
+              housewarming gift.
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
               {[

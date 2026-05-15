@@ -12,10 +12,19 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { ArrowLeft, Loader2, Globe, RefreshCw, Check, X, Star } from "lucide-react";
 import { toast } from "sonner";
@@ -39,7 +48,11 @@ function TownLibrary() {
   const townQ = useQuery({
     queryKey: ["town", slug],
     queryFn: async () => {
-      const { data } = await supabase.from("towns").select("id, name, state, slug").eq("slug", slug).maybeSingle();
+      const { data } = await supabase
+        .from("towns")
+        .select("id, name, state, slug")
+        .eq("slug", slug)
+        .maybeSingle();
       return data;
     },
   });
@@ -65,8 +78,11 @@ function TownLibrary() {
 
   const setStatusFn = useServerFn(setScrapedStatus);
   const setStatusMut = useMutation({
-    mutationFn: (vars: { ids: string[]; status: "pending" | "included" | "excluded"; reason?: string }) =>
-      setStatusFn({ data: vars }),
+    mutationFn: (vars: {
+      ids: string[];
+      status: "pending" | "included" | "excluded";
+      reason?: string;
+    }) => setStatusFn({ data: vars }),
     onSuccess: () => {
       setSelected(new Set());
       qc.invalidateQueries({ queryKey: ["scraped", townQ.data?.id] });
@@ -105,14 +121,21 @@ function TownLibrary() {
   };
 
   if (townQ.isLoading || !townQ.data) {
-    return <div className="flex justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
+    return (
+      <div className="flex justify-center py-20">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
   }
 
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <Link to="/admin/towns" className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
+          <Link
+            to="/admin/towns"
+            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+          >
             <ArrowLeft className="h-3 w-3" /> All towns
           </Link>
           <h2 className="font-display mt-2 text-2xl font-extrabold uppercase tracking-tight">
@@ -128,9 +151,14 @@ function TownLibrary() {
         {(["pending", "included", "excluded", "promoted"] as Tab[]).map((t) => (
           <button
             key={t}
-            onClick={() => { setTab(t); setSelected(new Set()); }}
+            onClick={() => {
+              setTab(t);
+              setSelected(new Set());
+            }}
             className={`rounded-full px-3 py-1.5 font-semibold uppercase tracking-wider text-xs ${
-              tab === t ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground"
+              tab === t
+                ? "bg-foreground text-background"
+                : "text-muted-foreground hover:text-foreground"
             }`}
           >
             {t} <span className="ml-1 opacity-70">{counts[t]}</span>
@@ -143,16 +171,20 @@ function TownLibrary() {
           <span className="font-medium">{selected.size} selected</span>
           <div className="ml-auto flex gap-2">
             {tab !== "included" && (
-              <Button size="sm" variant="outline" onClick={() =>
-                setStatusMut.mutate({ ids: [...selected], status: "included" })
-              }>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setStatusMut.mutate({ ids: [...selected], status: "included" })}
+              >
                 <Check className="mr-1 h-3 w-3" /> Include
               </Button>
             )}
             {tab !== "excluded" && (
-              <Button size="sm" variant="outline" onClick={() =>
-                setStatusMut.mutate({ ids: [...selected], status: "excluded" })
-              }>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setStatusMut.mutate({ ids: [...selected], status: "excluded" })}
+              >
                 <X className="mr-1 h-3 w-3" /> Exclude
               </Button>
             )}
@@ -161,7 +193,9 @@ function TownLibrary() {
       )}
 
       {listQ.isLoading ? (
-        <div className="flex justify-center py-12"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+        <div className="flex justify-center py-12">
+          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+        </div>
       ) : tabRows.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-border bg-card/50 p-10 text-center text-sm text-muted-foreground">
           Nothing here. {tab === "pending" && "Click 'Scrape now' to pull businesses from the web."}
@@ -192,35 +226,57 @@ function TownLibrary() {
                   )}
                   <td className="p-3">
                     <div className="font-medium">{r.name}</div>
-                    {r.description && <div className="line-clamp-1 text-xs text-muted-foreground">{r.description}</div>}
+                    {r.description && (
+                      <div className="line-clamp-1 text-xs text-muted-foreground">
+                        {r.description}
+                      </div>
+                    )}
                   </td>
                   <td className="p-3 text-xs text-muted-foreground">
-                    {r.category_id ? catById.get(r.category_id)?.name ?? "—" : "—"}
+                    {r.category_id ? (catById.get(r.category_id)?.name ?? "—") : "—"}
                   </td>
                   <td className="p-3">
                     {r.website && (
-                      <a href={r.website} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-primary hover:underline">
-                        <Globe className="h-3 w-3" /> {new URL(r.website).hostname.replace(/^www\./, "")}
+                      <a
+                        href={r.website}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                      >
+                        <Globe className="h-3 w-3" />{" "}
+                        {new URL(r.website).hostname.replace(/^www\./, "")}
                       </a>
                     )}
                   </td>
                   <td className="p-3 text-right">
                     <div className="inline-flex gap-1">
                       {tab !== "included" && (
-                        <Button size="sm" variant="ghost" onClick={() =>
-                          setStatusMut.mutate({ ids: [r.id], status: "included" })
-                        }>Include</Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setStatusMut.mutate({ ids: [r.id], status: "included" })}
+                        >
+                          Include
+                        </Button>
                       )}
                       {tab !== "excluded" && (
-                        <Button size="sm" variant="ghost" onClick={() =>
-                          setStatusMut.mutate({ ids: [r.id], status: "excluded" })
-                        }>Exclude</Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setStatusMut.mutate({ ids: [r.id], status: "excluded" })}
+                        >
+                          Exclude
+                        </Button>
                       )}
                       {tab === "included" && (
-                        <Button size="sm" className="rounded-full" onClick={() => {
-                          setPromoting({ id: r.id, name: r.name });
-                          setPromoteTier("bronze");
-                        }}>
+                        <Button
+                          size="sm"
+                          className="rounded-full"
+                          onClick={() => {
+                            setPromoting({ id: r.id, name: r.name });
+                            setPromoteTier("bronze");
+                          }}
+                        >
                           <Star className="mr-1 h-3 w-3" /> Promote
                         </Button>
                       )}
@@ -238,7 +294,9 @@ function TownLibrary() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Scrape {townQ.data.name}</DialogTitle>
-            <DialogDescription>Run a Firecrawl search across all categories. Results land in the Pending tab.</DialogDescription>
+            <DialogDescription>
+              Run a Firecrawl search across all categories. Results land in the Pending tab.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 py-2">
             <label className="text-sm font-medium">Results per category</label>
@@ -247,11 +305,15 @@ function TownLibrary() {
               min={1}
               max={20}
               value={scrapeLimit}
-              onChange={(e) => setScrapeLimit(Math.max(1, Math.min(20, Number(e.target.value) || 8)))}
+              onChange={(e) =>
+                setScrapeLimit(Math.max(1, Math.min(20, Number(e.target.value) || 8)))
+              }
             />
           </div>
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setScrapeOpen(false)}>Cancel</Button>
+            <Button variant="ghost" onClick={() => setScrapeOpen(false)}>
+              Cancel
+            </Button>
             <Button onClick={() => scrapeMut.mutate(scrapeLimit)} disabled={scrapeMut.isPending}>
               {scrapeMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Run scrape"}
             </Button>
@@ -268,8 +330,13 @@ function TownLibrary() {
           </DialogHeader>
           <div className="py-2">
             <label className="mb-1.5 block text-sm font-medium">Sponsor tier</label>
-            <Select value={promoteTier} onValueChange={(v) => setPromoteTier(v as typeof promoteTier)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+            <Select
+              value={promoteTier}
+              onValueChange={(v) => setPromoteTier(v as typeof promoteTier)}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="bronze">Bronze</SelectItem>
                 <SelectItem value="silver">Silver</SelectItem>
@@ -279,9 +346,13 @@ function TownLibrary() {
             </Select>
           </div>
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setPromoting(null)}>Cancel</Button>
+            <Button variant="ghost" onClick={() => setPromoting(null)}>
+              Cancel
+            </Button>
             <Button
-              onClick={() => promoting && promoteMut.mutate({ id: promoting.id, sponsor_tier: promoteTier })}
+              onClick={() =>
+                promoting && promoteMut.mutate({ id: promoting.id, sponsor_tier: promoteTier })
+              }
               disabled={promoteMut.isPending}
             >
               {promoteMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Promote"}
