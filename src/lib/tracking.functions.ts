@@ -82,7 +82,7 @@ export const logEvent = createServerFn({ method: "POST" })
       device: detectDevice(ua),
       session_id: data.session_id ?? null,
       utm: data.utm ?? {},
-      metadata: data.metadata ?? {},
+      metadata: safeMetadata,
     });
 
     if (error) {
