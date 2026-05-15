@@ -269,6 +269,7 @@ export type Database = {
           buyer_last_name: string | null
           closing_date: string | null
           created_at: string
+          excluded_business_ids: string[]
           has_kids: boolean
           has_pets: boolean
           home_photo_url: string | null
@@ -292,6 +293,7 @@ export type Database = {
           buyer_last_name?: string | null
           closing_date?: string | null
           created_at?: string
+          excluded_business_ids?: string[]
           has_kids?: boolean
           has_pets?: boolean
           home_photo_url?: string | null
@@ -315,6 +317,7 @@ export type Database = {
           buyer_last_name?: string | null
           closing_date?: string | null
           created_at?: string
+          excluded_business_ids?: string[]
           has_kids?: boolean
           has_pets?: boolean
           home_photo_url?: string | null
@@ -467,6 +470,94 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      scraped_businesses: {
+        Row: {
+          address: string | null
+          category_id: string | null
+          created_at: string
+          description: string | null
+          excluded_reason: string | null
+          id: string
+          last_scraped_at: string
+          logo_url: string | null
+          name: string
+          phone: string | null
+          promoted_business_id: string | null
+          raw: Json
+          source: string
+          source_query: string | null
+          source_url: string | null
+          status: Database["public"]["Enums"]["scraped_business_status"]
+          town_id: string
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          address?: string | null
+          category_id?: string | null
+          created_at?: string
+          description?: string | null
+          excluded_reason?: string | null
+          id?: string
+          last_scraped_at?: string
+          logo_url?: string | null
+          name: string
+          phone?: string | null
+          promoted_business_id?: string | null
+          raw?: Json
+          source?: string
+          source_query?: string | null
+          source_url?: string | null
+          status?: Database["public"]["Enums"]["scraped_business_status"]
+          town_id: string
+          updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          address?: string | null
+          category_id?: string | null
+          created_at?: string
+          description?: string | null
+          excluded_reason?: string | null
+          id?: string
+          last_scraped_at?: string
+          logo_url?: string | null
+          name?: string
+          phone?: string | null
+          promoted_business_id?: string | null
+          raw?: Json
+          source?: string
+          source_query?: string | null
+          source_url?: string | null
+          status?: Database["public"]["Enums"]["scraped_business_status"]
+          town_id?: string
+          updated_at?: string
+          website?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scraped_businesses_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scraped_businesses_promoted_business_id_fkey"
+            columns: ["promoted_business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scraped_businesses_town_id_fkey"
+            columns: ["town_id"]
+            isOneToOne: false
+            referencedRelation: "towns"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       sponsor_inquiries: {
         Row: {
@@ -781,6 +872,7 @@ export type Database = {
         | "share_click"
       packet_status: "draft" | "generated"
       saved_item_type: "business" | "coupon" | "packet"
+      scraped_business_status: "pending" | "included" | "excluded" | "promoted"
       sponsor_tier: "none" | "bronze" | "silver" | "gold" | "s_tier"
     }
     CompositeTypes: {
@@ -936,6 +1028,7 @@ export const Constants = {
       ],
       packet_status: ["draft", "generated"],
       saved_item_type: ["business", "coupon", "packet"],
+      scraped_business_status: ["pending", "included", "excluded", "promoted"],
       sponsor_tier: ["none", "bronze", "silver", "gold", "s_tier"],
     },
   },
