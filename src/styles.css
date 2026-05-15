@@ -67,39 +67,44 @@
 :root {
   --radius: 1rem;
 
-  /* Snapture shell */
-  --background: oklch(0.965 0.018 78);          /* warm cream #F9F2E8-ish */
-  --foreground: oklch(0.20 0.02 60);            /* warm near-black */
-  --card: oklch(0.99 0.01 80);                  /* off-white */
-  --card-foreground: oklch(0.20 0.02 60);
-  --popover: oklch(0.99 0.01 80);
-  --popover-foreground: oklch(0.20 0.02 60);
-  --primary: oklch(0.68 0.20 42);               /* vibrant orange #FF6B00-ish */
+  /* Hearth Handbook brand — cream + charcoal + copper */
+  --background: oklch(0.96 0.022 80);           /* warm cream from brand sheet */
+  --foreground: oklch(0.24 0.015 55);           /* deep warm charcoal (H mark) */
+  --card: oklch(0.985 0.012 82);                /* off-cream */
+  --card-foreground: oklch(0.24 0.015 55);
+  --popover: oklch(0.985 0.012 82);
+  --popover-foreground: oklch(0.24 0.015 55);
+  --primary: oklch(0.62 0.13 45);               /* refined copper / terracotta */
   --primary-foreground: oklch(0.985 0.012 90);
-  --secondary: oklch(0.93 0.025 75);            /* soft taupe */
-  --secondary-foreground: oklch(0.22 0.02 60);
-  --muted: oklch(0.93 0.02 75);
-  --muted-foreground: oklch(0.45 0.025 65);
-  --accent: oklch(0.68 0.20 42);                /* same orange as primary */
+  --secondary: oklch(0.92 0.025 78);            /* warm sand */
+  --secondary-foreground: oklch(0.24 0.015 55);
+  --muted: oklch(0.92 0.025 78);
+  --muted-foreground: oklch(0.46 0.022 60);
+  --accent: oklch(0.62 0.13 45);                /* same copper */
   --accent-foreground: oklch(0.985 0.012 90);
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(0.984 0.003 247.858);
-  --border: oklch(0.88 0.025 75);               /* warm sand */
-  --input: oklch(0.88 0.025 75);
-  --ring: oklch(0.68 0.20 42);
-  --chart-1: oklch(0.68 0.20 42);
+  --border: oklch(0.87 0.025 75);               /* warm sand border */
+  --input: oklch(0.87 0.025 75);
+  --ring: oklch(0.62 0.13 45);
+  --chart-1: oklch(0.62 0.13 45);
   --chart-2: oklch(0.62 0.13 230);
   --chart-3: oklch(0.48 0.11 155);
   --chart-4: oklch(0.82 0.17 85);
   --chart-5: oklch(0.58 0.20 25);
-  --sidebar: oklch(0.965 0.018 78);
-  --sidebar-foreground: oklch(0.20 0.02 60);
-  --sidebar-primary: oklch(0.68 0.20 42);
+  --sidebar: oklch(0.96 0.022 80);
+  --sidebar-foreground: oklch(0.24 0.015 55);
+  --sidebar-primary: oklch(0.62 0.13 45);
   --sidebar-primary-foreground: oklch(0.985 0.012 90);
-  --sidebar-accent: oklch(0.93 0.025 75);
-  --sidebar-accent-foreground: oklch(0.22 0.02 60);
-  --sidebar-border: oklch(0.88 0.025 75);
-  --sidebar-ring: oklch(0.68 0.20 42);
+  --sidebar-accent: oklch(0.92 0.025 78);
+  --sidebar-accent-foreground: oklch(0.24 0.015 55);
+  --sidebar-border: oklch(0.87 0.025 75);
+  --sidebar-ring: oklch(0.62 0.13 45);
+
+  /* Named brand tokens — use for literal logo backgrounds, dividers */
+  --brand-charcoal: oklch(0.24 0.015 55);
+  --brand-copper: oklch(0.62 0.13 45);
+  --brand-cream: oklch(0.96 0.022 80);
 
   /* Wisconsin landscape palette — used ONLY for category accents */
   --wi-lake: oklch(0.62 0.13 230);
