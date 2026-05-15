@@ -6,6 +6,7 @@ import { tierPriority, type Business, type Category, type Town } from "@/lib/tow
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import type { Packet } from "@/lib/packets";
 import { getPublicBaseUrl } from "@/lib/public-url";
+import { verifyPdfToken } from "@/lib/public-packet.functions";
 
 const styles = StyleSheet.create({
   page: {
@@ -135,6 +136,11 @@ export const Route = createFileRoute("/api/packet-pdf/$slug")({
     handlers: {
       GET: async ({ params, request }) => {
         const slug = params.slug;
+        const url = new URL(request.url);
+        const token = url.searchParams.get("t");
+        if (!verifyPdfToken(slug, token)) {
+          return new Response("Unauthorized", { status: 401 });
+        }
         const { data: packet } = await supabaseAdmin
           .from("packets")
           .select("*")
