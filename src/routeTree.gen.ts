@@ -31,6 +31,8 @@ import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authentic
 import { Route as AuthenticatedAdminInviteCodesRouteImport } from './routes/_authenticated/admin.invite-codes'
 import { Route as AuthenticatedAdminFinanceRouteImport } from './routes/_authenticated/admin.finance'
 import { Route as AuthenticatedAdminEventsRouteImport } from './routes/_authenticated/admin.events'
+import { Route as AuthenticatedAdminTownsIndexRouteImport } from './routes/_authenticated/admin.towns.index'
+import { Route as AuthenticatedAdminTownsSlugLibraryRouteImport } from './routes/_authenticated/admin.towns.$slug.library'
 
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
@@ -145,6 +147,18 @@ const AuthenticatedAdminEventsRoute =
     path: '/events',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const AuthenticatedAdminTownsIndexRoute =
+  AuthenticatedAdminTownsIndexRouteImport.update({
+    id: '/towns/',
+    path: '/towns/',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminTownsSlugLibraryRoute =
+  AuthenticatedAdminTownsSlugLibraryRouteImport.update({
+    id: '/towns/$slug/library',
+    path: '/towns/$slug/library',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -168,6 +182,8 @@ export interface FileRoutesByFullPath {
   '/api/packet-pdf/$slug': typeof ApiPacketPdfSlugRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
   '/packets/': typeof AuthenticatedPacketsIndexRoute
+  '/admin/towns/': typeof AuthenticatedAdminTownsIndexRoute
+  '/admin/towns/$slug/library': typeof AuthenticatedAdminTownsSlugLibraryRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -190,6 +206,8 @@ export interface FileRoutesByTo {
   '/api/packet-pdf/$slug': typeof ApiPacketPdfSlugRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
   '/packets': typeof AuthenticatedPacketsIndexRoute
+  '/admin/towns': typeof AuthenticatedAdminTownsIndexRoute
+  '/admin/towns/$slug/library': typeof AuthenticatedAdminTownsSlugLibraryRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -215,6 +233,8 @@ export interface FileRoutesById {
   '/api/packet-pdf/$slug': typeof ApiPacketPdfSlugRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
   '/_authenticated/packets/': typeof AuthenticatedPacketsIndexRoute
+  '/_authenticated/admin/towns/': typeof AuthenticatedAdminTownsIndexRoute
+  '/_authenticated/admin/towns/$slug/library': typeof AuthenticatedAdminTownsSlugLibraryRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -240,6 +260,8 @@ export interface FileRouteTypes {
     | '/api/packet-pdf/$slug'
     | '/admin/'
     | '/packets/'
+    | '/admin/towns/'
+    | '/admin/towns/$slug/library'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -262,6 +284,8 @@ export interface FileRouteTypes {
     | '/api/packet-pdf/$slug'
     | '/admin'
     | '/packets'
+    | '/admin/towns'
+    | '/admin/towns/$slug/library'
   id:
     | '__root__'
     | '/'
@@ -286,6 +310,8 @@ export interface FileRouteTypes {
     | '/api/packet-pdf/$slug'
     | '/_authenticated/admin/'
     | '/_authenticated/packets/'
+    | '/_authenticated/admin/towns/'
+    | '/_authenticated/admin/towns/$slug/library'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -458,6 +484,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminEventsRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/towns/': {
+      id: '/_authenticated/admin/towns/'
+      path: '/towns'
+      fullPath: '/admin/towns/'
+      preLoaderRoute: typeof AuthenticatedAdminTownsIndexRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/towns/$slug/library': {
+      id: '/_authenticated/admin/towns/$slug/library'
+      path: '/towns/$slug/library'
+      fullPath: '/admin/towns/$slug/library'
+      preLoaderRoute: typeof AuthenticatedAdminTownsSlugLibraryRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
   }
 }
 
@@ -467,6 +507,8 @@ interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminInviteCodesRoute: typeof AuthenticatedAdminInviteCodesRoute
   AuthenticatedAdminUsersRoute: typeof AuthenticatedAdminUsersRoute
   AuthenticatedAdminIndexRoute: typeof AuthenticatedAdminIndexRoute
+  AuthenticatedAdminTownsIndexRoute: typeof AuthenticatedAdminTownsIndexRoute
+  AuthenticatedAdminTownsSlugLibraryRoute: typeof AuthenticatedAdminTownsSlugLibraryRoute
 }
 
 const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
@@ -475,6 +517,9 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminInviteCodesRoute: AuthenticatedAdminInviteCodesRoute,
   AuthenticatedAdminUsersRoute: AuthenticatedAdminUsersRoute,
   AuthenticatedAdminIndexRoute: AuthenticatedAdminIndexRoute,
+  AuthenticatedAdminTownsIndexRoute: AuthenticatedAdminTownsIndexRoute,
+  AuthenticatedAdminTownsSlugLibraryRoute:
+    AuthenticatedAdminTownsSlugLibraryRoute,
 }
 
 const AuthenticatedAdminRouteWithChildren =
@@ -518,13 +563,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

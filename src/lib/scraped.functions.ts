@@ -87,7 +87,7 @@ export const scrapeTown = createServerFn({ method: "POST" })
                 name,
                 website,
                 description: r.description ?? null,
-                raw: r as unknown as Record<string, unknown>,
+                raw: r as never,
                 last_scraped_at: new Date().toISOString(),
               },
               { onConflict: "town_id,website", ignoreDuplicates: false },
@@ -142,9 +142,10 @@ export const setScrapedStatus = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     await assertAdmin(context.userId);
-    const patch: Record<string, unknown> = { status: data.status };
-    if (data.status === "excluded") patch.excluded_reason = data.reason ?? null;
-    if (data.status !== "excluded") patch.excluded_reason = null;
+    const patch = {
+      status: data.status,
+      excluded_reason: data.status === "excluded" ? (data.reason ?? null) : null,
+    };
     const { error } = await supabaseAdmin
       .from("scraped_businesses")
       .update(patch)
