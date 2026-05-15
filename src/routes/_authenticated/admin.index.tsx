@@ -106,6 +106,8 @@ function AdminOverview() {
         </div>
       </div>
 
+      <QaHandbookCard />
+
       {/* KPI cards */}
       <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-6">
         <KpiCard label="Packets" value={data.totals.packets} prev={data.prev.packets} icon={FileText} />
