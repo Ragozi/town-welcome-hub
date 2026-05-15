@@ -1,14 +1,16 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { adminGetMetrics } from "@/lib/admin.functions";
+import { generateQaHandbook, getQaHandbook } from "@/lib/scraped.functions";
 import { useAuth } from "@/lib/auth";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
   PieChart, Pie, Cell, BarChart, Bar,
 } from "recharts";
-import { ArrowDown, ArrowUp, Download, FileText, MapPin, MousePointerClick, QrCode, Users2, Loader2, ShieldAlert, LogIn } from "lucide-react";
+import { ArrowDown, ArrowUp, Download, FileText, MapPin, MousePointerClick, QrCode, Users2, Loader2, ShieldAlert, LogIn, Beaker, ExternalLink, RefreshCw } from "lucide-react";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/admin/")({
   component: AdminOverview,
