@@ -109,7 +109,7 @@ function BuyerLanding() {
   };
 
   const allBiz = businesses as PublicBusiness[];
-  const allCats = categories as Category[];
+  const allCats = categories as PublicCategory[];
 
   const featured = allBiz
     .filter((b: PublicBusiness) => b.sponsor_tier !== "none")
@@ -163,11 +163,10 @@ function BuyerLanding() {
             </p>
             <h1 className="font-display mt-4 text-5xl font-extrabold uppercase leading-[0.92] tracking-tight md:text-7xl">
               {packet.buyer_first_name}
-              {packet.buyer_last_name ? ` & family` : ""}.
+              {packet.buyer_has_partner ? ` & family` : ""}.
             </h1>
             <p className="mt-4 max-w-xl text-base text-background/85 md:text-lg">
-              {packet.location_label}
-              {town ? ` · ${town.name}, ${town.state}` : ""}
+              {packet.location_label ?? ""}
             </p>
           </div>
         </div>
