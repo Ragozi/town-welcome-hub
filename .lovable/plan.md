@@ -1,38 +1,103 @@
-## Fix: Gap Analysis detail panel overflow + use right-side space
+# Plan
 
-**Problem:** On `/admin/debug`, clicking a row in the Gap Analysis table renders a detail card *underneath* the table inside a fixed 500px box with no clipping, so it visually spills onto the "What's instrumented" section below. The embedded panel also only uses a narrow column even though there's plenty of horizontal room on the page.
+This needs more than a UI tweak: the scrape is returning search results, but inserts are failing silently, county-level jobs are not logged as jobs, and the town admin page does not scale beyond the small Ozaukee seed set.
 
-### Changes
+## 1. Fix why nothing new appears in Pending
 
-**1. Split-pane layout for `GapAnalysisPanel`** (`src/components/debug-lab/gap-analysis.tsx`)
+**Root cause:** Firecrawl search calls are succeeding, but `scraped_businesses` remains empty because the upsert conflict target does not match the database index.
 
-Restructure the panel into a responsive two-column layout:
+- Existing code upserts with `onConflict: "town_id,website"`.
+- Existing DB index is `town_id, lower(website)`.
+- That mismatch makes every insert fail, then the code counts it as `skipped`.
+
+**Changes:**
+- Add a migration to replace the current expression index with a plain unique index on `(town_id, website)` where website is not null.
+- Update both `scrapeTown` and `scrapeCounty` so insert/upsert errors are returned and logged, not swallowed as generic skips.
+- Update the scrape success toast to show `inserted / skipped / errors / searches` so admin sees whether a run actually stored rows.
+
+## 2. Add top-level scrape job logs, including county logs
+
+Right now `debug_logs` mostly shows individual `firecrawlSearch` calls. There is no parent `scrapeCounty` job log, so the DB does not clearly show “county scrape started / finished / failed.”
+
+**Changes:**
+- Wrap `scrapeTown` with `withDebugLog({ function_name: "scrapeTown" })`.
+- Wrap `scrapeCounty` with `withDebugLog({ function_name: "scrapeCounty" })`.
+- Include town id, town name, state, county, limit, category count, search count, inserted count, skipped reasons summary, and errors in the parent log payload.
+- Keep the existing lower-level `firecrawlSearch` logs so we can still inspect exact queries and raw returned URLs.
+
+## 3. Explain skip logic in the admin UI
+
+Current skip behavior is opaque. I’ll make it explicit.
+
+**Current skip reasons:**
+- No usable URL/host returned.
+- Aggregator/review/social/map results are ignored: Yelp, TripAdvisor, Facebook, Instagram, Google, YellowPages, MapQuest, AllMenus.
+- Insert/upsert DB errors were incorrectly counted as skipped — this will become a visible error.
+- Duplicate website within the same town resolves through upsert rather than a brand-new row.
+
+**Changes:**
+- Track skip reasons during `scrapeTown` and `scrapeCounty` as counts, e.g. `aggregator_site`, `missing_url`, `db_error`, `duplicate_or_updated`.
+- Return `skipReasons` from scrape functions.
+- Show these reasons in the scrape toast and/or a small “Last scrape summary” panel in the town library page.
+- Include skip summary in Debug Lab/support export logs.
+
+## 4. Make closed/outdated businesses visible instead of pretending search is accurate
+
+Example: `Cheel` is currently in the `businesses` table, not `scraped_businesses`, with no website and no `last_scraped`, so it appears to be manually/previously seeded. The current scraper does not verify whether existing `businesses` are still open.
+
+**Changes:**
+- Add nullable verification fields to `businesses` and `scraped_businesses`:
+  - `last_verified_at`
+  - `verification_status` (`unknown`, `open`, `possibly_closed`, `closed`)
+  - `verification_note`
+- In admin town library, show verification status next to each result/business where available.
+- Do not auto-delete closed businesses. Flag them for admin review so we avoid removing something incorrectly.
+- Add a simple admin action to mark a business/result as `possibly_closed` or `closed` with a note.
+
+**Not included yet:** automatic web verification of closed status. That can be a second pass using targeted search/scrape queries like `"Cheel" "Grafton" closed` and business website checks. It should be deliberate because false positives are likely.
+
+## 5. Redesign `/admin/towns` to scale by State → County → Town
+
+The database currently only has 8 Ozaukee towns, so only Ozaukee shows. The page also has no structure for multi-county/multi-state growth.
+
+**Changes:**
+- Update `adminListTowns` to return `state` and `county`.
+- Redesign `/admin/towns` into a scalable directory:
 
 ```text
-┌──────────────────────────────┬───────────────────────┐
-│ Town picker + summary stats  │                       │
-├──────────────────────────────┤   Detail card         │
-│                              │   (selected row)      │
-│   Scrollable table           │                       │
-│                              │   – Found examples    │
-│                              │   – Why skipped       │
-│                              │   – Suggested action  │
-│                              │   – Re-scrape button  │
-└──────────────────────────────┴───────────────────────┘
+State filter     County filter/search
+WI
+  Ozaukee        town cards/counts
+  Milwaukee      town cards/counts
+  Waukesha       town cards/counts
+  ...
 ```
 
-- Wrap table area and detail card in a `flex` row: table gets `flex-1 min-w-0`, detail gets a fixed `w-[340px] shrink-0` sidebar.
-- Detail sidebar is `overflow-y-auto` so long excluded-reasons lists scroll inside their own column.
-- When nothing is selected, sidebar shows a muted "Select a row to inspect" placeholder (keeps layout stable, no jump when clicking).
-- Below `md` breakpoint (drawer use-case at 420px), collapse back to stacked layout (`flex-col md:flex-row`) so the existing drawer view still works.
+- Add URL search params for `state`, `county`, and text search so filters are shareable/bookmarkable.
+- Roll up counts at state and county level.
+- Keep town cards linking to the existing town library route.
 
-**2. Container fix on the admin page** (`src/routes/_authenticated/admin.debug.tsx`, line 281)
+## 6. Seed additional towns after the scalable UI exists
 
-- Add `overflow-hidden` to the embed wrapper so nothing can spill regardless of content.
-- Bump height from `h-[500px]` to `h-[560px]` (or `min-h-[500px]`) to give the new two-column layout breathing room.
-- Widen the section — currently the parent `.space-y-6` column on `/admin/debug` already runs full width, so the panel will naturally fill horizontally once the inner layout is row-based.
+After the state/county UI is in place, add town data in a controlled migration.
 
-### Out of scope
-- No changes to data fetching, server functions, RLS, or scrape behavior.
-- Drawer (`debug-drawer.tsx`) stays unchanged — the responsive `flex-col` fallback handles the narrow drawer case automatically.
-- No changes to row click behavior or re-scrape button logic.
+Initial seed target: Southeast Wisconsin counties:
+- Milwaukee
+- Waukesha
+- Washington
+- Racine
+- Kenosha
+- Walworth
+- plus existing Ozaukee
+
+For each town: `slug`, `name`, `state`, `county`, `zip_codes`, `latitude`, `longitude`.
+
+I’ll seed a practical core list first, not every municipality, unless you ask for full coverage.
+
+# Technical details
+
+- Use a schema migration for the unique index and verification columns.
+- Use data insertion for new town seed rows, not schema migration-only assumptions.
+- Keep all scrape/admin functions protected by super-admin checks.
+- Do not change public packet behavior in this pass.
+- Do not auto-promote scraped rows into live businesses; scraped results still land in Pending for review.

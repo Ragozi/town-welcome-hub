@@ -2,7 +2,21 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { withDebugLog } from "@/lib/debug-log.server";
 import { firecrawlSearch } from "./firecrawl.server";
+
+type SkipReasons = {
+  missing_url: number;
+  aggregator_site: number;
+  duplicate_or_updated: number;
+  db_error: number;
+};
+
+function emptySkipReasons(): SkipReasons {
+  return { missing_url: 0, aggregator_site: 0, duplicate_or_updated: 0, db_error: 0 };
+}
+
+const AGGREGATOR_RE = /yelp|tripadvisor|facebook|instagram|google\.|yellowpages|mapquest|allmenus/i;
 
 async function assertAdmin(userId: string) {
   const { data } = await supabaseAdmin
@@ -41,95 +55,132 @@ export const scrapeTown = createServerFn({ method: "POST" })
       limit: z.number().min(1).max(20).default(8),
     }).parse,
   )
-  .handler(async ({ data, context }) => {
-    await assertAdmin(context.userId);
+  .handler(async ({ data, context }) =>
+    withDebugLog(
+      {
+        event_type: "scrape",
+        function_name: "scrapeTown",
+        user_id: context.userId,
+        input: { townId: data.townId, categorySlugs: data.categorySlugs, zipCodes: data.zipCodes, limit: data.limit },
+      },
+      async () => {
+        await assertAdmin(context.userId);
 
-    const { data: town, error: tErr } = await supabaseAdmin
-      .from("towns")
-      .select("id, name, state, zip_codes")
-      .eq("id", data.townId)
-      .maybeSingle();
-    if (tErr || !town) throw new Response("Town not found", { status: 404 });
+        const { data: town, error: tErr } = await supabaseAdmin
+          .from("towns")
+          .select("id, name, state, county, zip_codes")
+          .eq("id", data.townId)
+          .maybeSingle();
+        if (tErr || !town) throw new Response("Town not found", { status: 404 });
 
-    let catQuery = supabaseAdmin.from("categories").select("id, slug, name").order("display_order");
-    if (data.categorySlugs && data.categorySlugs.length > 0) {
-      catQuery = catQuery.in("slug", data.categorySlugs);
-    }
-    const { data: categories } = await catQuery;
-    if (!categories || categories.length === 0) {
-      return { inserted: 0, skipped: 0, errors: [] as string[], searches: 0 };
-    }
+        let catQuery = supabaseAdmin
+          .from("categories")
+          .select("id, slug, name")
+          .order("display_order");
+        if (data.categorySlugs && data.categorySlugs.length > 0) {
+          catQuery = catQuery.in("slug", data.categorySlugs);
+        }
+        const { data: categories } = await catQuery;
+        if (!categories || categories.length === 0) {
+          return {
+            town: { id: town.id, name: town.name, state: town.state, county: town.county },
+            inserted: 0,
+            skipped: 0,
+            skipReasons: emptySkipReasons(),
+            errors: [] as string[],
+            searches: 0,
+          };
+        }
 
-    const townZips = (town.zip_codes ?? []).filter((z): z is string => typeof z === "string" && z.length > 0);
-    const zips = data.zipCodes && data.zipCodes.length > 0 ? data.zipCodes : townZips;
-    // Fall back to town-name query if no zips configured, so we degrade
-    // gracefully on towns whose zip_codes haven't been populated yet.
-    const targets: { zip: string | null; locationLabel: string }[] = zips.length > 0
-      ? zips.map((zip) => ({ zip, locationLabel: `${town.name}, ${town.state} ${zip}` }))
-      : [{ zip: null, locationLabel: `${town.name}, ${town.state}` }];
+        const townZips = (town.zip_codes ?? []).filter(
+          (z): z is string => typeof z === "string" && z.length > 0,
+        );
+        const zips = data.zipCodes && data.zipCodes.length > 0 ? data.zipCodes : townZips;
+        const targets: { zip: string | null; locationLabel: string }[] =
+          zips.length > 0
+            ? zips.map((zip) => ({ zip, locationLabel: `${town.name}, ${town.state} ${zip}` }))
+            : [{ zip: null, locationLabel: `${town.name}, ${town.state}` }];
 
-    let inserted = 0;
-    let skipped = 0;
-    let searches = 0;
-    const errors: string[] = [];
+        let inserted = 0;
+        let searches = 0;
+        const skipReasons = emptySkipReasons();
+        const errors: string[] = [];
 
-    for (const cat of categories) {
-      for (const target of targets) {
-        const query = `best ${cat.name.toLowerCase()} in ${target.locationLabel}`;
-        try {
-          const results = await firecrawlSearch(query, { limit: data.limit });
-          searches += 1;
-          for (const r of results) {
-            const website = r.url;
-            const host = hostFrom(website);
-            if (!host) {
-              skipped += 1;
-              continue;
-            }
-            // Skip aggregator/review sites — we want the business' own site
-            if (
-              /yelp|tripadvisor|facebook|instagram|google\.|yellowpages|mapquest|allmenus/i.test(host)
-            ) {
-              skipped += 1;
-              continue;
-            }
+        for (const cat of categories) {
+          for (const target of targets) {
+            const query = `best ${cat.name.toLowerCase()} in ${target.locationLabel}`;
+            try {
+              const results = await firecrawlSearch(query, { limit: data.limit });
+              searches += 1;
+              for (const r of results) {
+                const website = r.url;
+                const host = hostFrom(website);
+                if (!host) {
+                  skipReasons.missing_url += 1;
+                  continue;
+                }
+                if (AGGREGATOR_RE.test(host)) {
+                  skipReasons.aggregator_site += 1;
+                  continue;
+                }
 
-            const name = (r.title ?? host)
-              .split(/[|\-–·]/)[0]
-              .trim()
-              .slice(0, 200);
+                const name = (r.title ?? host).split(/[|\-–·]/)[0].trim().slice(0, 200);
 
-            const { error: insErr } = await supabaseAdmin.from("scraped_businesses").upsert(
-              {
-                town_id: town.id,
-                category_id: cat.id,
-                source: "firecrawl_search",
-                source_url: website,
-                source_query: query,
-                source_zip: target.zip,
-                name,
-                website,
-                description: r.description ?? null,
-                raw: r as never,
-                last_scraped_at: new Date().toISOString(),
-              },
-              { onConflict: "town_id,website", ignoreDuplicates: false },
-            );
-            if (insErr) {
-              // Unique-index expression conflict can throw; treat as skip
-              skipped += 1;
-            } else {
-              inserted += 1;
+                const { data: upserted, error: insErr } = await supabaseAdmin
+                  .from("scraped_businesses")
+                  .upsert(
+                    {
+                      town_id: town.id,
+                      category_id: cat.id,
+                      source: "firecrawl_search",
+                      source_url: website,
+                      source_query: query,
+                      source_zip: target.zip,
+                      name,
+                      website,
+                      description: r.description ?? null,
+                      raw: r as never,
+                      last_scraped_at: new Date().toISOString(),
+                    },
+                    { onConflict: "town_id,website", ignoreDuplicates: false },
+                  )
+                  .select("id, created_at, updated_at");
+
+                if (insErr) {
+                  skipReasons.db_error += 1;
+                  errors.push(`${cat.name} @ ${target.zip ?? "town"} (${host}): ${insErr.message}`);
+                } else if (upserted && upserted[0]) {
+                  const row = upserted[0];
+                  const isNew = row.created_at === row.updated_at;
+                  if (isNew) inserted += 1;
+                  else skipReasons.duplicate_or_updated += 1;
+                } else {
+                  skipReasons.duplicate_or_updated += 1;
+                }
+              }
+            } catch (e) {
+              errors.push(`${cat.name} @ ${target.zip ?? "town"}: ${(e as Error).message}`);
             }
           }
-        } catch (e) {
-          errors.push(`${cat.name} @ ${target.zip ?? "town"}: ${(e as Error).message}`);
         }
-      }
-    }
 
-    return { inserted, skipped, errors, searches };
-  });
+        const skipped =
+          skipReasons.missing_url +
+          skipReasons.aggregator_site +
+          skipReasons.duplicate_or_updated +
+          skipReasons.db_error;
+
+        return {
+          town: { id: town.id, name: town.name, state: town.state, county: town.county },
+          inserted,
+          skipped,
+          skipReasons,
+          errors,
+          searches,
+        };
+      },
+    ),
+  );
 
 // ----- Scrape county (core_business_categories deep scrape) -----
 // Iterates the canonical `core_business_categories` (the same list the gap
@@ -154,98 +205,131 @@ export const scrapeCounty = createServerFn({ method: "POST" })
       limit: z.number().min(1).max(20).default(10),
     }).parse,
   )
-  .handler(async ({ data, context }) => {
-    await assertAdmin(context.userId);
+  .handler(async ({ data, context }) =>
+    withDebugLog(
+      {
+        event_type: "scrape",
+        function_name: "scrapeCounty",
+        user_id: context.userId,
+        input: { townId: data.townId, criticalOnly: data.criticalOnly, limit: data.limit },
+      },
+      async () => {
+        await assertAdmin(context.userId);
 
-    const { data: town, error: tErr } = await supabaseAdmin
-      .from("towns")
-      .select("id, name, state, county")
-      .eq("id", data.townId)
-      .maybeSingle();
-    if (tErr || !town) throw new Response("Town not found", { status: 404 });
-    if (!town.county) {
-      throw new Response("Town has no county set", { status: 400 });
-    }
+        const { data: town, error: tErr } = await supabaseAdmin
+          .from("towns")
+          .select("id, name, state, county")
+          .eq("id", data.townId)
+          .maybeSingle();
+        if (tErr || !town) throw new Response("Town not found", { status: 404 });
+        if (!town.county) {
+          throw new Response("Town has no county set", { status: 400 });
+        }
 
-    let coreQuery = supabaseAdmin
-      .from("core_business_categories")
-      .select("id, category_slug, subcategory, label, synonyms, is_critical")
-      .order("display_order");
-    if (data.criticalOnly) {
-      coreQuery = coreQuery.eq("is_critical", true);
-    }
-    const { data: coreCats } = await coreQuery;
-    if (!coreCats || coreCats.length === 0) {
-      return { inserted: 0, skipped: 0, errors: [] as string[], searches: 0 };
-    }
+        let coreQuery = supabaseAdmin
+          .from("core_business_categories")
+          .select("id, category_slug, subcategory, label, synonyms, is_critical")
+          .order("display_order");
+        if (data.criticalOnly) {
+          coreQuery = coreQuery.eq("is_critical", true);
+        }
+        const { data: coreCats } = await coreQuery;
+        if (!coreCats || coreCats.length === 0) {
+          return {
+            town: { id: town.id, name: town.name, state: town.state, county: town.county },
+            inserted: 0,
+            skipped: 0,
+            skipReasons: emptySkipReasons(),
+            errors: [] as string[],
+            searches: 0,
+          };
+        }
 
-    // Resolve core_business_categories.category_slug → categories.id so we can
-    // tag the scraped row with the right parent category for the library UI.
-    const { data: cats } = await supabaseAdmin.from("categories").select("id, slug");
-    const catIdBySlug = new Map((cats ?? []).map((c) => [c.slug, c.id] as const));
+        const { data: cats } = await supabaseAdmin.from("categories").select("id, slug");
+        const catIdBySlug = new Map((cats ?? []).map((c) => [c.slug, c.id] as const));
 
-    let inserted = 0;
-    let skipped = 0;
-    let searches = 0;
-    const errors: string[] = [];
+        let inserted = 0;
+        let searches = 0;
+        const skipReasons = emptySkipReasons();
+        const errors: string[] = [];
 
-    for (const core of coreCats) {
-      const term = (core.synonyms && core.synonyms.length > 0 ? core.synonyms[0] : core.label)
-        .toLowerCase()
-        .trim();
-      const query = `best ${term} in ${town.county} County, ${town.state}`;
-      try {
-        const results = await firecrawlSearch(query, { limit: data.limit });
-        searches += 1;
-        for (const r of results) {
-          const website = r.url;
-          const host = hostFrom(website);
-          if (!host) {
-            skipped += 1;
-            continue;
-          }
-          if (
-            /yelp|tripadvisor|facebook|instagram|google\.|yellowpages|mapquest|allmenus/i.test(host)
-          ) {
-            skipped += 1;
-            continue;
-          }
+        for (const core of coreCats) {
+          const term = (core.synonyms && core.synonyms.length > 0 ? core.synonyms[0] : core.label)
+            .toLowerCase()
+            .trim();
+          const query = `best ${term} in ${town.county} County, ${town.state}`;
+          try {
+            const results = await firecrawlSearch(query, { limit: data.limit });
+            searches += 1;
+            for (const r of results) {
+              const website = r.url;
+              const host = hostFrom(website);
+              if (!host) {
+                skipReasons.missing_url += 1;
+                continue;
+              }
+              if (AGGREGATOR_RE.test(host)) {
+                skipReasons.aggregator_site += 1;
+                continue;
+              }
 
-          const name = (r.title ?? host)
-            .split(/[|\-–·]/)[0]
-            .trim()
-            .slice(0, 200);
+              const name = (r.title ?? host).split(/[|\-–·]/)[0].trim().slice(0, 200);
 
-          const { error: insErr } = await supabaseAdmin.from("scraped_businesses").upsert(
-            {
-              town_id: town.id,
-              category_id: catIdBySlug.get(core.category_slug) ?? null,
-              source: "firecrawl_search_county",
-              source_url: website,
-              source_query: query,
-              source_zip: null,
-              source_county: town.county,
-              name,
-              website,
-              description: r.description ?? null,
-              raw: r as never,
-              last_scraped_at: new Date().toISOString(),
-            },
-            { onConflict: "town_id,website", ignoreDuplicates: false },
-          );
-          if (insErr) {
-            skipped += 1;
-          } else {
-            inserted += 1;
+              const { data: upserted, error: insErr } = await supabaseAdmin
+                .from("scraped_businesses")
+                .upsert(
+                  {
+                    town_id: town.id,
+                    category_id: catIdBySlug.get(core.category_slug) ?? null,
+                    source: "firecrawl_search_county",
+                    source_url: website,
+                    source_query: query,
+                    source_zip: null,
+                    source_county: town.county,
+                    name,
+                    website,
+                    description: r.description ?? null,
+                    raw: r as never,
+                    last_scraped_at: new Date().toISOString(),
+                  },
+                  { onConflict: "town_id,website", ignoreDuplicates: false },
+                )
+                .select("id, created_at, updated_at");
+
+              if (insErr) {
+                skipReasons.db_error += 1;
+                errors.push(`${core.label} (${host}): ${insErr.message}`);
+              } else if (upserted && upserted[0]) {
+                const row = upserted[0];
+                const isNew = row.created_at === row.updated_at;
+                if (isNew) inserted += 1;
+                else skipReasons.duplicate_or_updated += 1;
+              } else {
+                skipReasons.duplicate_or_updated += 1;
+              }
+            }
+          } catch (e) {
+            errors.push(`${core.label}: ${(e as Error).message}`);
           }
         }
-      } catch (e) {
-        errors.push(`${core.label}: ${(e as Error).message}`);
-      }
-    }
 
-    return { inserted, skipped, errors, searches };
-  });
+        const skipped =
+          skipReasons.missing_url +
+          skipReasons.aggregator_site +
+          skipReasons.duplicate_or_updated +
+          skipReasons.db_error;
+
+        return {
+          town: { id: town.id, name: town.name, state: town.state, county: town.county },
+          inserted,
+          skipped,
+          skipReasons,
+          errors,
+          searches,
+        };
+      },
+    ),
+  );
 
 // ----- Firecrawl health check -----
 // Fires one tiny search to verify the API key is wired and the service is
@@ -291,7 +375,7 @@ export const listScrapedForTown = createServerFn({ method: "POST" })
     const { data: rows } = await supabaseAdmin
       .from("scraped_businesses")
       .select(
-        "id, town_id, category_id, source, source_url, source_query, name, address, phone, website, description, logo_url, status, excluded_reason, promoted_business_id, last_scraped_at",
+        "id, town_id, category_id, source, source_url, source_query, name, address, phone, website, description, logo_url, status, excluded_reason, promoted_business_id, last_scraped_at, last_verified_at, verification_status, verification_note",
       )
       .eq("town_id", data.townId)
       .order("status")
@@ -300,7 +384,14 @@ export const listScrapedForTown = createServerFn({ method: "POST" })
       .from("categories")
       .select("id, slug, name")
       .order("display_order");
-    return { rows: rows ?? [], categories: cats ?? [] };
+    const { data: businesses } = await supabaseAdmin
+      .from("businesses")
+      .select(
+        "id, name, website, category_id, sponsor_tier, last_scraped, last_verified_at, verification_status, verification_note",
+      )
+      .eq("town_id", data.townId)
+      .order("name");
+    return { rows: rows ?? [], categories: cats ?? [], businesses: businesses ?? [] };
   });
 
 // ----- Set status -----
@@ -323,6 +414,34 @@ export const setScrapedStatus = createServerFn({ method: "POST" })
       .from("scraped_businesses")
       .update(patch)
       .in("id", data.ids);
+    if (error) throw new Response(error.message, { status: 500 });
+    return { ok: true };
+  });
+
+// ----- Set verification status -----
+// Lets admin flag a scraped result or live business as possibly closed / closed
+// without deleting it. Surfaces in the library so we stop showing stale results.
+export const setVerificationStatus = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    z.object({
+      table: z.enum(["scraped_businesses", "businesses"]),
+      id: z.string().uuid(),
+      status: z.enum(["unknown", "open", "possibly_closed", "closed"]),
+      note: z.string().max(500).optional(),
+    }).parse,
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.userId);
+    const patch = {
+      verification_status: data.status,
+      verification_note: data.note ?? null,
+      last_verified_at: new Date().toISOString(),
+    };
+    const { error } =
+      data.table === "scraped_businesses"
+        ? await supabaseAdmin.from("scraped_businesses").update(patch).eq("id", data.id)
+        : await supabaseAdmin.from("businesses").update(patch).eq("id", data.id);
     if (error) throw new Response(error.message, { status: 500 });
     return { ok: true };
   });
@@ -380,7 +499,9 @@ export const adminListTowns = createServerFn({ method: "GET" })
     await assertAdmin(context.userId);
     const { data: towns } = await supabaseAdmin
       .from("towns")
-      .select("id, slug, name, state")
+      .select("id, slug, name, state, county")
+      .order("state")
+      .order("county")
       .order("name");
     const { data: counts } = await supabaseAdmin
       .from("scraped_businesses")

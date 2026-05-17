@@ -8,6 +8,7 @@ import {
   scrapeTown,
   scrapeCounty,
   setScrapedStatus,
+  setVerificationStatus,
   promoteToBusiness,
 } from "@/lib/scraped.functions";
 import { Button } from "@/components/ui/button";
@@ -45,6 +46,14 @@ function TownLibrary() {
   const [scrapeLimit, setScrapeLimit] = useState(8);
   const [promoting, setPromoting] = useState<{ id: string; name: string } | null>(null);
   const [promoteTier, setPromoteTier] = useState<"bronze" | "silver" | "gold" | "s_tier">("bronze");
+  const [lastSummary, setLastSummary] = useState<{
+    label: string;
+    inserted: number;
+    skipped: number;
+    searches: number;
+    skipReasons: Record<string, number>;
+    errors: string[];
+  } | null>(null);
 
   const townQ = useQuery({
     queryKey: ["town", slug],
@@ -69,8 +78,16 @@ function TownLibrary() {
   const scrapeMut = useMutation({
     mutationFn: (limit: number) => scrapeFn({ data: { townId: townQ.data!.id, limit } }),
     onSuccess: (r) => {
+      setLastSummary({
+        label: `Town scrape (${r.searches} searches)`,
+        inserted: r.inserted,
+        skipped: r.skipped,
+        searches: r.searches,
+        skipReasons: r.skipReasons,
+        errors: r.errors,
+      });
       toast.success(`Scrape complete: ${r.inserted} new, ${r.skipped} skipped`);
-      if (r.errors.length) toast.warning(r.errors.join(" • "));
+      if (r.errors.length) toast.warning(`${r.errors.length} error(s) — see summary panel`);
       setScrapeOpen(false);
       qc.invalidateQueries({ queryKey: ["scraped", townQ.data?.id] });
     },
@@ -81,10 +98,16 @@ function TownLibrary() {
   const scrapeCountyMut = useMutation({
     mutationFn: () => scrapeCountyFn({ data: { townId: townQ.data!.id, limit: 10 } }),
     onSuccess: (r) => {
-      toast.success(
-        `County deep scrape: ${r.inserted} new, ${r.skipped} skipped (${r.searches} searches)`,
-      );
-      if (r.errors.length) toast.warning(r.errors.join(" • "));
+      setLastSummary({
+        label: `County deep scrape (${r.searches} searches)`,
+        inserted: r.inserted,
+        skipped: r.skipped,
+        searches: r.searches,
+        skipReasons: r.skipReasons,
+        errors: r.errors,
+      });
+      toast.success(`County deep scrape: ${r.inserted} new, ${r.skipped} skipped`);
+      if (r.errors.length) toast.warning(`${r.errors.length} error(s) — see summary panel`);
       qc.invalidateQueries({ queryKey: ["scraped", townQ.data?.id] });
     },
     onError: (e) =>
@@ -114,6 +137,21 @@ function TownLibrary() {
       qc.invalidateQueries({ queryKey: ["scraped", townQ.data?.id] });
     },
     onError: (e) => toast.error("Promote failed", { description: (e as Error).message }),
+  });
+
+  const verifyFn = useServerFn(setVerificationStatus);
+  const verifyMut = useMutation({
+    mutationFn: (vars: {
+      table: "scraped_businesses" | "businesses";
+      id: string;
+      status: "unknown" | "open" | "possibly_closed" | "closed";
+      note?: string;
+    }) => verifyFn({ data: vars }),
+    onSuccess: () => {
+      toast.success("Verification updated");
+      qc.invalidateQueries({ queryKey: ["scraped", townQ.data?.id] });
+    },
+    onError: (e) => toast.error("Update failed", { description: (e as Error).message }),
   });
 
   const rows = listQ.data?.rows ?? [];
@@ -177,6 +215,61 @@ function TownLibrary() {
           </Button>
         </div>
       </div>
+
+      {lastSummary && (
+        <div className="rounded-xl border border-border bg-card/60 p-4 text-sm">
+          <div className="flex items-center justify-between">
+            <div className="font-semibold">{lastSummary.label}</div>
+            <button
+              type="button"
+              onClick={() => setLastSummary(null)}
+              className="text-xs text-muted-foreground hover:text-foreground"
+            >
+              dismiss
+            </button>
+          </div>
+          <div className="mt-2 flex flex-wrap gap-2 text-xs">
+            <span className="rounded-full bg-emerald-100 px-2 py-0.5 font-semibold uppercase tracking-wider text-emerald-800">
+              {lastSummary.inserted} new
+            </span>
+            <span className="rounded-full bg-zinc-100 px-2 py-0.5 font-semibold uppercase tracking-wider text-zinc-800">
+              {lastSummary.skipped} skipped
+            </span>
+            {Object.entries(lastSummary.skipReasons)
+              .filter(([, v]) => v > 0)
+              .map(([k, v]) => (
+                <span
+                  key={k}
+                  className="rounded-full bg-amber-100 px-2 py-0.5 text-amber-900"
+                  title={skipReasonHelp(k)}
+                >
+                  {k.replace(/_/g, " ")}: {v}
+                </span>
+              ))}
+            {lastSummary.errors.length > 0 && (
+              <span className="rounded-full bg-rose-100 px-2 py-0.5 font-semibold text-rose-800">
+                {lastSummary.errors.length} error(s)
+              </span>
+            )}
+          </div>
+          {lastSummary.errors.length > 0 && (
+            <details className="mt-3 text-xs">
+              <summary className="cursor-pointer text-muted-foreground">Show errors</summary>
+              <ul className="mt-2 space-y-1 font-mono text-rose-700">
+                {lastSummary.errors.slice(0, 20).map((e, i) => (
+                  <li key={i}>• {e}</li>
+                ))}
+              </ul>
+            </details>
+          )}
+          <p className="mt-3 text-xs text-muted-foreground">
+            Skip categories: <strong>aggregator_site</strong> (Yelp/TripAdvisor/Facebook/Instagram/Google/YellowPages/MapQuest/AllMenus filtered out — we want the business' own site),{" "}
+            <strong>duplicate_or_updated</strong> (same URL already in this town's library — record was refreshed in place),{" "}
+            <strong>missing_url</strong> (Firecrawl result had no parseable hostname),{" "}
+            <strong>db_error</strong> (insert failed — see error list).
+          </p>
+        </div>
+      )}
 
       <div className="flex gap-2 border-b border-border pb-2 text-sm">
         {(["pending", "included", "excluded", "promoted"] as Tab[]).map((t) => (
@@ -393,4 +486,19 @@ function TownLibrary() {
       </Dialog>
     </div>
   );
+}
+
+function skipReasonHelp(key: string): string {
+  switch (key) {
+    case "aggregator_site":
+      return "URL was Yelp/TripAdvisor/Facebook/Instagram/Google/YellowPages/MapQuest/AllMenus — we filter these so the library captures business' own sites.";
+    case "duplicate_or_updated":
+      return "Same website already exists for this town — record was updated in place instead of inserted.";
+    case "missing_url":
+      return "Firecrawl returned a result with no parseable hostname.";
+    case "db_error":
+      return "Database insert failed — see error list below.";
+    default:
+      return key;
+  }
 }
