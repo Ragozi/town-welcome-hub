@@ -78,8 +78,16 @@ function TownLibrary() {
   const scrapeMut = useMutation({
     mutationFn: (limit: number) => scrapeFn({ data: { townId: townQ.data!.id, limit } }),
     onSuccess: (r) => {
+      setLastSummary({
+        label: `Town scrape (${r.searches} searches)`,
+        inserted: r.inserted,
+        skipped: r.skipped,
+        searches: r.searches,
+        skipReasons: r.skipReasons,
+        errors: r.errors,
+      });
       toast.success(`Scrape complete: ${r.inserted} new, ${r.skipped} skipped`);
-      if (r.errors.length) toast.warning(r.errors.join(" • "));
+      if (r.errors.length) toast.warning(`${r.errors.length} error(s) — see summary panel`);
       setScrapeOpen(false);
       qc.invalidateQueries({ queryKey: ["scraped", townQ.data?.id] });
     },
@@ -90,10 +98,16 @@ function TownLibrary() {
   const scrapeCountyMut = useMutation({
     mutationFn: () => scrapeCountyFn({ data: { townId: townQ.data!.id, limit: 10 } }),
     onSuccess: (r) => {
-      toast.success(
-        `County deep scrape: ${r.inserted} new, ${r.skipped} skipped (${r.searches} searches)`,
-      );
-      if (r.errors.length) toast.warning(r.errors.join(" • "));
+      setLastSummary({
+        label: `County deep scrape (${r.searches} searches)`,
+        inserted: r.inserted,
+        skipped: r.skipped,
+        searches: r.searches,
+        skipReasons: r.skipReasons,
+        errors: r.errors,
+      });
+      toast.success(`County deep scrape: ${r.inserted} new, ${r.skipped} skipped`);
+      if (r.errors.length) toast.warning(`${r.errors.length} error(s) — see summary panel`);
       qc.invalidateQueries({ queryKey: ["scraped", townQ.data?.id] });
     },
     onError: (e) =>
