@@ -2,6 +2,9 @@ import { createFileRoute, Link, Outlet, useNavigate } from "@tanstack/react-rout
 import { useEffect } from "react";
 import { useAuth } from "@/lib/auth";
 import { Loader2 } from "lucide-react";
+import { DebugDrawerProvider } from "@/components/debug-lab/debug-drawer-provider";
+import { DebugDrawer } from "@/components/debug-lab/debug-drawer";
+import { DebugFab } from "@/components/debug-lab/debug-fab";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   component: AdminLayout,
