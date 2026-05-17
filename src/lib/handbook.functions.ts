@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { withDebugLog } from "@/lib/debug-log.server";
 import type { Business, Category, Town } from "@/lib/towns";
 import type { Packet } from "@/lib/packets";
 
@@ -30,6 +31,9 @@ export const getHandbookData = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }): Promise<HandbookData | null> => {
     const { userId } = context;
+    return withDebugLog(
+      { event_type: "packet", function_name: "getHandbookData", input: { slug: data.slug }, user_id: userId },
+      async () => {
 
     const { data: packet } = await supabaseAdmin
       .from("packets")
@@ -86,4 +90,6 @@ export const getHandbookData = createServerFn({ method: "POST" })
       liveUrl: `${origin}/p/${packet.slug}`,
       origin,
     };
+      },
+    );
   });
