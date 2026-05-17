@@ -23,6 +23,79 @@ function hostFrom(url: string | undefined): string | null {
   }
 }
 
+// Normalize URL for deduplication: lowercase, strip trailing slash,
+// strip default ports. PostgREST onConflict requires plain-column unique
+// indexes (not functional), so we must normalize at write time.
+function normalizeUrl(url: string): string {
+  try {
+    const u = new URL(url);
+    u.hash = "";
+    let s = u.toString().toLowerCase();
+    if (s.endsWith("/") && u.pathname === "/") s = s.slice(0, -1);
+    return s;
+  } catch {
+    return url.toLowerCase().trim();
+  }
+}
+
+// Quick liveness check that doesn't burn Firecrawl credits. Tries a GET
+// with a short timeout and scans the first 50KB for "permanently closed"
+// signals that Google's index doesn't yet reflect. Cloudflare Workers
+// supports `fetch` natively.
+async function verifyUrlLive(
+  url: string,
+): Promise<{ live: true } | { live: false; reason: string }> {
+  try {
+    const res = await fetch(url, {
+      method: "GET",
+      redirect: "follow",
+      signal: AbortSignal.timeout(5000),
+      headers: {
+        "User-Agent": "Mozilla/5.0 (compatible; HearthHandbookBot/1.0; +https://hearthhandbook.com)",
+        Accept: "text/html,application/xhtml+xml",
+      },
+    });
+    if (res.status === 404 || res.status === 410) {
+      return { live: false, reason: `http_${res.status}` };
+    }
+    if (!res.ok) {
+      return { live: false, reason: `http_${res.status}` };
+    }
+    const reader = res.body?.getReader();
+    if (!reader) return { live: true };
+    let bytesRead = 0;
+    const chunks: Uint8Array[] = [];
+    while (bytesRead < 50_000) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+      bytesRead += value.length;
+    }
+    void reader.cancel();
+    const text = new TextDecoder().decode(
+      new Uint8Array(
+        chunks.reduce<number[]>((acc, c) => {
+          for (const b of c) acc.push(b);
+          return acc;
+        }, []),
+      ),
+    );
+    const lowered = text.toLowerCase();
+    if (
+      /permanently closed|closed permanently|business is closed|we have closed|we are now closed|no longer in business/.test(
+        lowered,
+      )
+    ) {
+      return { live: false, reason: "marked_closed" };
+    }
+    return { live: true };
+  } catch (e) {
+    const msg = (e as Error).message;
+    if (/timeout|abort/i.test(msg)) return { live: false, reason: "timeout" };
+    return { live: false, reason: "fetch_error" };
+  }
+}
+
 // ----- Scrape town -----
 // Iterates one Firecrawl search per (category × zip code). The query is the
 // strongest signal Firecrawl/Google use for geographic targeting, so we put
@@ -99,6 +172,7 @@ export const scrapeTown = createServerFn({ method: "POST" })
               .trim()
               .slice(0, 200);
 
+            const normalized = normalizeUrl(website);
             const { error: insErr } = await supabaseAdmin.from("scraped_businesses").upsert(
               {
                 town_id: town.id,
@@ -108,7 +182,7 @@ export const scrapeTown = createServerFn({ method: "POST" })
                 source_query: query,
                 source_zip: target.zip,
                 name,
-                website,
+                website: normalized,
                 description: r.description ?? null,
                 raw: r as never,
                 last_scraped_at: new Date().toISOString(),
@@ -216,25 +290,35 @@ export const scrapeCounty = createServerFn({ method: "POST" })
             .trim()
             .slice(0, 200);
 
-          const { error: insErr } = await supabaseAdmin.from("scraped_businesses").upsert(
-            {
-              town_id: town.id,
-              category_id: catIdBySlug.get(core.category_slug) ?? null,
-              source: "firecrawl_search_county",
-              source_url: website,
-              source_query: query,
-              source_zip: null,
-              source_county: town.county,
-              name,
-              website,
-              description: r.description ?? null,
-              raw: r as never,
-              last_scraped_at: new Date().toISOString(),
-            },
-            { onConflict: "town_id,website", ignoreDuplicates: false },
-          );
+          // Live-URL check — guards against stale Google index entries for
+          // businesses that have closed since they were last crawled
+          // (e.g. cached snippets returning a coupon for a business that
+          // shut down last year).
+          const liveness = await verifyUrlLive(website);
+          const normalized = normalizeUrl(website);
+          const isLive = liveness.live;
+          const row = {
+            town_id: town.id,
+            category_id: catIdBySlug.get(core.category_slug) ?? null,
+            source: "firecrawl_search_county" as const,
+            source_url: website,
+            source_query: query,
+            source_zip: null,
+            source_county: town.county,
+            name,
+            website: normalized,
+            description: r.description ?? null,
+            raw: r as never,
+            last_scraped_at: new Date().toISOString(),
+            status: (isLive ? "pending" : "excluded") as "pending" | "excluded",
+            excluded_reason: isLive ? null : (liveness as { reason: string }).reason,
+          };
+          const { error: insErr } = await supabaseAdmin
+            .from("scraped_businesses")
+            .upsert(row, { onConflict: "town_id,website", ignoreDuplicates: false });
           if (insErr) {
             skipped += 1;
+            errors.push(`${core.label} upsert: ${insErr.message}`);
           } else {
             inserted += 1;
           }
