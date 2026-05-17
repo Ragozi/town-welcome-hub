@@ -113,6 +113,42 @@ export type Database = {
         }
         Relationships: []
       }
+      core_business_categories: {
+        Row: {
+          category_slug: string
+          created_at: string
+          display_order: number
+          id: string
+          is_critical: boolean
+          label: string
+          min_expected: number
+          subcategory: string | null
+          synonyms: string[]
+        }
+        Insert: {
+          category_slug: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_critical?: boolean
+          label: string
+          min_expected?: number
+          subcategory?: string | null
+          synonyms?: string[]
+        }
+        Update: {
+          category_slug?: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_critical?: boolean
+          label?: string
+          min_expected?: number
+          subcategory?: string | null
+          synonyms?: string[]
+        }
+        Relationships: []
+      }
       debug_logs: {
         Row: {
           created_at: string
