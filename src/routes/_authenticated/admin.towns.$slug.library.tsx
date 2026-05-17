@@ -139,6 +139,21 @@ function TownLibrary() {
     onError: (e) => toast.error("Promote failed", { description: (e as Error).message }),
   });
 
+  const verifyFn = useServerFn(setVerificationStatus);
+  const verifyMut = useMutation({
+    mutationFn: (vars: {
+      table: "scraped_businesses" | "businesses";
+      id: string;
+      status: "unknown" | "open" | "possibly_closed" | "closed";
+      note?: string;
+    }) => verifyFn({ data: vars }),
+    onSuccess: () => {
+      toast.success("Verification updated");
+      qc.invalidateQueries({ queryKey: ["scraped", townQ.data?.id] });
+    },
+    onError: (e) => toast.error("Update failed", { description: (e as Error).message }),
+  });
+
   const rows = listQ.data?.rows ?? [];
   const cats = listQ.data?.categories ?? [];
   const catById = useMemo(() => new Map(cats.map((c) => [c.id, c])), [cats]);
