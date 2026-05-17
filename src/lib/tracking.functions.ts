@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { logDebug } from "@/lib/debug-log.server";
 
 const EventTypeSchema = z.enum([
   "landing_view",
@@ -87,7 +88,21 @@ export const logEvent = createServerFn({ method: "POST" })
 
     if (error) {
       console.error("[tracking] insert failed", error);
+      logDebug({
+        event_type: "database",
+        function_name: "logEvent",
+        status: "error",
+        message: error.message,
+        payload: { event_type: data.event_type, packet_slug: data.packet_slug },
+      });
       return { ok: false };
     }
+    logDebug({
+      event_type: "database",
+      function_name: "logEvent",
+      status: "success",
+      message: data.event_type,
+      payload: { event_type: data.event_type, source: data.source, packet_slug: data.packet_slug, device: detectDevice(ua) },
+    });
     return { ok: true };
   });

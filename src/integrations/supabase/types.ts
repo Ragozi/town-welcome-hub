@@ -113,6 +113,42 @@ export type Database = {
         }
         Relationships: []
       }
+      debug_logs: {
+        Row: {
+          created_at: string
+          duration_ms: number | null
+          event_type: string
+          function_name: string
+          id: string
+          message: string
+          payload: Json
+          status: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          duration_ms?: number | null
+          event_type: string
+          function_name: string
+          id?: string
+          message?: string
+          payload?: Json
+          status: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          duration_ms?: number | null
+          event_type?: string
+          function_name?: string
+          id?: string
+          message?: string
+          payload?: Json
+          status?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       expenses: {
         Row: {
           amount: number

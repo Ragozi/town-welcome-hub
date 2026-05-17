@@ -2,6 +2,9 @@ import { createFileRoute, Link, Outlet, useNavigate } from "@tanstack/react-rout
 import { useEffect } from "react";
 import { useAuth } from "@/lib/auth";
 import { Loader2 } from "lucide-react";
+import { DebugDrawerProvider } from "@/components/debug-lab/debug-drawer-provider";
+import { DebugDrawer } from "@/components/debug-lab/debug-drawer";
+import { DebugFab } from "@/components/debug-lab/debug-fab";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   component: AdminLayout,
@@ -25,13 +28,14 @@ function AdminLayout() {
   if (!isAdmin) return null;
 
   return (
-    <div className="space-y-6">
-      <div>
-        <p className="eyebrow">// Admin</p>
-        <h1 className="font-display text-3xl font-extrabold uppercase tracking-tight">
-          Operations
-        </h1>
-      </div>
+    <DebugDrawerProvider>
+      <div className="space-y-6">
+        <div>
+          <p className="eyebrow">// Admin</p>
+          <h1 className="font-display text-3xl font-extrabold uppercase tracking-tight">
+            Operations
+          </h1>
+        </div>
       <nav className="flex flex-wrap gap-2 border-b border-border pb-4 text-sm">
         <Link
           to="/admin"
@@ -94,8 +98,21 @@ function AdminLayout() {
         >
           Invitations
         </Link>
-      </nav>
-      <Outlet />
-    </div>
+        <Link
+          to="/admin/debug"
+          activeProps={{
+            className:
+              "!bg-gradient-to-br !from-zinc-800 !via-zinc-900 !to-amber-700 !text-amber-200 !border-amber-500/60 !shadow-[0_8px_24px_-6px_rgba(245,158,11,0.55)] !-translate-y-0.5",
+          }}
+          className="inline-flex items-center gap-1 rounded-full border border-border bg-background/60 px-4 py-2 font-display font-bold uppercase tracking-wide transition-all duration-200 hover:-translate-y-0.5 hover:border-amber-500/60 hover:bg-zinc-900 hover:text-amber-300 hover:shadow-[0_6px_18px_-8px_rgba(245,158,11,0.45)]"
+        >
+          🔧 Debug Lab
+        </Link>
+        </nav>
+        <Outlet />
+      </div>
+      <DebugDrawer />
+      <DebugFab />
+    </DebugDrawerProvider>
   );
 }

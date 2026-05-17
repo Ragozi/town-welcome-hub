@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { withDebugLog } from "@/lib/debug-log.server";
 import type {
   PublicBusiness,
   PublicCategory,
@@ -21,7 +22,10 @@ export const getPublicPacket = createServerFn({ method: "GET" })
   .inputValidator((input: unknown) =>
     z.object({ slug: z.string().min(1).max(64) }).parse(input),
   )
-  .handler(async ({ data }): Promise<PublicPacket | null> => {
+  .handler(async ({ data }): Promise<PublicPacket | null> =>
+    withDebugLog(
+      { event_type: "packet", function_name: "getPublicPacket", input: { slug: data.slug } },
+      async () => {
     const { data: packet } = await supabaseAdmin
       .from("packets")
       .select(
@@ -78,7 +82,9 @@ export const getPublicPacket = createServerFn({ method: "GET" })
       categories: (categories ?? []) as PublicCategory[],
       businesses,
     };
-  });
+      },
+    ),
+  );
 
 // issuePdfToken removed: PDF rendering moved client-side, no signed URL needed.
 

@@ -31,6 +31,7 @@ import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authentic
 import { Route as AuthenticatedAdminInviteCodesRouteImport } from './routes/_authenticated/admin.invite-codes'
 import { Route as AuthenticatedAdminFinanceRouteImport } from './routes/_authenticated/admin.finance'
 import { Route as AuthenticatedAdminEventsRouteImport } from './routes/_authenticated/admin.events'
+import { Route as AuthenticatedAdminDebugRouteImport } from './routes/_authenticated/admin.debug'
 import { Route as AuthenticatedAdminTownsIndexRouteImport } from './routes/_authenticated/admin.towns.index'
 import { Route as AuthenticatedAdminTownsSlugLibraryRouteImport } from './routes/_authenticated/admin.towns.$slug.library'
 
@@ -147,6 +148,11 @@ const AuthenticatedAdminEventsRoute =
     path: '/events',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const AuthenticatedAdminDebugRoute = AuthenticatedAdminDebugRouteImport.update({
+  id: '/debug',
+  path: '/debug',
+  getParentRoute: () => AuthenticatedAdminRoute,
+} as any)
 const AuthenticatedAdminTownsIndexRoute =
   AuthenticatedAdminTownsIndexRouteImport.update({
     id: '/towns/',
@@ -173,6 +179,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof AuthenticatedSettingsRoute
   '/p/$slug': typeof PSlugRoute
   '/r/$referralSlug': typeof RReferralSlugRoute
+  '/admin/debug': typeof AuthenticatedAdminDebugRoute
   '/admin/events': typeof AuthenticatedAdminEventsRoute
   '/admin/finance': typeof AuthenticatedAdminFinanceRoute
   '/admin/invite-codes': typeof AuthenticatedAdminInviteCodesRoute
@@ -197,6 +204,7 @@ export interface FileRoutesByTo {
   '/settings': typeof AuthenticatedSettingsRoute
   '/p/$slug': typeof PSlugRoute
   '/r/$referralSlug': typeof RReferralSlugRoute
+  '/admin/debug': typeof AuthenticatedAdminDebugRoute
   '/admin/events': typeof AuthenticatedAdminEventsRoute
   '/admin/finance': typeof AuthenticatedAdminFinanceRoute
   '/admin/invite-codes': typeof AuthenticatedAdminInviteCodesRoute
@@ -224,6 +232,7 @@ export interface FileRoutesById {
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/p/$slug': typeof PSlugRoute
   '/r/$referralSlug': typeof RReferralSlugRoute
+  '/_authenticated/admin/debug': typeof AuthenticatedAdminDebugRoute
   '/_authenticated/admin/events': typeof AuthenticatedAdminEventsRoute
   '/_authenticated/admin/finance': typeof AuthenticatedAdminFinanceRoute
   '/_authenticated/admin/invite-codes': typeof AuthenticatedAdminInviteCodesRoute
@@ -251,6 +260,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/p/$slug'
     | '/r/$referralSlug'
+    | '/admin/debug'
     | '/admin/events'
     | '/admin/finance'
     | '/admin/invite-codes'
@@ -275,6 +285,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/p/$slug'
     | '/r/$referralSlug'
+    | '/admin/debug'
     | '/admin/events'
     | '/admin/finance'
     | '/admin/invite-codes'
@@ -301,6 +312,7 @@ export interface FileRouteTypes {
     | '/_authenticated/settings'
     | '/p/$slug'
     | '/r/$referralSlug'
+    | '/_authenticated/admin/debug'
     | '/_authenticated/admin/events'
     | '/_authenticated/admin/finance'
     | '/_authenticated/admin/invite-codes'
@@ -484,6 +496,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminEventsRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/debug': {
+      id: '/_authenticated/admin/debug'
+      path: '/debug'
+      fullPath: '/admin/debug'
+      preLoaderRoute: typeof AuthenticatedAdminDebugRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/admin/towns/': {
       id: '/_authenticated/admin/towns/'
       path: '/towns'
@@ -502,6 +521,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedAdminRouteChildren {
+  AuthenticatedAdminDebugRoute: typeof AuthenticatedAdminDebugRoute
   AuthenticatedAdminEventsRoute: typeof AuthenticatedAdminEventsRoute
   AuthenticatedAdminFinanceRoute: typeof AuthenticatedAdminFinanceRoute
   AuthenticatedAdminInviteCodesRoute: typeof AuthenticatedAdminInviteCodesRoute
@@ -512,6 +532,7 @@ interface AuthenticatedAdminRouteChildren {
 }
 
 const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
+  AuthenticatedAdminDebugRoute: AuthenticatedAdminDebugRoute,
   AuthenticatedAdminEventsRoute: AuthenticatedAdminEventsRoute,
   AuthenticatedAdminFinanceRoute: AuthenticatedAdminFinanceRoute,
   AuthenticatedAdminInviteCodesRoute: AuthenticatedAdminInviteCodesRoute,
@@ -563,13 +584,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
