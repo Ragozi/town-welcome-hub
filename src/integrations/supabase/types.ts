@@ -558,6 +558,7 @@ export type Database = {
           promoted_business_id: string | null
           raw: Json
           source: string
+          source_county: string | null
           source_query: string | null
           source_url: string | null
           status: Database["public"]["Enums"]["scraped_business_status"]
@@ -579,6 +580,7 @@ export type Database = {
           promoted_business_id?: string | null
           raw?: Json
           source?: string
+          source_county?: string | null
           source_query?: string | null
           source_url?: string | null
           status?: Database["public"]["Enums"]["scraped_business_status"]
@@ -600,6 +602,7 @@ export type Database = {
           promoted_business_id?: string | null
           raw?: Json
           source?: string
+          source_county?: string | null
           source_query?: string | null
           source_url?: string | null
           status?: Database["public"]["Enums"]["scraped_business_status"]

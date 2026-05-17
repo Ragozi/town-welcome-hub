@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   listScrapedForTown,
   scrapeTown,
+  scrapeCounty,
   setScrapedStatus,
   promoteToBusiness,
 } from "@/lib/scraped.functions";
@@ -26,7 +27,7 @@ import {
   DialogFooter,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { ArrowLeft, Loader2, Globe, RefreshCw, Check, X, Star } from "lucide-react";
+import { ArrowLeft, Loader2, Globe, RefreshCw, Check, X, Star, Building2 } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/admin/towns/$slug/library")({
@@ -74,6 +75,20 @@ function TownLibrary() {
       qc.invalidateQueries({ queryKey: ["scraped", townQ.data?.id] });
     },
     onError: (e) => toast.error("Scrape failed", { description: (e as Error).message }),
+  });
+
+  const scrapeCountyFn = useServerFn(scrapeCounty);
+  const scrapeCountyMut = useMutation({
+    mutationFn: () => scrapeCountyFn({ data: { townId: townQ.data!.id, limit: 10 } }),
+    onSuccess: (r) => {
+      toast.success(
+        `County deep scrape: ${r.inserted} new, ${r.skipped} skipped (${r.searches} searches)`,
+      );
+      if (r.errors.length) toast.warning(r.errors.join(" • "));
+      qc.invalidateQueries({ queryKey: ["scraped", townQ.data?.id] });
+    },
+    onError: (e) =>
+      toast.error("County scrape failed", { description: (e as Error).message }),
   });
 
   const setStatusFn = useServerFn(setScrapedStatus);
@@ -142,9 +157,25 @@ function TownLibrary() {
             {townQ.data.name} <span className="text-muted-foreground">· library</span>
           </h2>
         </div>
-        <Button onClick={() => setScrapeOpen(true)} className="rounded-full">
-          <RefreshCw className="mr-1.5 h-4 w-4" /> Scrape now
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => scrapeCountyMut.mutate()}
+            disabled={scrapeCountyMut.isPending}
+            className="rounded-full"
+            title="Iterates all core business types (pizza, ortho, urgent care…) at the county level"
+          >
+            {scrapeCountyMut.isPending ? (
+              <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+            ) : (
+              <Building2 className="mr-1.5 h-4 w-4" />
+            )}
+            Deep scrape (county)
+          </Button>
+          <Button onClick={() => setScrapeOpen(true)} className="rounded-full">
+            <RefreshCw className="mr-1.5 h-4 w-4" /> Scrape now
+          </Button>
+        </div>
       </div>
 
       <div className="flex gap-2 border-b border-border pb-2 text-sm">

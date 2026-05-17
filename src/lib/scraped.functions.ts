@@ -131,6 +131,122 @@ export const scrapeTown = createServerFn({ method: "POST" })
     return { inserted, skipped, errors, searches };
   });
 
+// ----- Scrape county (core_business_categories deep scrape) -----
+// Iterates the canonical `core_business_categories` (the same list the gap
+// analysis grades against) and fires one Firecrawl search per core category
+// at the COUNTY level (e.g. "best pizza in Ozaukee County, WI"). Use this
+// for categories where buyers reasonably drive across town lines
+// (orthodontist, urgent care, hardware). For hyperlocal categories
+// (coffee/pizza/ice cream), the per-zip `scrapeTown` is the better tool.
+//
+// Results are anchored to the requesting town_id (so they show up in that
+// town's library), tagged with `source_county`, and tagged with
+// `source = 'firecrawl_search_county'` so we can tell them apart in analytics.
+//
+// Cost: one search per core_business_category (currently 15) = 15 searches
+// per click, charged at 2 Firecrawl credits per 10 results.
+export const scrapeCounty = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    z.object({
+      townId: z.string().uuid(),
+      criticalOnly: z.boolean().default(false),
+      limit: z.number().min(1).max(20).default(10),
+    }).parse,
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.userId);
+
+    const { data: town, error: tErr } = await supabaseAdmin
+      .from("towns")
+      .select("id, name, state, county")
+      .eq("id", data.townId)
+      .maybeSingle();
+    if (tErr || !town) throw new Response("Town not found", { status: 404 });
+    if (!town.county) {
+      throw new Response("Town has no county set", { status: 400 });
+    }
+
+    let coreQuery = supabaseAdmin
+      .from("core_business_categories")
+      .select("id, category_slug, subcategory, label, synonyms, is_critical")
+      .order("display_order");
+    if (data.criticalOnly) {
+      coreQuery = coreQuery.eq("is_critical", true);
+    }
+    const { data: coreCats } = await coreQuery;
+    if (!coreCats || coreCats.length === 0) {
+      return { inserted: 0, skipped: 0, errors: [] as string[], searches: 0 };
+    }
+
+    // Resolve core_business_categories.category_slug → categories.id so we can
+    // tag the scraped row with the right parent category for the library UI.
+    const { data: cats } = await supabaseAdmin.from("categories").select("id, slug");
+    const catIdBySlug = new Map((cats ?? []).map((c) => [c.slug, c.id] as const));
+
+    let inserted = 0;
+    let skipped = 0;
+    let searches = 0;
+    const errors: string[] = [];
+
+    for (const core of coreCats) {
+      const term = (core.synonyms && core.synonyms.length > 0 ? core.synonyms[0] : core.label)
+        .toLowerCase()
+        .trim();
+      const query = `best ${term} in ${town.county} County, ${town.state}`;
+      try {
+        const results = await firecrawlSearch(query, { limit: data.limit });
+        searches += 1;
+        for (const r of results) {
+          const website = r.url;
+          const host = hostFrom(website);
+          if (!host) {
+            skipped += 1;
+            continue;
+          }
+          if (
+            /yelp|tripadvisor|facebook|instagram|google\.|yellowpages|mapquest|allmenus/i.test(host)
+          ) {
+            skipped += 1;
+            continue;
+          }
+
+          const name = (r.title ?? host)
+            .split(/[|\-–·]/)[0]
+            .trim()
+            .slice(0, 200);
+
+          const { error: insErr } = await supabaseAdmin.from("scraped_businesses").upsert(
+            {
+              town_id: town.id,
+              category_id: catIdBySlug.get(core.category_slug) ?? null,
+              source: "firecrawl_search_county",
+              source_url: website,
+              source_query: query,
+              source_zip: null,
+              source_county: town.county,
+              name,
+              website,
+              description: r.description ?? null,
+              raw: r as never,
+              last_scraped_at: new Date().toISOString(),
+            },
+            { onConflict: "town_id,website", ignoreDuplicates: false },
+          );
+          if (insErr) {
+            skipped += 1;
+          } else {
+            inserted += 1;
+          }
+        }
+      } catch (e) {
+        errors.push(`${core.label}: ${(e as Error).message}`);
+      }
+    }
+
+    return { inserted, skipped, errors, searches };
+  });
+
 // ----- Firecrawl health check -----
 // Fires one tiny search to verify the API key is wired and the service is
 // reachable. Surfaces in Debug Lab as a scrape event. Cheap (1 result = 2 credits).
