@@ -499,7 +499,9 @@ export const adminListTowns = createServerFn({ method: "GET" })
     await assertAdmin(context.userId);
     const { data: towns } = await supabaseAdmin
       .from("towns")
-      .select("id, slug, name, state")
+      .select("id, slug, name, state, county")
+      .order("state")
+      .order("county")
       .order("name");
     const { data: counts } = await supabaseAdmin
       .from("scraped_businesses")
