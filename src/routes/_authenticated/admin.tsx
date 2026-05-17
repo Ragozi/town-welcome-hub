@@ -28,13 +28,14 @@ function AdminLayout() {
   if (!isAdmin) return null;
 
   return (
-    <div className="space-y-6">
-      <div>
-        <p className="eyebrow">// Admin</p>
-        <h1 className="font-display text-3xl font-extrabold uppercase tracking-tight">
-          Operations
-        </h1>
-      </div>
+    <DebugDrawerProvider>
+      <div className="space-y-6">
+        <div>
+          <p className="eyebrow">// Admin</p>
+          <h1 className="font-display text-3xl font-extrabold uppercase tracking-tight">
+            Operations
+          </h1>
+        </div>
       <nav className="flex flex-wrap gap-2 border-b border-border pb-4 text-sm">
         <Link
           to="/admin"
