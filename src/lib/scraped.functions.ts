@@ -205,98 +205,131 @@ export const scrapeCounty = createServerFn({ method: "POST" })
       limit: z.number().min(1).max(20).default(10),
     }).parse,
   )
-  .handler(async ({ data, context }) => {
-    await assertAdmin(context.userId);
+  .handler(async ({ data, context }) =>
+    withDebugLog(
+      {
+        event_type: "scrape",
+        function_name: "scrapeCounty",
+        user_id: context.userId,
+        input: { townId: data.townId, criticalOnly: data.criticalOnly, limit: data.limit },
+      },
+      async () => {
+        await assertAdmin(context.userId);
 
-    const { data: town, error: tErr } = await supabaseAdmin
-      .from("towns")
-      .select("id, name, state, county")
-      .eq("id", data.townId)
-      .maybeSingle();
-    if (tErr || !town) throw new Response("Town not found", { status: 404 });
-    if (!town.county) {
-      throw new Response("Town has no county set", { status: 400 });
-    }
+        const { data: town, error: tErr } = await supabaseAdmin
+          .from("towns")
+          .select("id, name, state, county")
+          .eq("id", data.townId)
+          .maybeSingle();
+        if (tErr || !town) throw new Response("Town not found", { status: 404 });
+        if (!town.county) {
+          throw new Response("Town has no county set", { status: 400 });
+        }
 
-    let coreQuery = supabaseAdmin
-      .from("core_business_categories")
-      .select("id, category_slug, subcategory, label, synonyms, is_critical")
-      .order("display_order");
-    if (data.criticalOnly) {
-      coreQuery = coreQuery.eq("is_critical", true);
-    }
-    const { data: coreCats } = await coreQuery;
-    if (!coreCats || coreCats.length === 0) {
-      return { inserted: 0, skipped: 0, errors: [] as string[], searches: 0 };
-    }
+        let coreQuery = supabaseAdmin
+          .from("core_business_categories")
+          .select("id, category_slug, subcategory, label, synonyms, is_critical")
+          .order("display_order");
+        if (data.criticalOnly) {
+          coreQuery = coreQuery.eq("is_critical", true);
+        }
+        const { data: coreCats } = await coreQuery;
+        if (!coreCats || coreCats.length === 0) {
+          return {
+            town: { id: town.id, name: town.name, state: town.state, county: town.county },
+            inserted: 0,
+            skipped: 0,
+            skipReasons: emptySkipReasons(),
+            errors: [] as string[],
+            searches: 0,
+          };
+        }
 
-    // Resolve core_business_categories.category_slug → categories.id so we can
-    // tag the scraped row with the right parent category for the library UI.
-    const { data: cats } = await supabaseAdmin.from("categories").select("id, slug");
-    const catIdBySlug = new Map((cats ?? []).map((c) => [c.slug, c.id] as const));
+        const { data: cats } = await supabaseAdmin.from("categories").select("id, slug");
+        const catIdBySlug = new Map((cats ?? []).map((c) => [c.slug, c.id] as const));
 
-    let inserted = 0;
-    let skipped = 0;
-    let searches = 0;
-    const errors: string[] = [];
+        let inserted = 0;
+        let searches = 0;
+        const skipReasons = emptySkipReasons();
+        const errors: string[] = [];
 
-    for (const core of coreCats) {
-      const term = (core.synonyms && core.synonyms.length > 0 ? core.synonyms[0] : core.label)
-        .toLowerCase()
-        .trim();
-      const query = `best ${term} in ${town.county} County, ${town.state}`;
-      try {
-        const results = await firecrawlSearch(query, { limit: data.limit });
-        searches += 1;
-        for (const r of results) {
-          const website = r.url;
-          const host = hostFrom(website);
-          if (!host) {
-            skipped += 1;
-            continue;
-          }
-          if (
-            /yelp|tripadvisor|facebook|instagram|google\.|yellowpages|mapquest|allmenus/i.test(host)
-          ) {
-            skipped += 1;
-            continue;
-          }
+        for (const core of coreCats) {
+          const term = (core.synonyms && core.synonyms.length > 0 ? core.synonyms[0] : core.label)
+            .toLowerCase()
+            .trim();
+          const query = `best ${term} in ${town.county} County, ${town.state}`;
+          try {
+            const results = await firecrawlSearch(query, { limit: data.limit });
+            searches += 1;
+            for (const r of results) {
+              const website = r.url;
+              const host = hostFrom(website);
+              if (!host) {
+                skipReasons.missing_url += 1;
+                continue;
+              }
+              if (AGGREGATOR_RE.test(host)) {
+                skipReasons.aggregator_site += 1;
+                continue;
+              }
 
-          const name = (r.title ?? host)
-            .split(/[|\-–·]/)[0]
-            .trim()
-            .slice(0, 200);
+              const name = (r.title ?? host).split(/[|\-–·]/)[0].trim().slice(0, 200);
 
-          const { error: insErr } = await supabaseAdmin.from("scraped_businesses").upsert(
-            {
-              town_id: town.id,
-              category_id: catIdBySlug.get(core.category_slug) ?? null,
-              source: "firecrawl_search_county",
-              source_url: website,
-              source_query: query,
-              source_zip: null,
-              source_county: town.county,
-              name,
-              website,
-              description: r.description ?? null,
-              raw: r as never,
-              last_scraped_at: new Date().toISOString(),
-            },
-            { onConflict: "town_id,website", ignoreDuplicates: false },
-          );
-          if (insErr) {
-            skipped += 1;
-          } else {
-            inserted += 1;
+              const { data: upserted, error: insErr } = await supabaseAdmin
+                .from("scraped_businesses")
+                .upsert(
+                  {
+                    town_id: town.id,
+                    category_id: catIdBySlug.get(core.category_slug) ?? null,
+                    source: "firecrawl_search_county",
+                    source_url: website,
+                    source_query: query,
+                    source_zip: null,
+                    source_county: town.county,
+                    name,
+                    website,
+                    description: r.description ?? null,
+                    raw: r as never,
+                    last_scraped_at: new Date().toISOString(),
+                  },
+                  { onConflict: "town_id,website", ignoreDuplicates: false },
+                )
+                .select("id, created_at, updated_at");
+
+              if (insErr) {
+                skipReasons.db_error += 1;
+                errors.push(`${core.label} (${host}): ${insErr.message}`);
+              } else if (upserted && upserted[0]) {
+                const row = upserted[0];
+                const isNew = row.created_at === row.updated_at;
+                if (isNew) inserted += 1;
+                else skipReasons.duplicate_or_updated += 1;
+              } else {
+                skipReasons.duplicate_or_updated += 1;
+              }
+            }
+          } catch (e) {
+            errors.push(`${core.label}: ${(e as Error).message}`);
           }
         }
-      } catch (e) {
-        errors.push(`${core.label}: ${(e as Error).message}`);
-      }
-    }
 
-    return { inserted, skipped, errors, searches };
-  });
+        const skipped =
+          skipReasons.missing_url +
+          skipReasons.aggregator_site +
+          skipReasons.duplicate_or_updated +
+          skipReasons.db_error;
+
+        return {
+          town: { id: town.id, name: town.name, state: town.state, county: town.county },
+          inserted,
+          skipped,
+          skipReasons,
+          errors,
+          searches,
+        };
+      },
+    ),
+  );
 
 // ----- Firecrawl health check -----
 // Fires one tiny search to verify the API key is wired and the service is
