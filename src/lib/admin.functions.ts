@@ -763,7 +763,7 @@ export const getSupportBundleData = createServerFn({ method: "POST" })
         const out: Record<string, number> = {};
         for (const t of tables) {
           const { count } = await supabaseAdmin
-            .from(t)
+            .from(t as never)
             .select("*", { count: "exact", head: true });
           out[t] = count ?? 0;
         }
