@@ -1,8 +1,16 @@
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
+import { useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Wrench, Download, Loader2, FileJson } from "lucide-react";
+import {
+  CheckCircle2,
+  Download,
+  FileJson,
+  Loader2,
+  Wrench,
+  XCircle,
+} from "lucide-react";
 import { useDebugDrawer } from "@/components/debug-lab/debug-drawer-provider";
 import { GapAnalysisPanel } from "@/components/debug-lab/gap-analysis";
 import {
@@ -14,6 +22,8 @@ import {
 import type { DebugLog } from "@/components/debug-lab/types";
 import { useAuth } from "@/lib/auth";
 import { getRecentDebugLogs, getSupportBundleData } from "@/lib/admin.functions";
+import { firecrawlHealthCheck } from "@/lib/scraped.functions";
+import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/_authenticated/admin/debug")({
   component: DebugLabPage,
@@ -25,6 +35,12 @@ function DebugLabPage() {
   const fetch7d = useServerFn(getRecentDebugLogs);
   const fetchBundle = useServerFn(getSupportBundleData);
   const [busy, setBusy] = useState<string | null>(null);
+
+  const healthFn = useServerFn(firecrawlHealthCheck);
+  const healthMut = useMutation({
+    mutationFn: () => healthFn({}),
+  });
+  const health = healthMut.data;
 
   const meta = (): SupportBundleMeta => ({
     user_id: user?.id ?? null,
@@ -177,6 +193,67 @@ function DebugLabPage() {
           includes the last 7 days of logs plus event summary counts and table row counts —
           shaped for pasting into a support ticket.
         </p>
+      </div>
+
+      <div className="rounded-xl border border-border bg-card/60 p-6">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h3 className="font-display text-lg font-bold uppercase tracking-tight">
+              Firecrawl health check
+            </h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Fires one 1-result search to verify <code className="font-mono text-xs">FIRECRAWL_API_KEY</code> is wired and the service is reachable. Also writes a <code className="font-mono text-xs">scrape</code> event to the log feed above.
+            </p>
+          </div>
+          <Button
+            onClick={() => healthMut.mutate()}
+            disabled={healthMut.isPending}
+            variant="outline"
+            className="rounded-full"
+          >
+            {healthMut.isPending ? (
+              <>
+                <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> Checking
+              </>
+            ) : (
+              "Run check"
+            )}
+          </Button>
+        </div>
+        {health && (
+          <div
+            className={`mt-4 flex items-start gap-3 rounded-lg border px-4 py-3 text-sm ${
+              health.ok
+                ? "border-emerald-500/30 bg-emerald-500/5 text-emerald-200"
+                : "border-rose-500/30 bg-rose-500/5 text-rose-200"
+            }`}
+          >
+            {health.ok ? (
+              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
+            ) : (
+              <XCircle className="mt-0.5 h-4 w-4 shrink-0" />
+            )}
+            <div className="min-w-0 flex-1 font-mono text-xs">
+              <div className="font-bold">
+                {health.ok ? "OK" : health.hasKey ? "FAILED" : "MISSING_KEY"}
+              </div>
+              {"durationMs" in health && health.durationMs != null && (
+                <div className="opacity-80">{health.durationMs}ms</div>
+              )}
+              {health.ok && "sampleUrl" in health && health.sampleUrl && (
+                <div className="mt-1 truncate opacity-80">sample: {health.sampleUrl}</div>
+              )}
+              {!health.ok && "message" in health && health.message && (
+                <div className="mt-1 break-words opacity-80">{health.message}</div>
+              )}
+            </div>
+          </div>
+        )}
+        {healthMut.isError && !health && (
+          <div className="mt-4 rounded-lg border border-rose-500/30 bg-rose-500/5 px-4 py-3 font-mono text-xs text-rose-200">
+            {(healthMut.error as Error).message}
+          </div>
+        )}
       </div>
 
       <div className="rounded-xl border border-border bg-card/60 p-6">

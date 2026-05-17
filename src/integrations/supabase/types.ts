@@ -560,6 +560,7 @@ export type Database = {
           source: string
           source_query: string | null
           source_url: string | null
+          source_zip: string | null
           status: Database["public"]["Enums"]["scraped_business_status"]
           town_id: string
           updated_at: string
@@ -581,6 +582,7 @@ export type Database = {
           source?: string
           source_query?: string | null
           source_url?: string | null
+          source_zip?: string | null
           status?: Database["public"]["Enums"]["scraped_business_status"]
           town_id: string
           updated_at?: string
@@ -602,6 +604,7 @@ export type Database = {
           source?: string
           source_query?: string | null
           source_url?: string | null
+          source_zip?: string | null
           status?: Database["public"]["Enums"]["scraped_business_status"]
           town_id?: string
           updated_at?: string

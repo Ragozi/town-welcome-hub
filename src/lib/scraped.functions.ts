@@ -24,12 +24,20 @@ function hostFrom(url: string | undefined): string | null {
 }
 
 // ----- Scrape town -----
+// Iterates one Firecrawl search per (category × zip code). The query is the
+// strongest signal Firecrawl/Google use for geographic targeting, so we put
+// the zip directly in the query string rather than relying on Firecrawl's
+// `location` param (which only accepts country/region granularity).
+//
+// Cost: a town with 5 zips × 10 categories = 50 searches per click,
+// charged at 2 Firecrawl credits per 10 results.
 export const scrapeTown = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(
     z.object({
       townId: z.string().uuid(),
       categorySlugs: z.array(z.string()).optional(),
+      zipCodes: z.array(z.string()).optional(),
       limit: z.number().min(1).max(20).default(8),
     }).parse,
   )
@@ -38,7 +46,7 @@ export const scrapeTown = createServerFn({ method: "POST" })
 
     const { data: town, error: tErr } = await supabaseAdmin
       .from("towns")
-      .select("id, name, state")
+      .select("id, name, state, zip_codes")
       .eq("id", data.townId)
       .maybeSingle();
     if (tErr || !town) throw new Response("Town not found", { status: 404 });
@@ -49,65 +57,109 @@ export const scrapeTown = createServerFn({ method: "POST" })
     }
     const { data: categories } = await catQuery;
     if (!categories || categories.length === 0) {
-      return { inserted: 0, skipped: 0, errors: [] as string[] };
+      return { inserted: 0, skipped: 0, errors: [] as string[], searches: 0 };
     }
+
+    const townZips = (town.zip_codes ?? []).filter((z): z is string => typeof z === "string" && z.length > 0);
+    const zips = data.zipCodes && data.zipCodes.length > 0 ? data.zipCodes : townZips;
+    // Fall back to town-name query if no zips configured, so we degrade
+    // gracefully on towns whose zip_codes haven't been populated yet.
+    const targets: { zip: string | null; locationLabel: string }[] = zips.length > 0
+      ? zips.map((zip) => ({ zip, locationLabel: `${town.name}, ${town.state} ${zip}` }))
+      : [{ zip: null, locationLabel: `${town.name}, ${town.state}` }];
 
     let inserted = 0;
     let skipped = 0;
+    let searches = 0;
     const errors: string[] = [];
 
     for (const cat of categories) {
-      const query = `best ${cat.name.toLowerCase()} in ${town.name}, ${town.state}`;
-      try {
-        const results = await firecrawlSearch(query, { limit: data.limit });
-        for (const r of results) {
-          const website = r.url;
-          const host = hostFrom(website);
-          if (!host) {
-            skipped += 1;
-            continue;
-          }
-          // Skip aggregator/review sites — we want the business' own site
-          if (
-            /yelp|tripadvisor|facebook|instagram|google\.|yellowpages|mapquest|allmenus/i.test(host)
-          ) {
-            skipped += 1;
-            continue;
-          }
+      for (const target of targets) {
+        const query = `best ${cat.name.toLowerCase()} in ${target.locationLabel}`;
+        try {
+          const results = await firecrawlSearch(query, { limit: data.limit });
+          searches += 1;
+          for (const r of results) {
+            const website = r.url;
+            const host = hostFrom(website);
+            if (!host) {
+              skipped += 1;
+              continue;
+            }
+            // Skip aggregator/review sites — we want the business' own site
+            if (
+              /yelp|tripadvisor|facebook|instagram|google\.|yellowpages|mapquest|allmenus/i.test(host)
+            ) {
+              skipped += 1;
+              continue;
+            }
 
-          const name = (r.title ?? host)
-            .split(/[|\-–·]/)[0]
-            .trim()
-            .slice(0, 200);
+            const name = (r.title ?? host)
+              .split(/[|\-–·]/)[0]
+              .trim()
+              .slice(0, 200);
 
-          const { error: insErr } = await supabaseAdmin.from("scraped_businesses").upsert(
-            {
-              town_id: town.id,
-              category_id: cat.id,
-              source: "firecrawl_search",
-              source_url: website,
-              source_query: query,
-              name,
-              website,
-              description: r.description ?? null,
-              raw: r as never,
-              last_scraped_at: new Date().toISOString(),
-            },
-            { onConflict: "town_id,website", ignoreDuplicates: false },
-          );
-          if (insErr) {
-            // Unique-index expression conflict can throw; treat as skip
-            skipped += 1;
-          } else {
-            inserted += 1;
+            const { error: insErr } = await supabaseAdmin.from("scraped_businesses").upsert(
+              {
+                town_id: town.id,
+                category_id: cat.id,
+                source: "firecrawl_search",
+                source_url: website,
+                source_query: query,
+                source_zip: target.zip,
+                name,
+                website,
+                description: r.description ?? null,
+                raw: r as never,
+                last_scraped_at: new Date().toISOString(),
+              },
+              { onConflict: "town_id,website", ignoreDuplicates: false },
+            );
+            if (insErr) {
+              // Unique-index expression conflict can throw; treat as skip
+              skipped += 1;
+            } else {
+              inserted += 1;
+            }
           }
+        } catch (e) {
+          errors.push(`${cat.name} @ ${target.zip ?? "town"}: ${(e as Error).message}`);
         }
-      } catch (e) {
-        errors.push(`${cat.name}: ${(e as Error).message}`);
       }
     }
 
-    return { inserted, skipped, errors };
+    return { inserted, skipped, errors, searches };
+  });
+
+// ----- Firecrawl health check -----
+// Fires one tiny search to verify the API key is wired and the service is
+// reachable. Surfaces in Debug Lab as a scrape event. Cheap (1 result = 2 credits).
+export const firecrawlHealthCheck = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context.userId);
+    const hasKey = !!process.env.FIRECRAWL_API_KEY;
+    if (!hasKey) {
+      return { ok: false, hasKey: false, message: "FIRECRAWL_API_KEY not set" } as const;
+    }
+    const started = Date.now();
+    try {
+      const results = await firecrawlSearch("hearth handbook health check", { limit: 1 });
+      return {
+        ok: true,
+        hasKey: true,
+        durationMs: Date.now() - started,
+        sampleCount: results.length,
+        sampleUrl: results[0]?.url ?? null,
+      } as const;
+    } catch (e) {
+      return {
+        ok: false,
+        hasKey: true,
+        durationMs: Date.now() - started,
+        message: (e as Error).message,
+      } as const;
+    }
   });
 
 // ----- List for a town -----
