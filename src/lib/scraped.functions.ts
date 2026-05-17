@@ -375,7 +375,7 @@ export const listScrapedForTown = createServerFn({ method: "POST" })
     const { data: rows } = await supabaseAdmin
       .from("scraped_businesses")
       .select(
-        "id, town_id, category_id, source, source_url, source_query, name, address, phone, website, description, logo_url, status, excluded_reason, promoted_business_id, last_scraped_at",
+        "id, town_id, category_id, source, source_url, source_query, name, address, phone, website, description, logo_url, status, excluded_reason, promoted_business_id, last_scraped_at, last_verified_at, verification_status, verification_note",
       )
       .eq("town_id", data.townId)
       .order("status")
@@ -384,7 +384,14 @@ export const listScrapedForTown = createServerFn({ method: "POST" })
       .from("categories")
       .select("id, slug, name")
       .order("display_order");
-    return { rows: rows ?? [], categories: cats ?? [] };
+    const { data: businesses } = await supabaseAdmin
+      .from("businesses")
+      .select(
+        "id, name, website, category_id, sponsor_tier, last_scraped, last_verified_at, verification_status, verification_note",
+      )
+      .eq("town_id", data.townId)
+      .order("name");
+    return { rows: rows ?? [], categories: cats ?? [], businesses: businesses ?? [] };
   });
 
 // ----- Set status -----
@@ -407,6 +414,34 @@ export const setScrapedStatus = createServerFn({ method: "POST" })
       .from("scraped_businesses")
       .update(patch)
       .in("id", data.ids);
+    if (error) throw new Response(error.message, { status: 500 });
+    return { ok: true };
+  });
+
+// ----- Set verification status -----
+// Lets admin flag a scraped result or live business as possibly closed / closed
+// without deleting it. Surfaces in the library so we stop showing stale results.
+export const setVerificationStatus = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    z.object({
+      table: z.enum(["scraped_businesses", "businesses"]),
+      id: z.string().uuid(),
+      status: z.enum(["unknown", "open", "possibly_closed", "closed"]),
+      note: z.string().max(500).optional(),
+    }).parse,
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.userId);
+    const patch = {
+      verification_status: data.status,
+      verification_note: data.note ?? null,
+      last_verified_at: new Date().toISOString(),
+    };
+    const { error } =
+      data.table === "scraped_businesses"
+        ? await supabaseAdmin.from("scraped_businesses").update(patch).eq("id", data.id)
+        : await supabaseAdmin.from("businesses").update(patch).eq("id", data.id);
     if (error) throw new Response(error.message, { status: 500 });
     return { ok: true };
   });
