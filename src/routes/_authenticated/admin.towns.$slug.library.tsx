@@ -8,6 +8,7 @@ import {
   scrapeTown,
   scrapeCounty,
   setScrapedStatus,
+  setVerificationStatus,
   promoteToBusiness,
 } from "@/lib/scraped.functions";
 import { Button } from "@/components/ui/button";
