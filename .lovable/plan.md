@@ -1,78 +1,116 @@
-## Why the PDF route is returning 500
+# Debug Lab — Implementation Plan
 
-Server logs from the last hour show every `/api/packet-pdf/...` request failing with:
+A persistent right-side drawer in the admin area showing real-time backend activity, backed by a new `debug_logs` table + Supabase Realtime, with a clickable JSON inspector and filters.
+
+## 1. Database
+
+New migration: `debug_logs` table.
+
+Columns:
+
+- `id uuid pk`
+- `created_at timestamptz default now()`
+- `event_type text` — `scrape | packet | auth | database | other`
+- `function_name text`
+- `status text` — `success | running | error`
+- `message text`
+- `payload jsonb default '{}'`
+- `user_id uuid null`
+- `duration_ms integer null`
+
+RLS:
+
+- Admins (`has_role(auth.uid(),'super_admin')`) can SELECT.
+- INSERT only via service role (server functions); no client policy.
+- Add table to `supabase_realtime` publication; `REPLICA IDENTITY FULL`.
+- Index on `(created_at desc)`, `(event_type)`, `(status)`.
+- Retention helper: keep last 7 days (cleanup function called opportunistically on insert when row count > threshold, or simply rely on manual clear for now).
+
+## 2. Server-side logging helper
+
+`src/lib/debug-log.server.ts`:
+
+- `logDebug({ event_type, function_name, status, message, payload?, user_id? })` — fire-and-forget insert via `supabaseAdmin`. Never throws (swallow + console.error).
+- `withDebugLog(meta, fn)` wrapper: emits a `running` entry, then `success`/`error` with `duration_ms` and result/error payload (sanitized, capped at ~4 KB).
+
+Instrument:
+
+- `firecrawlSearch` (src/lib/firecrawl.server.ts) → event_type=`scrape`
+- `getHandbookData`, `getPublicPacket`, `issuePdfToken` (already removed) → event_type=`packet`
+- `logEvent` (tracking.functions.ts) → event_type=`database`
+- Admin functions (invite create/revoke, user role changes) → `auth`
+- Generic catch in `src/server.ts` error wrapper → `error`/`other`
+
+All payload writes pass through a `sanitize()` that strips `email`, `phone`, `buyer_last_name`, bearer tokens.
+
+## 3. Admin nav entry
+
+Edit `src/routes/_authenticated/admin.tsx`: add `<Link to="/admin/debug">🔧 Debug Lab</Link>` chip styled with a slate→cyan gradient (matches existing chip pattern).
+
+New route `src/routes/_authenticated/admin.debug.tsx` — minimal page that mainly documents the drawer + offers a "Open Debug Lab" button. The drawer itself is global within the admin layout (see next).
+
+## 4. Drawer UI
+
+New components:
+
+- `src/components/debug-lab/debug-drawer-provider.tsx` — React context: `{ open, setOpen, paused, setPaused, filter, search, selectedId, ... }`. Mounted inside `_authenticated/admin.tsx` so it persists across admin subroutes.
+- `src/components/debug-lab/debug-fab.tsx` — fixed bottom-right floating button (🔧) with unread count badge.
+- `src/components/debug-lab/debug-drawer.tsx` — Sheet (shadcn) from the right, `w-[380px] sm:w-[420px]`, dark theme scoped via `class="dark"` wrapper + custom tokens (warm amber accents on near-black bg).
+- `src/components/debug-lab/log-feed.tsx` — virtualized-ish scroll (simple list, cap at 500 in memory). Each row: timestamp (HH:mm:ss.SSS), colored status dot, function name (mono), short message, event_type chip. Click → set `selectedId`. Auto-scroll to bottom unless user has scrolled up (track with `onScroll`).
+- `src/components/debug-lab/json-inspector.tsx` — pretty JSON with collapsible nodes (lightweight custom recursive renderer; no new dep) + "Copy JSON" button using `navigator.clipboard`. Syntax colors via tailwind classes.
+- `src/components/debug-lab/controls.tsx` — filter Select (All / Scrape / Packet / Auth / Database / Other), search Input, Pause toggle, Clear button (clears local buffer only; optional admin "wipe table" behind confirm).
+
+Layout inside drawer: top = controls, middle = log feed (flex-1, scroll), bottom (40% height) = JSON inspector when a row is selected, collapsible.
+
+## 5. Realtime + initial fetch
+
+Inside provider:
+
+- On mount (super admin only): `supabase.from('debug_logs').select('*').order('created_at',{ascending:false}).limit(200)` then reverse for display.
+- `supabase.channel('debug_logs').on('postgres_changes', { event:'INSERT', schema:'public', table:'debug_logs' }, (p) => appendIfNotPaused(p.new))`.
+- Buffer paused inserts into a queue; on resume, flush.
+- Filter + search applied client-side over the in-memory buffer.
+
+## 6. Styling
+
+Drawer interior tokens (scoped, don't change global theme):
 
 ```
-RuntimeError: Aborted(CompileError: WebAssembly.instantiate():
-Wasm code generation disallowed by embedder)
+bg: oklch(0.16 0.01 60)   /* warm near-black */
+fg: oklch(0.92 0.02 80)
+accent: oklch(0.78 0.16 55) /* amber */
+success: oklch(0.78 0.16 150)
+error: oklch(0.68 0.20 25)
+running: oklch(0.80 0.16 75)
 ```
 
-`@react-pdf/renderer` depends on Yoga (a flexbox layout engine) compiled to WASM. It instantiates that WASM from a raw buffer at render time. Cloudflare Workers — the runtime serving our TanStack server routes — disallow dynamic WASM compilation. This is a hard runtime constraint, not a flag we can toggle.
+Mono font: existing `font-mono` token (JetBrains Mono if available, else system mono).
 
-Engine comparison (in the project's actual runtime context):
+## 7. Files touched / created
 
-| Engine | Runs on our Worker? | React-style authoring? | Notes |
-|---|---|---|---|
-| @react-pdf/renderer (current, server) | ❌ WASM blocked | ✅ | Works in the browser, not the Worker |
-| Playwright / Puppeteer | ❌ needs Chromium binary | n/a (HTML) | Requires external service ($/latency) |
-| Hosted HTML→PDF (PDFShift, Browserless, DocRaptor) | ✅ via fetch | n/a | Per-render cost + PII leaves perimeter |
-| pdf-lib / pdfkit | ✅ pure JS | ❌ low-level drawing | Full rewrite of layout |
-| jsPDF (browser) | ✅ in browser | ❌ low-level | n/a |
+Created:
 
-User direction: stay on react-pdf. The only viable way to do that without a rewrite is to **render in the browser**, where react-pdf's WASM works fine.
+- `supabase/migrations/<ts>_debug_logs.sql`
+- `src/lib/debug-log.server.ts`
+- `src/routes/_authenticated/admin.debug.tsx`
+- `src/components/debug-lab/{debug-drawer-provider,debug-fab,debug-drawer,log-feed,json-inspector,controls}.tsx`
 
-## Plan
+Edited:
 
-Keep the exact `<Document>` JSX, fonts, layout, and QR pipeline we already built — just move execution to the client. The server's job shrinks to providing sanitized data; the browser does the layout and produces the file.
+- `src/routes/_authenticated/admin.tsx` (mount provider + FAB + nav chip)
+- `src/lib/firecrawl.server.ts` (instrument)
+- `src/lib/handbook.functions.ts` (instrument)
+- `src/lib/public-packet.functions.ts` (instrument `getPublicPacket`)
+- `src/lib/tracking.functions.ts` (instrument)
+- `src/lib/admin.functions.ts` (instrument key mutations)
+- `src/server.ts` (log uncaught SSR errors)
 
-### 1. New client-side renderer module
+## 8. Out of scope
 
-Create `src/lib/pdf/handbook-document.tsx`:
-- Extract the `PacketPdf`, `FeaturedCardPdf`, `CategoryPdf` components and `styles` from `src/routes/api/packet-pdf.$slug.tsx` verbatim into this client-safe file. Import from `@react-pdf/renderer` (the package auto-resolves to its browser entry when imported from a client module).
+- No edit/replay of past requests.
+- No log export to file (Copy JSON only).
+- No per-user log streams — super admin-only view of everything.
 
-### 2. Server function for the data payload
+## Open question
 
-Create `src/lib/handbook.functions.ts` with `getHandbookData({ slug })`:
-- Auth: realtor must own the packet (reuse `requireSupabaseAuth` + ownership check, same pattern as `issuePdfToken`).
-- Returns a plain DTO: packet fields needed for the PDF, realtor profile (full name, brokerage, email_public, phone, headshot_url), town, categories, businesses (post-exclusion).
-- No WASM, no streaming, no Worker constraint hit.
-
-QR data URL is generated **in the browser** using the existing `qrcode` package (already in deps; works client-side). No server work needed for the QR.
-
-### 3. Replace the iframe preview + download buttons in `src/routes/_authenticated/packets.$id.tsx`
-
-- Remove the broken iframe pointing at `/api/packet-pdf/...`.
-- Use `useQuery` to fetch `getHandbookData({ slug })`.
-- Render `<PDFViewer>` from `@react-pdf/renderer` for the inline preview (same look as the iframe, but client-rendered).
-- "Download" button uses `<PDFDownloadLink document={<PacketPdf .../>} fileName="...">` — produces a real PDF blob in the browser.
-- "Open" button uses `pdf(<PacketPdf .../>).toBlob()` then `URL.createObjectURL` + `window.open`.
-- Loading state while react-pdf is mounted (it's lazy by nature — wrap in Suspense or use the `loading` prop of `PDFDownloadLink`).
-
-### 4. Retire the broken server route
-
-`src/routes/api/packet-pdf.$slug.tsx`:
-- Option A (chosen): delete the route entirely. Nothing else references it once `packets.$id.tsx` is migrated. Public buyer page `/p/$slug` does not link to the PDF.
-- Option B (deferred): keep as a stub that returns `410 Gone` with a message, so any cached email/QR links don't silently 500. We'll do this — one-line handler, no behavior change for active users.
-
-Token machinery (`pdf-token.server.ts`, `issuePdfToken`) becomes unused — remove the export from `public-packet.functions.ts` and delete `pdf-token.server.ts`. The PII protection that token provided is now enforced by `getHandbookData` requiring auth + ownership.
-
-### 5. QA checklist after the swap
-
-- Realtor logs in → opens `/packets/$id` → sees inline PDF preview rendering (cover, directory page, thank-you page).
-- Cover QR scans to the live `/p/$slug?s=qr`.
-- "Download" button writes a real `.pdf` to disk.
-- Unauthenticated user navigating directly to `/packets/$id` is redirected to `/login` (already enforced by `_authenticated` layout).
-- Buyer landing page `/p/$slug` still loads (it doesn't depend on the PDF route).
-- `bunx tsc --noEmit` clean.
-
-## Technical notes
-
-- `@react-pdf/renderer` already in `package.json`; bundle hit on the client is ~250 KB gzipped — acceptable for an authenticated, low-traffic dashboard route. Code-split by importing it dynamically inside the route component (`const { PDFViewer, PDFDownloadLink, pdf } = await import("@react-pdf/renderer")` inside an effect, or `React.lazy`).
-- `qrcode` (already used server-side) works identically in the browser — same `QRCode.toDataURL(url)` call.
-- No new packages, no external services, no new secrets.
-- The PDF event tracking (`pdf_downloaded` counter, `packet_events` insert) that the old server route did needs to move into a small `logEvent` server fn call from the download click handler. Will add a one-line tracking call.
-
-## Tradeoffs vs. alternatives
-
-- We lose server-side PDF generation, so we can't email a PDF attachment from the server later without revisiting. If that becomes a requirement, the right move is a hosted HTML→PDF service called via fetch (Worker-safe) — separate decision.
-- Visual fidelity, fonts, layout: identical to today, because we're reusing the same `<Document>` tree.
+Realtime cross-tab is via Supabase Realtime as specified. Confirm OK to also persist logs to `debug_logs` (vs in-memory only). Plan assumes **persist + Realtime** since the brief lists the table schema explicitly.
