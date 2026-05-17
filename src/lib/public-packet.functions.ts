@@ -1,7 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { signPdfToken } from "@/lib/pdf-token.server";
 import type {
   PublicBusiness,
   PublicCategory,
@@ -81,22 +80,5 @@ export const getPublicPacket = createServerFn({ method: "GET" })
     };
   });
 
-/**
- * Issues a short-lived signed token for the PDF route. Anyone who knows a
- * packet slug already has access to the public buyer landing page, so issuing
- * a token here doesn't expand exposure — it lets us keep the storage bucket
- * private and add expiry to PDF access.
- */
-export const issuePdfToken = createServerFn({ method: "POST" })
-  .inputValidator((input: unknown) =>
-    z.object({ slug: z.string().min(1).max(64) }).parse(input),
-  )
-  .handler(async ({ data }) => {
-    const { data: packet } = await supabaseAdmin
-      .from("packets")
-      .select("slug")
-      .eq("slug", data.slug)
-      .maybeSingle();
-    if (!packet) return { token: null as string | null };
-    return { token: signPdfToken(packet.slug) as string | null };
-  });
+// issuePdfToken removed: PDF rendering moved client-side, no signed URL needed.
+

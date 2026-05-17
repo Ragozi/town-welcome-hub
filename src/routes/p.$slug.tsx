@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import { tierPriority } from "@/lib/towns";
 import {
   getPublicPacket,
-  issuePdfToken,
   type PublicBusiness,
   type PublicCategory,
 } from "@/lib/public-packet.functions";

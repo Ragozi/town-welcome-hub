@@ -1,106 +1,78 @@
-# Handbook QA + Data Pipeline + Entity Library
+## Why the PDF route is returning 500
 
-Three connected pieces, sequenced so each unblocks the next.
+Server logs from the last hour show every `/api/packet-pdf/...` request failing with:
 
----
+```
+RuntimeError: Aborted(CompileError: WebAssembly.instantiate():
+Wasm code generation disallowed by embedder)
+```
 
-## 1. Connect Firecrawl
+`@react-pdf/renderer` depends on Yoga (a flexbox layout engine) compiled to WASM. It instantiates that WASM from a raw buffer at render time. Cloudflare Workers — the runtime serving our TanStack server routes — disallow dynamic WASM compilation. This is a hard runtime constraint, not a flag we can toggle.
 
-Add Firecrawl as the scrape source for local business data.
+Engine comparison (in the project's actual runtime context):
 
-- Add Firecrawl connector via `standard_connectors--connect` (`firecrawl`)
-- Server-only client in `src/lib/firecrawl.server.ts` reading `FIRECRAWL_API_KEY` from `process.env`
+| Engine | Runs on our Worker? | React-style authoring? | Notes |
+|---|---|---|---|
+| @react-pdf/renderer (current, server) | ❌ WASM blocked | ✅ | Works in the browser, not the Worker |
+| Playwright / Puppeteer | ❌ needs Chromium binary | n/a (HTML) | Requires external service ($/latency) |
+| Hosted HTML→PDF (PDFShift, Browserless, DocRaptor) | ✅ via fetch | n/a | Per-render cost + PII leaves perimeter |
+| pdf-lib / pdfkit | ✅ pure JS | ❌ low-level drawing | Full rewrite of layout |
+| jsPDF (browser) | ✅ in browser | ❌ low-level | n/a |
 
----
+User direction: stay on react-pdf. The only viable way to do that without a rewrite is to **render in the browser**, where react-pdf's WASM works fine.
 
-## 2. Scraped entities library (per-town)
+## Plan
 
-A new admin surface where each town has its own library of scraped businesses. Admins decide which ones flow into handbooks.
+Keep the exact `<Document>` JSX, fonts, layout, and QR pipeline we already built — just move execution to the client. The server's job shrinks to providing sanitized data; the browser does the layout and produces the file.
 
-### Schema
+### 1. New client-side renderer module
 
-New table `scraped_businesses`:
-- `town_id` (FK → towns)
-- `category_id` (FK → categories, nullable until classified)
-- `source` (`firecrawl_search` | `firecrawl_map` | `manual`)
-- `source_url`, `source_query`
-- `name`, `address`, `phone`, `website`, `description`, `logo_url`
-- `raw` (jsonb — full Firecrawl payload)
-- `status` enum: `pending` | `included` | `excluded` | `promoted`
-- `excluded_reason` (text, nullable)
-- `promoted_business_id` (FK → businesses, nullable — set when "Promote to sponsor")
-- `last_scraped_at`, timestamps
-- Unique on (`town_id`, `website`) to dedupe re-scrapes
+Create `src/lib/pdf/handbook-document.tsx`:
+- Extract the `PacketPdf`, `FeaturedCardPdf`, `CategoryPdf` components and `styles` from `src/routes/api/packet-pdf.$slug.tsx` verbatim into this client-safe file. Import from `@react-pdf/renderer` (the package auto-resolves to its browser entry when imported from a client module).
 
-RLS: admin-only read/write.
+### 2. Server function for the data payload
 
-### Server functions (`src/lib/scraped.functions.ts`)
+Create `src/lib/handbook.functions.ts` with `getHandbookData({ slug })`:
+- Auth: realtor must own the packet (reuse `requireSupabaseAuth` + ownership check, same pattern as `issuePdfToken`).
+- Returns a plain DTO: packet fields needed for the PDF, realtor profile (full name, brokerage, email_public, phone, headshot_url), town, categories, businesses (post-exclusion).
+- No WASM, no streaming, no Worker constraint hit.
 
-- `scrapeTown({ townId, categorySlugs?, limit? })` — admin-only. Runs Firecrawl `search` per category for the town's name + state, upserts results as `pending`.
-- `listScrapedForTown({ townId, status? })`
-- `setScrapedStatus({ id, status, reason? })` — include / exclude / pending
-- `promoteToBusiness({ id, sponsor_tier })` — copies into `businesses` table and marks `promoted`
+QR data URL is generated **in the browser** using the existing `qrcode` package (already in deps; works client-side). No server work needed for the QR.
 
-### UI: `/admin/towns/$slug/library`
+### 3. Replace the iframe preview + download buttons in `src/routes/_authenticated/packets.$id.tsx`
 
-- Header: town name + "Scrape now" button (categories multiselect, limit slider)
-- Tabs: **Pending** · **Included** · **Excluded** · **Promoted (Sponsors)**
-- Table per row: logo, name, category, website, source, last scraped
-- Per-row actions: Include · Exclude (with reason) · Promote to sponsor (opens tier picker)
-- Bulk: select rows → Include / Exclude
-- Counts per tab in chip badges
+- Remove the broken iframe pointing at `/api/packet-pdf/...`.
+- Use `useQuery` to fetch `getHandbookData({ slug })`.
+- Render `<PDFViewer>` from `@react-pdf/renderer` for the inline preview (same look as the iframe, but client-rendered).
+- "Download" button uses `<PDFDownloadLink document={<PacketPdf .../>} fileName="...">` — produces a real PDF blob in the browser.
+- "Open" button uses `pdf(<PacketPdf .../>).toBlob()` then `URL.createObjectURL` + `window.open`.
+- Loading state while react-pdf is mounted (it's lazy by nature — wrap in Suspense or use the `loading` prop of `PDFDownloadLink`).
 
-Link from `/admin` → "Town Libraries" → list of towns → `/admin/towns/$slug/library`.
+### 4. Retire the broken server route
 
----
+`src/routes/api/packet-pdf.$slug.tsx`:
+- Option A (chosen): delete the route entirely. Nothing else references it once `packets.$id.tsx` is migrated. Public buyer page `/p/$slug` does not link to the PDF.
+- Option B (deferred): keep as a stub that returns `410 Gone` with a message, so any cached email/QR links don't silently 500. We'll do this — one-line handler, no behavior change for active users.
 
-## 3. Data parse preview (in New Handbook flow)
+Token machinery (`pdf-token.server.ts`, `issuePdfToken`) becomes unused — remove the export from `public-packet.functions.ts` and delete `pdf-token.server.ts`. The PII protection that token provided is now enforced by `getHandbookData` requiring auth + ownership.
 
-Before generating the PDF, show what will appear so the realtor can adjust.
+### 5. QA checklist after the swap
 
-After the existing New Handbook form, insert a **Preview** step:
+- Realtor logs in → opens `/packets/$id` → sees inline PDF preview rendering (cover, directory page, thank-you page).
+- Cover QR scans to the live `/p/$slug?s=qr`.
+- "Download" button writes a real `.pdf` to disk.
+- Unauthenticated user navigating directly to `/packets/$id` is redirected to `/login` (already enforced by `_authenticated` layout).
+- Buyer landing page `/p/$slug` still loads (it doesn't depend on the PDF route).
+- `bunx tsc --noEmit` clean.
 
-- Detected town (with override dropdown)
-- For each category: list of businesses that will appear, ordered by sponsor tier then alpha
-  - Source badge (Sponsor / Included from library / Auto)
-  - Eyeball toggle to exclude-for-this-handbook-only (stored on packet as `excluded_business_ids[]`)
-- Missing-data warnings (no businesses for category X, ambiguous town match, etc.)
-- "Looks good → Generate handbook" button
+## Technical notes
 
-Schema add: `packets.excluded_business_ids uuid[] default '{}'`.
+- `@react-pdf/renderer` already in `package.json`; bundle hit on the client is ~250 KB gzipped — acceptable for an authenticated, low-traffic dashboard route. Code-split by importing it dynamically inside the route component (`const { PDFViewer, PDFDownloadLink, pdf } = await import("@react-pdf/renderer")` inside an effect, or `React.lazy`).
+- `qrcode` (already used server-side) works identically in the browser — same `QRCode.toDataURL(url)` call.
+- No new packages, no external services, no new secrets.
+- The PDF event tracking (`pdf_downloaded` counter, `packet_events` insert) that the old server route did needs to move into a small `logEvent` server fn call from the download click handler. Will add a one-line tracking call.
 
-The town/category business query gets a filter: `status = 'included' OR status = 'promoted'` from the library, plus any direct sponsors, minus the per-packet exclusions.
+## Tradeoffs vs. alternatives
 
----
-
-## 4. QA handbook
-
-A first end-to-end test packet so we can iterate on layout/content.
-
-- Admin button on `/admin` → "Generate QA handbook"
-- Creates a packet with fixed slug `qa-sample`, seeded buyer data ("Sample Buyer", a real address in a town that has library data), runs the same render path as a real packet
-- Re-running overwrites the existing `qa-sample`
-- Visible at `/p/qa-sample` and downloadable as PDF
-- Admin page shows: last generated timestamp, link to view, link to PDF, "Regenerate" button
-
-This is the surface we'll use to review and iterate on visual/content changes.
-
----
-
-## Build order
-
-1. Migration: `scraped_businesses` table + `packets.excluded_business_ids`
-2. Firecrawl connector + server client
-3. Scrape + library admin UI (one town first to validate)
-4. Parse-preview step in New Handbook
-5. QA handbook generator + admin entry point
-
-## Files
-
-- new: `supabase/migrations/<ts>_scraped_businesses.sql`
-- new: `src/lib/firecrawl.server.ts`, `src/lib/scraped.functions.ts`
-- new: `src/routes/_authenticated/admin.towns.index.tsx`, `src/routes/_authenticated/admin.towns.$slug.library.tsx`
-- new: `src/routes/_authenticated/admin.qa.tsx` (or button on admin index)
-- edit: `src/routes/_authenticated/packets.new.tsx` (add Preview step)
-- edit: `src/routes/_authenticated/admin.tsx` / `admin.index.tsx` (nav entries)
-- edit: `src/lib/packets.ts` or related render path (apply library + per-packet exclusions)
+- We lose server-side PDF generation, so we can't email a PDF attachment from the server later without revisiting. If that becomes a requirement, the right move is a hosted HTML→PDF service called via fetch (Worker-safe) — separate decision.
+- Visual fidelity, fonts, layout: identical to today, because we're reusing the same `<Document>` tree.

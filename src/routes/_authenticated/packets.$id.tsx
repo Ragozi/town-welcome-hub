@@ -1,11 +1,11 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { QRCodeSVG } from "qrcode.react";
-import { useMemo, useRef } from "react";
+import { lazy, Suspense, useMemo, useRef } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useAuth } from "@/lib/auth";
 import { getPacketById, deletePacket } from "@/lib/packets";
-import { issuePdfToken } from "@/lib/public-packet.functions";
+import { getHandbookData } from "@/lib/handbook.functions";
 import { Button } from "@/components/ui/button";
 import {
   ArrowLeft,
@@ -17,10 +17,13 @@ import {
   Loader2,
   QrCode,
   FileText,
-  Eye,
 } from "lucide-react";
 import { toast } from "sonner";
-import { getPublicBaseUrl, packetUrl, packetPdfUrl } from "@/lib/public-url";
+import { getPublicBaseUrl, packetUrl } from "@/lib/public-url";
+
+const HandbookPdfPanel = lazy(() =>
+  import("@/components/handbook-pdf-panel").then((m) => ({ default: m.HandbookPdfPanel })),
+);
 
 export const Route = createFileRoute("/_authenticated/packets/$id")({
   component: PacketDetail,
@@ -31,7 +34,7 @@ function PacketDetail() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const qrWrapRef = useRef<HTMLDivElement>(null);
-  const issueToken = useServerFn(issuePdfToken);
+  const fetchHandbook = useServerFn(getHandbookData);
 
   const { data: packet, isLoading } = useQuery({
     queryKey: ["packet", id],
@@ -39,18 +42,14 @@ function PacketDetail() {
     enabled: !!user,
   });
 
-  const { data: pdfTokenData } = useQuery({
-    queryKey: ["pdf-token", packet?.slug],
-    queryFn: () => issueToken({ data: { slug: packet!.slug } }),
-    enabled: !!packet?.slug,
-    staleTime: 1000 * 60 * 60 * 12, // refresh well before 24h expiry
-  });
-  const tokenQuery = pdfTokenData?.token ? `t=${encodeURIComponent(pdfTokenData.token)}` : "";
-  const pdfPreviewUrl = packet && tokenQuery ? `/api/packet-pdf/${packet.slug}?${tokenQuery}` : "";
-  const pdfDownloadUrl =
-    packet && tokenQuery ? `/api/packet-pdf/${packet.slug}?${tokenQuery}&download=1` : "";
-  const pdfShareUrl = packet && tokenQuery ? `${packetPdfUrl(packet.slug)}?${tokenQuery}` : "";
   const liveUrl = useMemo(() => (packet ? packetUrl(packet.slug) : ""), [packet]);
+
+  const { data: handbookData } = useQuery({
+    queryKey: ["handbook-data", packet?.slug],
+    queryFn: () => fetchHandbook({ data: { slug: packet!.slug } }),
+    enabled: !!packet?.slug,
+    staleTime: 1000 * 60,
+  });
 
   if (isLoading) {
     return (
@@ -185,47 +184,21 @@ function PacketDetail() {
             </div>
           </div>
 
-          {/* PDF preview */}
-          <div className="rounded-3xl border border-border bg-card p-6 shadow-[var(--shadow-soft)]">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="eyebrow">// PDF preview</p>
-                <h2 className="font-display mt-1 text-lg font-extrabold uppercase tracking-tight">
-                  Closing-day packet
-                </h2>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <Button asChild variant="outline" size="sm" className="rounded-full">
-                  <a href={pdfPreviewUrl} target="_blank" rel="noreferrer">
-                    <Eye className="mr-1 h-4 w-4" /> Open
-                  </a>
-                </Button>
-                <Button
-                  asChild
-                  size="sm"
-                  className="rounded-full bg-primary text-primary-foreground hover:bg-primary/90"
-                >
-                  <a href={pdfDownloadUrl}>
-                    <Download className="mr-1 h-4 w-4" /> Download
-                  </a>
-                </Button>
-              </div>
+          {handbookData ? (
+            <Suspense
+              fallback={
+                <div className="flex h-[560px] items-center justify-center rounded-3xl border border-border bg-card">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              }
+            >
+              <HandbookPdfPanel data={handbookData} liveUrl={liveUrl} />
+            </Suspense>
+          ) : (
+            <div className="flex h-[560px] items-center justify-center rounded-3xl border border-border bg-card">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
-            <div className="mt-4 overflow-hidden rounded-2xl border border-border bg-background">
-              <iframe
-                src={pdfPreviewUrl}
-                title="Packet PDF preview"
-                loading="lazy"
-                className="h-[520px] w-full"
-              />
-            </div>
-            <p className="mt-2 break-all text-xs text-muted-foreground">
-              Direct link:{" "}
-              <a href={pdfShareUrl || pdfPreviewUrl} className="hover:text-foreground">
-                {pdfShareUrl || pdfPreviewUrl}
-              </a>
-            </p>
-          </div>
+          )}
         </div>
 
         <div className="space-y-4">
@@ -269,21 +242,12 @@ function PacketDetail() {
               </p>
             </div>
             <p className="mt-2 text-sm text-background/80">
-              Send the packet link or the printable PDF.
+              Send the packet link or download the printable PDF from the preview above.
             </p>
             <div className="mt-4 space-y-2">
               <Button
                 asChild
                 className="w-full rounded-full bg-primary text-primary-foreground hover:bg-primary/90"
-              >
-                <a href={pdfDownloadUrl}>
-                  <Download className="mr-1 h-4 w-4" /> Download PDF
-                </a>
-              </Button>
-              <Button
-                asChild
-                variant="outline"
-                className="w-full rounded-full border-background/20 bg-transparent text-background hover:bg-background/10"
               >
                 <a href={liveUrl} target="_blank" rel="noreferrer">
                   <ExternalLink className="mr-1 h-4 w-4" /> Open buyer page
