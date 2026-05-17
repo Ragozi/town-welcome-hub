@@ -169,145 +169,161 @@ export function GapAnalysisPanel() {
         </div>
       )}
 
-      <div className="min-h-0 flex-1 overflow-auto rounded-md border border-zinc-800 bg-zinc-950">
-        {loading && !data ? (
-          <div className="flex h-full items-center justify-center text-zinc-500">
-            <Loader2 className="h-4 w-4 animate-spin" />
-          </div>
-        ) : data ? (
-          <table className="w-full font-mono text-[10px]">
-            <thead className="sticky top-0 bg-zinc-900/95 text-zinc-500">
-              <tr>
-                <th className="px-2 py-1 text-left">Type</th>
-                <th className="px-1 py-1 text-right">Pub</th>
-                <th className="px-1 py-1 text-right">Pend</th>
-                <th className="px-1 py-1 text-right">Excl</th>
-                <th className="px-2 py-1 text-left">Status</th>
-                <th className="px-1 py-1" />
-              </tr>
-            </thead>
-            <tbody>
-              {data.rows.map((r) => {
-                const key = r.slug + (r.subcategory ?? "");
-                return (
-                  <tr
-                    key={key}
-                    onClick={() => setSelected(r)}
-                    className={`cursor-pointer border-t border-zinc-900 hover:bg-zinc-900/60 ${
-                      selected && selected.slug + (selected.subcategory ?? "") === key
-                        ? "bg-zinc-900"
-                        : ""
-                    }`}
-                  >
-                    <td className="px-2 py-1 text-zinc-200">
-                      {r.is_critical && (
-                        <span className="mr-1 text-rose-400" title="Critical">
-                          ●
+      <div className="flex min-h-0 flex-1 flex-col gap-2 md:flex-row">
+        <div className="min-h-0 flex-1 overflow-auto rounded-md border border-zinc-800 bg-zinc-950 md:min-w-0">
+          {loading && !data ? (
+            <div className="flex h-full items-center justify-center text-zinc-500">
+              <Loader2 className="h-4 w-4 animate-spin" />
+            </div>
+          ) : data ? (
+            <table className="w-full font-mono text-[10px]">
+              <thead className="sticky top-0 bg-zinc-900/95 text-zinc-500">
+                <tr>
+                  <th className="px-2 py-1 text-left">Type</th>
+                  <th className="px-1 py-1 text-right">Pub</th>
+                  <th className="px-1 py-1 text-right">Pend</th>
+                  <th className="px-1 py-1 text-right">Excl</th>
+                  <th className="px-2 py-1 text-left">Status</th>
+                  <th className="px-1 py-1" />
+                </tr>
+              </thead>
+              <tbody>
+                {data.rows.map((r) => {
+                  const key = r.slug + (r.subcategory ?? "");
+                  return (
+                    <tr
+                      key={key}
+                      onClick={() => setSelected(r)}
+                      className={`cursor-pointer border-t border-zinc-900 hover:bg-zinc-900/60 ${
+                        selected && selected.slug + (selected.subcategory ?? "") === key
+                          ? "bg-zinc-900"
+                          : ""
+                      }`}
+                    >
+                      <td className="px-2 py-1 text-zinc-200">
+                        {r.is_critical && (
+                          <span className="mr-1 text-rose-400" title="Critical">
+                            ●
+                          </span>
+                        )}
+                        {r.label}
+                      </td>
+                      <td className="px-1 py-1 text-right text-zinc-300">{r.published_count}</td>
+                      <td className="px-1 py-1 text-right text-amber-300">{r.pending_count}</td>
+                      <td className="px-1 py-1 text-right text-zinc-500">{r.excluded_count}</td>
+                      <td className="px-2 py-1">
+                        <span
+                          className={`rounded border px-1.5 py-0.5 text-[9px] font-bold uppercase ${STATUS_STYLES[r.status]}`}
+                        >
+                          {STATUS_LABEL[r.status]}
                         </span>
-                      )}
-                      {r.label}
-                    </td>
-                    <td className="px-1 py-1 text-right text-zinc-300">{r.published_count}</td>
-                    <td className="px-1 py-1 text-right text-amber-300">{r.pending_count}</td>
-                    <td className="px-1 py-1 text-right text-zinc-500">{r.excluded_count}</td>
-                    <td className="px-2 py-1">
-                      <span
-                        className={`rounded border px-1.5 py-0.5 text-[9px] font-bold uppercase ${STATUS_STYLES[r.status]}`}
-                      >
-                        {STATUS_LABEL[r.status]}
-                      </span>
-                    </td>
-                    <td className="px-1 py-1 text-right">
-                      <Sparkles className="h-3 w-3 text-zinc-600" />
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        ) : (
-          <div className="p-3 text-[10px] text-zinc-500">Select a town to begin.</div>
-        )}
-      </div>
-
-      {selected && data && (
-        <div className="rounded-md border border-amber-500/30 bg-zinc-950 p-3">
-          <div className="mb-2 flex items-start justify-between gap-2">
-            <div>
-              <div className="font-display text-xs font-bold uppercase tracking-wider text-amber-200">
-                {selected.label}
-              </div>
-              <div className="text-[10px] text-zinc-500">
-                {selected.slug}
-                {selected.subcategory ? ` · ${selected.subcategory}` : ""} · expects ≥{" "}
-                {selected.expected_min}
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => setSelected(null)}
-              className="text-[10px] text-zinc-500 hover:text-zinc-200"
-            >
-              close
-            </button>
-          </div>
-
-          {selected.published_examples.length > 0 && (
-            <div className="mb-2 text-[10px] text-zinc-400">
-              <span className="text-zinc-500">Found:</span> {selected.published_examples.join(", ")}
-            </div>
+                      </td>
+                      <td className="px-1 py-1 text-right">
+                        <Sparkles className="h-3 w-3 text-zinc-600" />
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          ) : (
+            <div className="p-3 text-[10px] text-zinc-500">Select a town to begin.</div>
           )}
-
-          {selected.excluded_reasons.length > 0 && (
-            <div className="mb-2">
-              <div className="mb-1 flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider text-fuchsia-300">
-                <AlertCircle className="h-3 w-3" /> Why entries were skipped
-              </div>
-              <ul className="space-y-0.5 font-mono text-[10px] text-zinc-300">
-                {selected.excluded_reasons.map((r) => (
-                  <li key={r.reason} className="flex justify-between">
-                    <span className="truncate">{r.reason}</span>
-                    <span className="ml-2 text-zinc-500">×{r.count}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {selected.status !== "ok" && (
-            <div className="mb-2 rounded bg-amber-500/10 p-2 text-[10px] text-amber-200">
-              <strong>Suggested:</strong>{" "}
-              {selected.status === "missing"
-                ? `No matches. Try re-scraping "${selected.suggested_query}".`
-                : selected.status === "thin"
-                  ? `Below expected count (${selected.published_count}/${selected.expected_min}). Re-scrape to widen pool.`
-                  : `All ${selected.excluded_count} matches were excluded. Review reasons or loosen filters.`}
-            </div>
-          )}
-
-          <div className="flex items-center gap-2 text-[10px] text-zinc-500">
-            <span>
-              Last scraped:{" "}
-              {selected.last_scraped_at
-                ? new Date(selected.last_scraped_at).toLocaleString()
-                : "never"}
-            </span>
-            <button
-              type="button"
-              onClick={() => void handleRescrape(selected)}
-              disabled={scrapingSlug !== null}
-              className="ml-auto inline-flex items-center gap-1 rounded-md border border-amber-500/40 bg-amber-500/10 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-amber-200 hover:bg-amber-500/20 disabled:opacity-50"
-            >
-              {scrapingSlug === selected.slug + (selected.subcategory ?? "") ? (
-                <Loader2 className="h-3 w-3 animate-spin" />
-              ) : (
-                <RefreshCw className="h-3 w-3" />
-              )}
-              Re-scrape {selected.slug}
-            </button>
-          </div>
         </div>
-      )}
+
+        <aside className="flex min-h-0 flex-col overflow-hidden rounded-md border border-zinc-800 bg-zinc-950 md:w-[340px] md:shrink-0">
+          {selected && data ? (
+            <>
+              <div className="flex items-start justify-between gap-2 border-b border-zinc-900 bg-gradient-to-b from-amber-500/10 to-transparent px-3 py-2">
+                <div>
+                  <div className="font-display text-xs font-bold uppercase tracking-wider text-amber-200">
+                    {selected.label}
+                  </div>
+                  <div className="text-[10px] text-zinc-500">
+                    {selected.slug}
+                    {selected.subcategory ? ` · ${selected.subcategory}` : ""} · expects ≥{" "}
+                    {selected.expected_min}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelected(null)}
+                  className="text-[10px] text-zinc-500 hover:text-zinc-200"
+                >
+                  close
+                </button>
+              </div>
+
+              <div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-3">
+                {selected.published_examples.length > 0 && (
+                  <div className="text-[10px] text-zinc-400">
+                    <span className="text-zinc-500">Found:</span>{" "}
+                    {selected.published_examples.join(", ")}
+                  </div>
+                )}
+
+                {selected.excluded_reasons.length > 0 && (
+                  <div>
+                    <div className="mb-1 flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider text-fuchsia-300">
+                      <AlertCircle className="h-3 w-3" /> Why entries were skipped
+                    </div>
+                    <ul className="space-y-0.5 font-mono text-[10px] text-zinc-300">
+                      {selected.excluded_reasons.map((r) => (
+                        <li key={r.reason} className="flex justify-between gap-2">
+                          <span className="truncate">{r.reason}</span>
+                          <span className="shrink-0 text-zinc-500">×{r.count}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {selected.status !== "ok" && (
+                  <div className="rounded bg-amber-500/10 p-2 text-[10px] text-amber-200">
+                    <strong>Suggested:</strong>{" "}
+                    {selected.status === "missing"
+                      ? `No matches. Try re-scraping "${selected.suggested_query}".`
+                      : selected.status === "thin"
+                        ? `Below expected count (${selected.published_count}/${selected.expected_min}). Re-scrape to widen pool.`
+                        : `All ${selected.excluded_count} matches were excluded. Review reasons or loosen filters.`}
+                  </div>
+                )}
+
+                <div className="text-[10px] text-zinc-500">
+                  Last scraped:{" "}
+                  {selected.last_scraped_at
+                    ? new Date(selected.last_scraped_at).toLocaleString()
+                    : "never"}
+                </div>
+              </div>
+
+              <div className="border-t border-zinc-900 p-2">
+                <button
+                  type="button"
+                  onClick={() => void handleRescrape(selected)}
+                  disabled={scrapingSlug !== null}
+                  className="inline-flex w-full items-center justify-center gap-1 rounded-md border border-amber-500/40 bg-amber-500/10 px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider text-amber-200 hover:bg-amber-500/20 disabled:opacity-50"
+                >
+                  {scrapingSlug === selected.slug + (selected.subcategory ?? "") ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <RefreshCw className="h-3 w-3" />
+                  )}
+                  Re-scrape {selected.slug}
+                </button>
+              </div>
+            </>
+          ) : (
+            <div className="flex h-full min-h-[140px] flex-col items-center justify-center gap-1 p-4 text-center text-[10px] text-zinc-500">
+              <Sparkles className="h-4 w-4 text-zinc-700" />
+              <div className="font-bold uppercase tracking-wider text-zinc-400">
+                Row inspector
+              </div>
+              <div>Select a category on the left to see why entries were found or skipped.</div>
+            </div>
+          )}
+        </aside>
+      </div>
     </div>
   );
 }
