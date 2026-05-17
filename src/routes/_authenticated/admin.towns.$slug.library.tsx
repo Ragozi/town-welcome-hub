@@ -216,6 +216,61 @@ function TownLibrary() {
         </div>
       </div>
 
+      {lastSummary && (
+        <div className="rounded-xl border border-border bg-card/60 p-4 text-sm">
+          <div className="flex items-center justify-between">
+            <div className="font-semibold">{lastSummary.label}</div>
+            <button
+              type="button"
+              onClick={() => setLastSummary(null)}
+              className="text-xs text-muted-foreground hover:text-foreground"
+            >
+              dismiss
+            </button>
+          </div>
+          <div className="mt-2 flex flex-wrap gap-2 text-xs">
+            <span className="rounded-full bg-emerald-100 px-2 py-0.5 font-semibold uppercase tracking-wider text-emerald-800">
+              {lastSummary.inserted} new
+            </span>
+            <span className="rounded-full bg-zinc-100 px-2 py-0.5 font-semibold uppercase tracking-wider text-zinc-800">
+              {lastSummary.skipped} skipped
+            </span>
+            {Object.entries(lastSummary.skipReasons)
+              .filter(([, v]) => v > 0)
+              .map(([k, v]) => (
+                <span
+                  key={k}
+                  className="rounded-full bg-amber-100 px-2 py-0.5 text-amber-900"
+                  title={skipReasonHelp(k)}
+                >
+                  {k.replace(/_/g, " ")}: {v}
+                </span>
+              ))}
+            {lastSummary.errors.length > 0 && (
+              <span className="rounded-full bg-rose-100 px-2 py-0.5 font-semibold text-rose-800">
+                {lastSummary.errors.length} error(s)
+              </span>
+            )}
+          </div>
+          {lastSummary.errors.length > 0 && (
+            <details className="mt-3 text-xs">
+              <summary className="cursor-pointer text-muted-foreground">Show errors</summary>
+              <ul className="mt-2 space-y-1 font-mono text-rose-700">
+                {lastSummary.errors.slice(0, 20).map((e, i) => (
+                  <li key={i}>• {e}</li>
+                ))}
+              </ul>
+            </details>
+          )}
+          <p className="mt-3 text-xs text-muted-foreground">
+            Skip categories: <strong>aggregator_site</strong> (Yelp/TripAdvisor/Facebook/Instagram/Google/YellowPages/MapQuest/AllMenus filtered out — we want the business' own site),{" "}
+            <strong>duplicate_or_updated</strong> (same URL already in this town's library — record was refreshed in place),{" "}
+            <strong>missing_url</strong> (Firecrawl result had no parseable hostname),{" "}
+            <strong>db_error</strong> (insert failed — see error list).
+          </p>
+        </div>
+      )}
+
       <div className="flex gap-2 border-b border-border pb-2 text-sm">
         {(["pending", "included", "excluded", "promoted"] as Tab[]).map((t) => (
           <button
