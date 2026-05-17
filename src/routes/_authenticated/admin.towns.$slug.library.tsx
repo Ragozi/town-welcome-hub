@@ -487,3 +487,18 @@ function TownLibrary() {
     </div>
   );
 }
+
+function skipReasonHelp(key: string): string {
+  switch (key) {
+    case "aggregator_site":
+      return "URL was Yelp/TripAdvisor/Facebook/Instagram/Google/YellowPages/MapQuest/AllMenus — we filter these so the library captures business' own sites.";
+    case "duplicate_or_updated":
+      return "Same website already exists for this town — record was updated in place instead of inserted.";
+    case "missing_url":
+      return "Firecrawl returned a result with no parseable hostname.";
+    case "db_error":
+      return "Database insert failed — see error list below.";
+    default:
+      return key;
+  }
+}
