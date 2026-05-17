@@ -46,6 +46,14 @@ function TownLibrary() {
   const [scrapeLimit, setScrapeLimit] = useState(8);
   const [promoting, setPromoting] = useState<{ id: string; name: string } | null>(null);
   const [promoteTier, setPromoteTier] = useState<"bronze" | "silver" | "gold" | "s_tier">("bronze");
+  const [lastSummary, setLastSummary] = useState<{
+    label: string;
+    inserted: number;
+    skipped: number;
+    searches: number;
+    skipReasons: Record<string, number>;
+    errors: string[];
+  } | null>(null);
 
   const townQ = useQuery({
     queryKey: ["town", slug],
