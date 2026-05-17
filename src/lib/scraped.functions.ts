@@ -2,7 +2,21 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { withDebugLog } from "@/lib/debug-log.server";
 import { firecrawlSearch } from "./firecrawl.server";
+
+type SkipReasons = {
+  missing_url: number;
+  aggregator_site: number;
+  duplicate_or_updated: number;
+  db_error: number;
+};
+
+function emptySkipReasons(): SkipReasons {
+  return { missing_url: 0, aggregator_site: 0, duplicate_or_updated: 0, db_error: 0 };
+}
+
+const AGGREGATOR_RE = /yelp|tripadvisor|facebook|instagram|google\.|yellowpages|mapquest|allmenus/i;
 
 async function assertAdmin(userId: string) {
   const { data } = await supabaseAdmin
