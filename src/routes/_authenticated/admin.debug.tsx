@@ -278,7 +278,7 @@ function DebugLabPage() {
             Open in drawer →
           </button>
         </div>
-        <div className="dark mt-4 h-[500px] rounded-lg border border-zinc-800 bg-zinc-950 p-3 text-zinc-100">
+        <div className="dark mt-4 h-[560px] overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950 p-3 text-zinc-100">
           <GapAnalysisPanel />
         </div>
       </div>
