@@ -67,7 +67,7 @@ export function logDebug(input: LogInput): void {
         function_name: input.function_name,
         status: input.status,
         message: (input.message ?? "").slice(0, 500),
-        payload: capPayload(input.payload ?? {}),
+        payload: capPayload(input.payload ?? {}) as never,
         user_id: input.user_id ?? null,
         duration_ms: input.duration_ms ?? null,
       });
