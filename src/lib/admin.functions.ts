@@ -581,3 +581,226 @@ export const adminListEvents = createServerFn({ method: "POST" })
       .limit(data.limit);
     return { events: events ?? [] };
   });
+
+// ----- Scrape Gap Analysis -----
+type GapStatus = "ok" | "thin" | "missing" | "all_excluded";
+
+export const getScrapeGapAnalysis = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({ town_slug: z.string().min(1).max(120) }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    await assertSuperAdmin(context.userId);
+
+    const { data: town } = await supabaseAdmin
+      .from("towns")
+      .select("id, slug, name, state")
+      .eq("slug", data.town_slug)
+      .maybeSingle();
+    if (!town) throw new Response("Town not found", { status: 404 });
+
+    const [{ data: cats }, { data: cores }, { data: published }, { data: scraped }] =
+      await Promise.all([
+        supabaseAdmin.from("categories").select("id, slug, name"),
+        supabaseAdmin
+          .from("core_business_categories")
+          .select("*")
+          .order("display_order", { ascending: true }),
+        supabaseAdmin
+          .from("businesses")
+          .select("id, name, description, subcategory, category_id")
+          .eq("town_id", town.id),
+        supabaseAdmin
+          .from("scraped_businesses")
+          .select("id, name, description, status, excluded_reason, category_id, last_scraped_at")
+          .eq("town_id", town.id),
+      ]);
+
+    const catBySlug = new Map((cats ?? []).map((c) => [c.slug, c.id]));
+    const slugByCatId = new Map((cats ?? []).map((c) => [c.id, c.slug]));
+
+    type Row = {
+      slug: string;
+      subcategory: string | null;
+      label: string;
+      expected_min: number;
+      is_critical: boolean;
+      published_count: number;
+      pending_count: number;
+      excluded_count: number;
+      published_examples: string[];
+      excluded_reasons: { reason: string; count: number }[];
+      last_scraped_at: string | null;
+      status: GapStatus;
+      suggested_query: string;
+    };
+
+    const matches = (
+      synonyms: string[],
+      name?: string | null,
+      description?: string | null,
+      subcategory?: string | null,
+    ): boolean => {
+      if (synonyms.length === 0) return true;
+      const hay = `${name ?? ""} ${description ?? ""} ${subcategory ?? ""}`.toLowerCase();
+      return synonyms.some((s) => hay.includes(s.toLowerCase()));
+    };
+
+    const rows: Row[] = (cores ?? []).map((core) => {
+      const catId = catBySlug.get(core.category_slug);
+      const pubInCat = (published ?? []).filter((b) => b.category_id === catId);
+      const pubMatched = pubInCat.filter((b) =>
+        matches(core.synonyms ?? [], b.name, b.description, b.subcategory),
+      );
+
+      const scrapedInCat = (scraped ?? []).filter(
+        (s) => !s.category_id || s.category_id === catId,
+      );
+      const scrapedMatched = scrapedInCat.filter((s) =>
+        matches(core.synonyms ?? [], s.name, s.description, null),
+      );
+
+      const pending = scrapedMatched.filter((s) => s.status === "pending");
+      const excluded = scrapedMatched.filter((s) => s.status === "excluded");
+
+      const reasonMap = new Map<string, number>();
+      for (const e of excluded) {
+        const r = e.excluded_reason ?? "(no reason)";
+        reasonMap.set(r, (reasonMap.get(r) ?? 0) + 1);
+      }
+
+      const lastScraped = scrapedMatched
+        .map((s) => s.last_scraped_at)
+        .filter(Boolean)
+        .sort()
+        .pop() ?? null;
+
+      let status: GapStatus = "ok";
+      if (pubMatched.length === 0 && excluded.length > 0 && pending.length === 0) {
+        status = "all_excluded";
+      } else if (pubMatched.length === 0) {
+        status = "missing";
+      } else if (pubMatched.length < core.min_expected) {
+        status = "thin";
+      }
+
+      return {
+        slug: core.category_slug,
+        subcategory: core.subcategory,
+        label: core.label,
+        expected_min: core.min_expected,
+        is_critical: core.is_critical,
+        published_count: pubMatched.length,
+        pending_count: pending.length,
+        excluded_count: excluded.length,
+        published_examples: pubMatched.slice(0, 3).map((b) => b.name),
+        excluded_reasons: Array.from(reasonMap.entries())
+          .map(([reason, count]) => ({ reason, count }))
+          .sort((a, b) => b.count - a.count),
+        last_scraped_at: lastScraped,
+        status,
+        suggested_query: `${core.label.toLowerCase()} ${town.name} ${town.state}`.trim(),
+      };
+    });
+
+    const summary = {
+      total: rows.length,
+      ok: rows.filter((r) => r.status === "ok").length,
+      thin: rows.filter((r) => r.status === "thin").length,
+      missing: rows.filter((r) => r.status === "missing").length,
+      all_excluded: rows.filter((r) => r.status === "all_excluded").length,
+      critical_gaps: rows.filter((r) => r.is_critical && r.status !== "ok").length,
+    };
+
+    return {
+      town: { id: town.id, slug: town.slug, name: town.name, state: town.state },
+      rows,
+      summary,
+      categories: (cats ?? []).map((c) => ({ slug: c.slug, name: c.name })),
+      _slugByCatId: Object.fromEntries(slugByCatId),
+    };
+  });
+
+// ----- Support bundle data -----
+export const getSupportBundleData = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        days: z.number().int().min(1).max(30).default(7),
+        town_slug: z.string().optional(),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    await assertSuperAdmin(context.userId);
+
+    const since = new Date(Date.now() - data.days * 86400000).toISOString();
+
+    const [{ data: logs }, { data: events }, tableCounts] = await Promise.all([
+      supabaseAdmin
+        .from("debug_logs")
+        .select("*")
+        .gte("created_at", since)
+        .order("created_at", { ascending: false })
+        .limit(2000),
+      supabaseAdmin
+        .from("packet_events")
+        .select("event_type, created_at")
+        .gte("created_at", since),
+      (async () => {
+        const tables = [
+          "packets",
+          "businesses",
+          "scraped_businesses",
+          "towns",
+          "profiles",
+          "user_roles",
+          "packet_events",
+          "debug_logs",
+        ];
+        const out: Record<string, number> = {};
+        for (const t of tables) {
+          const { count } = await supabaseAdmin
+            .from(t as never)
+            .select("*", { count: "exact", head: true });
+          out[t] = count ?? 0;
+        }
+        return out;
+      })(),
+    ]);
+
+    // event counts by type/day
+    const eventDaily: Record<string, Record<string, number>> = {};
+    for (const e of events ?? []) {
+      const day = e.created_at.slice(0, 10);
+      eventDaily[day] = eventDaily[day] ?? {};
+      eventDaily[day][e.event_type] = (eventDaily[day][e.event_type] ?? 0) + 1;
+    }
+
+    return {
+      since,
+      logs: logs ?? [],
+      event_summary: eventDaily,
+      table_counts: tableCounts,
+    };
+  });
+
+// ----- Fetch fresh logs window -----
+export const getRecentDebugLogs = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({ days: z.number().int().min(1).max(30).default(7) }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    await assertSuperAdmin(context.userId);
+    const since = new Date(Date.now() - data.days * 86400000).toISOString();
+    const { data: logs } = await supabaseAdmin
+      .from("debug_logs")
+      .select("*")
+      .gte("created_at", since)
+      .order("created_at", { ascending: false })
+      .limit(5000);
+    return { since, logs: logs ?? [] };
+  });

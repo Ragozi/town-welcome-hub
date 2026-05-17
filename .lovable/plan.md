@@ -1,116 +1,97 @@
-# Debug Lab — Implementation Plan
 
-A persistent right-side drawer in the admin area showing real-time backend activity, backed by a new `debug_logs` table + Supabase Realtime, with a clickable JSON inspector and filters.
+# Debug Lab v2 — Exports, Alerts & Gap Analysis
 
-## 1. Database
+All features ship inside the existing `/admin/debug` route + the floating Debug Lab drawer. Every entry point re-checks `has_role(auth.uid(), 'super_admin')` — RLS on `debug_logs` already enforces this server-side.
 
-New migration: `debug_logs` table.
+## 1. Export logs
 
-Columns:
+Add an **Export** menu (shadcn `DropdownMenu`) in `src/components/debug-lab/controls.tsx`:
+- **Export filtered (CSV)** — current `filteredLogs` only
+- **Export filtered (JSON)** — same, full payloads
+- **Export last 7 days (JSON)** — fetches fresh from Supabase (not just the in-memory 500 buffer)
+- **Export support bundle (.zip-style JSON)** — single JSON file with: logs, current user, app version, browser UA, timestamp, active filter — shaped for pasting into a support ticket
 
-- `id uuid pk`
-- `created_at timestamptz default now()`
-- `event_type text` — `scrape | packet | auth | database | other`
-- `function_name text`
-- `status text` — `success | running | error`
-- `message text`
-- `payload jsonb default '{}'`
-- `user_id uuid null`
-- `duration_ms integer null`
+Implementation:
+- New helper `src/components/debug-lab/export.ts` — pure functions: `toCsv(logs)`, `toJson(logs)`, `downloadBlob(name, mime, content)`, `buildSupportBundle(logs, meta)`
+- For "last 7 days" fetch: `supabase.from('debug_logs').select('*').gte('created_at', sevenDaysAgo).order('created_at')` — RLS limits to super admins
+- Filenames: `hearth-debug-{yyyy-mm-dd-HHmm}.{csv|json}`
+- Payloads are already PII-sanitized server-side by `withDebugLog`, so exports are safe to share
 
-RLS:
+## 2. Error alerts
 
-- Admins (`has_role(auth.uid(),'super_admin')`) can SELECT.
-- INSERT only via service role (server functions); no client policy.
-- Add table to `supabase_realtime` publication; `REPLICA IDENTITY FULL`.
-- Index on `(created_at desc)`, `(event_type)`, `(status)`.
-- Retention helper: keep last 7 days (cleanup function called opportunistically on insert when row count > threshold, or simply rely on manual clear for now).
+Real-time surfacing of `status === 'error'` rows:
 
-## 2. Server-side logging helper
+- **Toast on new error** (sonner) — fires from `DebugDrawerProvider` realtime handler when row is an error and drawer is closed. Click toast → opens drawer + selects that log.
+- **FAB red pulse + error count badge** — `DebugFab` already shows unread; add a separate red `errorCount` badge that only counts errors since last drawer-open. Animated ring pulse when > 0.
+- **In-drawer alert banner** — sticky banner at top of `LogFeed` listing the last 3 errors with "Jump to" buttons; dismissible per session.
+- **Quiet hours / mute toggle** — checkbox in controls "Mute error toasts" (persists to `localStorage`). Drawer badge still updates.
 
-`src/lib/debug-log.server.ts`:
+Provider changes (`debug-drawer-provider.tsx`): track `errorCount`, expose `muteErrors`/`setMuteErrors`, fire `toast.error(...)` on qualifying inserts.
 
-- `logDebug({ event_type, function_name, status, message, payload?, user_id? })` — fire-and-forget insert via `supabaseAdmin`. Never throws (swallow + console.error).
-- `withDebugLog(meta, fn)` wrapper: emits a `running` entry, then `success`/`error` with `duration_ms` and result/error payload (sanitized, capped at ~4 KB).
+## 3. Scrape Gap Analysis ("why no pizza shops?")
 
-Instrument:
+New tab inside the Debug Lab drawer: **Logs | Gap Analysis**.
 
-- `firecrawlSearch` (src/lib/firecrawl.server.ts) → event_type=`scrape`
-- `getHandbookData`, `getPublicPacket`, `issuePdfToken` (already removed) → event_type=`packet`
-- `logEvent` (tracking.functions.ts) → event_type=`database`
-- Admin functions (invite create/revoke, user role changes) → `auth`
-- Generic catch in `src/server.ts` error wrapper → `error`/`other`
+Concept: compare expected coverage of "core business types" per town vs. what the scraper actually produced, and explain misses.
 
-All payload writes pass through a `sanitize()` that strips `email`, `phone`, `buyer_last_name`, bearer tokens.
+### Data model
 
-## 3. Admin nav entry
+Add a small reference table — `core_business_categories`:
+- `category_slug` (FK to `categories.slug`), `min_expected` (int, default 1), `is_critical` (bool), `synonyms` (text[])
 
-Edit `src/routes/_authenticated/admin.tsx`: add `<Link to="/admin/debug">🔧 Debug Lab</Link>` chip styled with a slate→cyan gradient (matches existing chip pattern).
+Seeded with the launch-critical list: pizza, coffee, grocery, pharmacy, hardware, restaurant, ice_cream, gym, urgent_care, dentist, hair_salon, auto_repair, daycare, bakery, bank.
 
-New route `src/routes/_authenticated/admin.debug.tsx` — minimal page that mainly documents the drawer + offers a "Open Debug Lab" button. The drawer itself is global within the admin layout (see next).
+### Server function
 
-## 4. Drawer UI
+`getScrapeGapAnalysis(town_slug)` in `src/lib/admin.functions.ts`:
+- Joins `towns` × `core_business_categories` × counts from `businesses` and `scraped_businesses` (grouped by `status`)
+- For each core category returns:
+  - `expected_min`, `published_count`, `pending_count`, `excluded_count`
+  - `status`: `ok` | `thin` | `missing` | `all_excluded`
+  - `last_scrape_at` (latest `debug_logs.created_at` where `event_type='scrape'` and payload mentions slug + category)
+  - `reasons`: aggregated `excluded_reason` values from `scraped_businesses`, plus latest scrape error messages from `debug_logs`
+- Wrapped in `withDebugLog` for self-tracing
 
-New components:
+### UI — `src/components/debug-lab/gap-analysis.tsx`
 
-- `src/components/debug-lab/debug-drawer-provider.tsx` — React context: `{ open, setOpen, paused, setPaused, filter, search, selectedId, ... }`. Mounted inside `_authenticated/admin.tsx` so it persists across admin subroutes.
-- `src/components/debug-lab/debug-fab.tsx` — fixed bottom-right floating button (🔧) with unread count badge.
-- `src/components/debug-lab/debug-drawer.tsx` — Sheet (shadcn) from the right, `w-[380px] sm:w-[420px]`, dark theme scoped via `class="dark"` wrapper + custom tokens (warm amber accents on near-black bg).
-- `src/components/debug-lab/log-feed.tsx` — virtualized-ish scroll (simple list, cap at 500 in memory). Each row: timestamp (HH:mm:ss.SSS), colored status dot, function name (mono), short message, event_type chip. Click → set `selectedId`. Auto-scroll to bottom unless user has scrolled up (track with `onScroll`).
-- `src/components/debug-lab/json-inspector.tsx` — pretty JSON with collapsible nodes (lightweight custom recursive renderer; no new dep) + "Copy JSON" button using `navigator.clipboard`. Syntax colors via tailwind classes.
-- `src/components/debug-lab/controls.tsx` — filter Select (All / Scrape / Packet / Auth / Database / Other), search Input, Pause toggle, Clear button (clears local buffer only; optional admin "wipe table" behind confirm).
+- Town selector (defaults to admin's `default_town_id`)
+- Table: Category | Expected | Found | Pending | Excluded | Status pill | "Why?" button
+- "Why?" opens a side panel with: excluded reasons grouped + count, last 5 scrape log entries for that town/category, recommended action ("Re-run scrape with query: `pizza near {town}`", "Review 4 pending entries", "Loosen excluded_reason: 'chain'")
+- One-click **Re-run scrape** button that calls existing scrape flow with a targeted query (super-admin only; logs via `withDebugLog`)
+- **Export gap report (CSV)** button — same export helpers as §1
 
-Layout inside drawer: top = controls, middle = log feed (flex-1, scroll), bottom (40% height) = JSON inspector when a row is selected, collapsible.
+## 4. Support logs export
 
-## 5. Realtime + initial fetch
+Specialized variant of the export bundle aimed at sharing with the dev team:
 
-Inside provider:
+- Button on `/admin/debug` page (top right): **Generate support bundle**
+- Produces a single `.json` containing:
+  - Last 7 days of debug_logs (server-fetched, not buffered)
+  - Last 30 days of `packet_events` summary counts (no PII — counts by event_type/day)
+  - Active gap analysis for admin's default town
+  - Environment metadata: app version, build time, project ref, user id, UA, viewport
+  - Schema fingerprint: list of tables + row counts
+- Copy-to-clipboard + download
+- Wrapped in `withDebugLog` so the bundle generation itself is auditable
 
-- On mount (super admin only): `supabase.from('debug_logs').select('*').order('created_at',{ascending:false}).limit(200)` then reverse for display.
-- `supabase.channel('debug_logs').on('postgres_changes', { event:'INSERT', schema:'public', table:'debug_logs' }, (p) => appendIfNotPaused(p.new))`.
-- Buffer paused inserts into a queue; on resume, flush.
-- Filter + search applied client-side over the in-memory buffer.
+## Files
 
-## 6. Styling
+**New**
+- `src/components/debug-lab/export.ts` — CSV/JSON/bundle helpers
+- `src/components/debug-lab/gap-analysis.tsx` — gap UI + "why" panel
+- `src/components/debug-lab/error-banner.tsx` — sticky in-drawer error banner
+- `supabase/migrations/<ts>_core_business_categories.sql` — new table + seed + admin-only RLS
 
-Drawer interior tokens (scoped, don't change global theme):
+**Edited**
+- `src/components/debug-lab/debug-drawer-provider.tsx` — error count, toasts, mute, 7d fetch helper
+- `src/components/debug-lab/controls.tsx` — Export dropdown, mute toggle
+- `src/components/debug-lab/debug-drawer.tsx` — Logs / Gap Analysis tabs
+- `src/components/debug-lab/debug-fab.tsx` — error badge + pulse
+- `src/lib/admin.functions.ts` — `getScrapeGapAnalysis`, `generateSupportBundle`
+- `src/routes/_authenticated/admin.debug.tsx` — Support bundle button + gap entry point
 
-```
-bg: oklch(0.16 0.01 60)   /* warm near-black */
-fg: oklch(0.92 0.02 80)
-accent: oklch(0.78 0.16 55) /* amber */
-success: oklch(0.78 0.16 150)
-error: oklch(0.68 0.20 25)
-running: oklch(0.80 0.16 75)
-```
-
-Mono font: existing `font-mono` token (JetBrains Mono if available, else system mono).
-
-## 7. Files touched / created
-
-Created:
-
-- `supabase/migrations/<ts>_debug_logs.sql`
-- `src/lib/debug-log.server.ts`
-- `src/routes/_authenticated/admin.debug.tsx`
-- `src/components/debug-lab/{debug-drawer-provider,debug-fab,debug-drawer,log-feed,json-inspector,controls}.tsx`
-
-Edited:
-
-- `src/routes/_authenticated/admin.tsx` (mount provider + FAB + nav chip)
-- `src/lib/firecrawl.server.ts` (instrument)
-- `src/lib/handbook.functions.ts` (instrument)
-- `src/lib/public-packet.functions.ts` (instrument `getPublicPacket`)
-- `src/lib/tracking.functions.ts` (instrument)
-- `src/lib/admin.functions.ts` (instrument key mutations)
-- `src/server.ts` (log uncaught SSR errors)
-
-## 8. Out of scope
-
-- No edit/replay of past requests.
-- No log export to file (Copy JSON only).
-- No per-user log streams — super admin-only view of everything.
-
-## Open question
-
-Realtime cross-tab is via Supabase Realtime as specified. Confirm OK to also persist logs to `debug_logs` (vs in-memory only). Plan assumes **persist + Realtime** since the brief lists the table schema explicitly.
+## Out of scope
+- Email/Slack alerts (browser toasts only this round)
+- Auto re-scrape scheduling (manual button only)
+- Editing the core-category list from UI (seed-only; edit via migration)
+- Multi-town gap aggregation (per-town view only)

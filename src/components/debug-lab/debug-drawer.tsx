@@ -4,9 +4,11 @@ import { useDebugDrawer } from "./debug-drawer-provider";
 import { Controls } from "./controls";
 import { LogFeed } from "./log-feed";
 import { JsonInspector } from "./json-inspector";
+import { ErrorBanner } from "./error-banner";
+import { GapAnalysisPanel } from "./gap-analysis";
 
 export function DebugDrawer() {
-  const { open, setOpen, selected, setSelectedId } = useDebugDrawer();
+  const { open, setOpen, selected, setSelectedId, tab, setTab, errorUnread } = useDebugDrawer();
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetContent
@@ -24,30 +26,76 @@ export function DebugDrawer() {
             </div>
           </div>
         </header>
+        <div className="flex items-center gap-1 border-b border-zinc-800 bg-zinc-950 px-3 py-1.5">
+          <TabBtn active={tab === "logs"} onClick={() => setTab("logs")} badge={errorUnread}>
+            Logs
+          </TabBtn>
+          <TabBtn active={tab === "gap"} onClick={() => setTab("gap")}>
+            Gap Analysis
+          </TabBtn>
+        </div>
         <div className="flex min-h-0 flex-1 flex-col gap-3 p-3">
-          <Controls />
-          <LogFeed />
-          {selected && (
-            <div className="flex min-h-0 flex-col gap-1" style={{ height: "40%" }}>
-              <div className="flex items-center justify-between">
-                <div className="font-mono text-[10px] uppercase tracking-wider text-zinc-500">
-                  Payload · {selected.function_name}
+          {tab === "logs" ? (
+            <>
+              <Controls />
+              <ErrorBanner />
+              <LogFeed />
+              {selected && (
+                <div className="flex min-h-0 flex-col gap-1" style={{ height: "40%" }}>
+                  <div className="flex items-center justify-between">
+                    <div className="font-mono text-[10px] uppercase tracking-wider text-zinc-500">
+                      Payload · {selected.function_name}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedId(null)}
+                      className="text-[10px] text-zinc-500 hover:text-zinc-200"
+                    >
+                      close
+                    </button>
+                  </div>
+                  <div className="min-h-0 flex-1">
+                    <JsonInspector data={selected.payload} />
+                  </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setSelectedId(null)}
-                  className="text-[10px] text-zinc-500 hover:text-zinc-200"
-                >
-                  close
-                </button>
-              </div>
-              <div className="min-h-0 flex-1">
-                <JsonInspector data={selected.payload} />
-              </div>
-            </div>
+              )}
+            </>
+          ) : (
+            <GapAnalysisPanel />
           )}
         </div>
       </SheetContent>
     </Sheet>
+  );
+}
+
+function TabBtn({
+  active,
+  onClick,
+  badge,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  badge?: number;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`relative rounded px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider transition-colors ${
+        active
+          ? "bg-amber-500/15 text-amber-200"
+          : "text-zinc-500 hover:bg-zinc-900 hover:text-zinc-200"
+      }`}
+    >
+      {children}
+      {badge && badge > 0 ? (
+        <span className="absolute -right-1 -top-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[9px] font-bold text-white">
+          {badge > 99 ? "99+" : badge}
+        </span>
+      ) : null}
+    </button>
   );
 }

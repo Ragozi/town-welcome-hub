@@ -1,6 +1,24 @@
-import { Pause, Play, Trash2, Search } from "lucide-react";
+import { useState } from "react";
+import { Pause, Play, Trash2, Search, Download, Bell, BellOff, Loader2 } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { toast } from "sonner";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useAuth } from "@/lib/auth";
+import { getRecentDebugLogs, getSupportBundleData } from "@/lib/admin.functions";
 import { useDebugDrawer } from "./debug-drawer-provider";
-import type { FilterType } from "./types";
+import {
+  exportCsv,
+  exportJson,
+  exportSupportBundle,
+  type SupportBundleMeta,
+} from "./export";
+import type { DebugLog, FilterType } from "./types";
 
 const FILTERS: { value: FilterType; label: string }[] = [
   { value: "all", label: "All" },
@@ -12,7 +30,71 @@ const FILTERS: { value: FilterType; label: string }[] = [
 ];
 
 export function Controls() {
-  const { filter, setFilter, search, setSearch, paused, setPaused, clear, logs } = useDebugDrawer();
+  const {
+    filter,
+    setFilter,
+    search,
+    setSearch,
+    paused,
+    setPaused,
+    clear,
+    logs,
+    filteredLogs,
+    muteErrors,
+    setMuteErrors,
+  } = useDebugDrawer();
+  const { user, role } = useAuth();
+  const fetch7d = useServerFn(getRecentDebugLogs);
+  const fetchBundle = useServerFn(getSupportBundleData);
+  const [busy, setBusy] = useState<string | null>(null);
+
+  const meta = (): SupportBundleMeta => ({
+    user_id: user?.id ?? null,
+    user_email: user?.email ?? null,
+    role,
+    app_version: "hearth-handbook",
+    ua: typeof navigator !== "undefined" ? navigator.userAgent : "",
+    viewport:
+      typeof window !== "undefined" ? `${window.innerWidth}x${window.innerHeight}` : "",
+    url: typeof window !== "undefined" ? window.location.href : "",
+    active_filter: filter,
+    search_query: search,
+  });
+
+  const handleExport7d = async () => {
+    setBusy("7d");
+    try {
+      const res = await fetch7d({ data: { days: 7 } });
+      exportJson(res.logs as DebugLog[], "7d");
+      toast.success(`Exported ${res.logs.length} log entries`);
+    } catch (err) {
+      toast.error("Export failed", {
+        description: err instanceof Error ? err.message : String(err),
+      });
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const handleSupportBundle = async () => {
+    setBusy("bundle");
+    try {
+      const res = await fetchBundle({ data: { days: 7 } });
+      exportSupportBundle(res.logs as DebugLog[], meta(), {
+        event_summary: res.event_summary,
+        table_counts: res.table_counts,
+        since: res.since,
+      });
+      toast.success("Support bundle ready");
+    } catch (err) {
+      toast.error("Bundle failed", {
+        description: err instanceof Error ? err.message : String(err),
+      });
+    } finally {
+      setBusy(null);
+    }
+  };
+
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap gap-1">
@@ -56,16 +138,56 @@ export function Controls() {
         </button>
         <button
           type="button"
+          onClick={() => setMuteErrors(!muteErrors)}
+          title={muteErrors ? "Unmute error toasts" : "Mute error toasts"}
+          className={`inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[10px] font-bold uppercase tracking-wider ${
+            muteErrors
+              ? "border-zinc-700 bg-zinc-900 text-zinc-500"
+              : "border-rose-500/40 bg-rose-500/10 text-rose-300"
+          }`}
+        >
+          {muteErrors ? <BellOff className="h-3 w-3" /> : <Bell className="h-3 w-3" />}
+        </button>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              className="inline-flex items-center gap-1 rounded-md border border-zinc-800 bg-zinc-900 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-zinc-300 hover:border-amber-500/40"
+            >
+              {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Download className="h-3 w-3" />}
+              Export
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="dark border-zinc-800 bg-zinc-950 text-zinc-100">
+            <DropdownMenuItem onClick={() => exportCsv(filteredLogs)}>
+              Filtered ({filteredLogs.length}) — CSV
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => exportJson(filteredLogs)}>
+              Filtered ({filteredLogs.length}) — JSON
+            </DropdownMenuItem>
+            <DropdownMenuSeparator className="bg-zinc-800" />
+            <DropdownMenuItem onClick={handleExport7d}>
+              Last 7 days (server) — JSON
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleSupportBundle}>
+              Support bundle — JSON
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        <button
+          type="button"
           onClick={clear}
           title="Clear log buffer"
           className="inline-flex items-center gap-1 rounded-md border border-zinc-800 bg-zinc-900 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-zinc-300 hover:border-rose-500/40 hover:text-rose-300"
         >
           <Trash2 className="h-3 w-3" />
-          Clear
         </button>
       </div>
       <div className="text-[10px] text-zinc-500">
         {logs.length} entries{paused ? " · buffer paused" : ""}
+        {muteErrors ? " · errors muted" : ""}
       </div>
     </div>
   );
