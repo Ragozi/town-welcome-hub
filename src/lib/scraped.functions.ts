@@ -5,6 +5,7 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import type { Database } from "@/integrations/supabase/types";
 import { firecrawlSearch } from "./firecrawl.server";
 import { withDebugLog } from "./debug-log.server";
+import { filterResult, queryVariants } from "./scrape-filter";
 
 type ScrapedInsert = Database["public"]["Tables"]["scraped_businesses"]["Insert"];
 
@@ -91,6 +92,28 @@ async function insertOrUpdateScrapedBusiness(
     error: error ? { message: error.message, code: error.code } : null,
     action: "inserted",
   };
+}
+
+// Insert a filter-rejected row as status='excluded' with a reason ONLY if no
+// row already exists for this (town_id, website). We never overwrite an
+// existing row — admins may have already triaged it (Pending → Included)
+// and re-applying the filter shouldn't undo their work.
+async function insertFilteredAsExcluded(
+  row: ScrapedInsert & { website: string },
+  reason: string,
+): Promise<"inserted" | "skipped_existing" | "error"> {
+  const { data: existing } = await supabaseAdmin
+    .from("scraped_businesses")
+    .select("id")
+    .eq("town_id", row.town_id)
+    .eq("website", row.website)
+    .limit(1)
+    .maybeSingle();
+  if (existing?.id) return "skipped_existing";
+  const { error } = await supabaseAdmin
+    .from("scraped_businesses")
+    .insert({ ...row, status: "excluded", excluded_reason: `filter: ${reason}` });
+  return error ? "error" : "inserted";
 }
 
 // Quick liveness check that doesn't burn Firecrawl credits. Tries a GET
@@ -214,32 +237,27 @@ export const scrapeTown = createServerFn({ method: "POST" })
 
         for (const cat of categories) {
           for (const target of targets) {
-            const query = `best ${cat.name.toLowerCase()} in ${target.locationLabel}`;
-            try {
-              const results = await firecrawlSearch(query, { limit: data.limit });
-              searches += 1;
-              for (const r of results) {
-                const website = r.url;
-                const host = hostFrom(website);
-                if (!host) {
-                  bump("missing_url");
-                  continue;
-                }
-                if (
-                  /yelp|tripadvisor|facebook|instagram|google\.|yellowpages|mapquest|allmenus/i.test(host)
-                ) {
-                  bump("aggregator_site");
-                  continue;
-                }
+            // Fire 2 query variants and dedupe by URL across them — the bare
+            // variant tends to surface business sites, the "best" variant
+            // surfaces aggregators we filter out anyway.
+            const seenUrls = new Set<string>();
+            for (const query of queryVariants(cat.name, target.locationLabel)) {
+              try {
+                const results = await firecrawlSearch(query, { limit: data.limit });
+                searches += 1;
+                for (const r of results) {
+                  const website = r.url;
+                  if (!website || seenUrls.has(website)) continue;
+                  seenUrls.add(website);
 
-                const name = (r.title ?? host)
-                  .split(/[|\-–·]/)[0]
-                  .trim()
-                  .slice(0, 200);
+                  const verdict = filterResult(website, r.title);
+                  const normalized = normalizeUrl(website);
+                  const name = (r.title ?? hostFrom(website) ?? website)
+                    .split(/[|\-–·]/)[0]
+                    .trim()
+                    .slice(0, 200);
 
-                const normalized = normalizeUrl(website);
-                const { error: insErr } = await supabaseAdmin.from("scraped_businesses").upsert(
-                  {
+                  const baseRow = {
                     town_id: town.id,
                     category_id: cat.id,
                     source: "firecrawl_search",
@@ -251,18 +269,28 @@ export const scrapeTown = createServerFn({ method: "POST" })
                     description: r.description ?? null,
                     raw: r as never,
                     last_scraped_at: new Date().toISOString(),
-                  },
-                  { onConflict: "town_id,website", ignoreDuplicates: false },
-                );
-                if (insErr) {
-                  bump("db_error");
-                  errors.push(`${cat.name} upsert: ${insErr.message}`);
-                } else {
-                  inserted += 1;
+                  };
+
+                  if (!verdict.ok) {
+                    bump(verdict.reason);
+                    const action = await insertFilteredAsExcluded(baseRow, verdict.reason);
+                    if (action === "error") {
+                      errors.push(`${cat.name} excluded insert failed`);
+                    }
+                    continue;
+                  }
+
+                  const { error: insErr } = await insertOrUpdateScrapedBusiness(baseRow);
+                  if (insErr) {
+                    bump("db_error");
+                    errors.push(`${cat.name} write: ${insErr.message}`);
+                  } else {
+                    inserted += 1;
+                  }
                 }
+              } catch (e) {
+                errors.push(`${cat.name} @ ${target.zip ?? "town"}: ${(e as Error).message}`);
               }
-            } catch (e) {
-              errors.push(`${cat.name} @ ${target.zip ?? "town"}: ${(e as Error).message}`);
             }
           }
         }
@@ -345,58 +373,69 @@ export const scrapeCounty = createServerFn({ method: "POST" })
           const term = (core.synonyms && core.synonyms.length > 0 ? core.synonyms[0] : core.label)
             .toLowerCase()
             .trim();
-          const query = `best ${term} in ${town.county} County, ${town.state}`;
-          try {
-            const results = await firecrawlSearch(query, { limit: data.limit });
-            searches += 1;
-            for (const r of results) {
-              const website = r.url;
-              const host = hostFrom(website);
-              if (!host) {
-                bump("missing_url");
-                continue;
-              }
-              if (
-                /yelp|tripadvisor|facebook|instagram|google\.|yellowpages|mapquest|allmenus/i.test(host)
-              ) {
-                bump("aggregator_site");
-                continue;
-              }
+          const locationLabel = `${town.county} County, ${town.state}`;
+          // Fire 2 query variants and dedupe by URL across them — see scrapeTown.
+          const seenUrls = new Set<string>();
+          for (const query of queryVariants(term, locationLabel)) {
+            try {
+              const results = await firecrawlSearch(query, { limit: data.limit });
+              searches += 1;
+              for (const r of results) {
+                const website = r.url;
+                if (!website || seenUrls.has(website)) continue;
+                seenUrls.add(website);
 
-              const name = (r.title ?? host)
-                .split(/[|\-–·]/)[0]
-                .trim()
-                .slice(0, 200);
+                const verdict = filterResult(website, r.title);
+                const normalized = normalizeUrl(website);
+                const name = (r.title ?? hostFrom(website) ?? website)
+                  .split(/[|\-–·]/)[0]
+                  .trim()
+                  .slice(0, 200);
 
-              const liveness = await verifyUrlLive(website);
-              const normalized = normalizeUrl(website);
-              const isLive = liveness.live;
-              const row = {
-                town_id: town.id,
-                category_id: catIdBySlug.get(core.category_slug) ?? null,
-                source: "firecrawl_search_county",
-                source_url: website,
-                source_query: query,
-                source_zip: null,
-                source_county: town.county,
-                name,
-                website: normalized,
-                description: r.description ?? null,
-                raw: r as never,
-                last_scraped_at: new Date().toISOString(),
-                status: (isLive ? "pending" : "excluded") as "pending" | "excluded",
-                excluded_reason: isLive ? null : (liveness as { reason: string }).reason,
-              };
-              const { error: insErr } = await insertOrUpdateScrapedBusiness(row);
-              if (insErr) {
-                bump("db_error");
-                errors.push(`${core.label} write: ${insErr.message}`);
-              } else {
-                inserted += 1;
+                const baseRow = {
+                  town_id: town.id,
+                  category_id: catIdBySlug.get(core.category_slug) ?? null,
+                  source: "firecrawl_search_county",
+                  source_url: website,
+                  source_query: query,
+                  source_zip: null,
+                  source_county: town.county,
+                  name,
+                  website: normalized,
+                  description: r.description ?? null,
+                  raw: r as never,
+                  last_scraped_at: new Date().toISOString(),
+                };
+
+                if (!verdict.ok) {
+                  bump(verdict.reason);
+                  const action = await insertFilteredAsExcluded(baseRow, verdict.reason);
+                  if (action === "error") {
+                    errors.push(`${core.label} excluded insert failed`);
+                  }
+                  continue;
+                }
+
+                // Filter passed — now do the expensive liveness check
+                const liveness = await verifyUrlLive(website);
+                const isLive = liveness.live;
+                const row = {
+                  ...baseRow,
+                  status: (isLive ? "pending" : "excluded") as "pending" | "excluded",
+                  excluded_reason: isLive ? null : `liveness: ${(liveness as { reason: string }).reason}`,
+                };
+                const { error: insErr } = await insertOrUpdateScrapedBusiness(row);
+                if (insErr) {
+                  bump("db_error");
+                  errors.push(`${core.label} write: ${insErr.message}`);
+                } else {
+                  inserted += 1;
+                  if (!isLive) bump(`liveness: ${(liveness as { reason: string }).reason}`);
+                }
               }
+            } catch (e) {
+              errors.push(`${core.label}: ${(e as Error).message}`);
             }
-          } catch (e) {
-            errors.push(`${core.label}: ${(e as Error).message}`);
           }
         }
 
