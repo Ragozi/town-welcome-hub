@@ -25,6 +25,7 @@ export type Database = {
           featured_order: number
           id: string
           last_scraped: string | null
+          last_verified_at: string | null
           logo_url: string | null
           name: string
           phone: string | null
@@ -32,6 +33,8 @@ export type Database = {
           sponsor_tier: Database["public"]["Enums"]["sponsor_tier"]
           subcategory: string | null
           town_id: string
+          verification_note: string | null
+          verification_status: Database["public"]["Enums"]["business_verification_status"]
           website: string | null
         }
         Insert: {
@@ -44,6 +47,7 @@ export type Database = {
           featured_order?: number
           id?: string
           last_scraped?: string | null
+          last_verified_at?: string | null
           logo_url?: string | null
           name: string
           phone?: string | null
@@ -51,6 +55,8 @@ export type Database = {
           sponsor_tier?: Database["public"]["Enums"]["sponsor_tier"]
           subcategory?: string | null
           town_id: string
+          verification_note?: string | null
+          verification_status?: Database["public"]["Enums"]["business_verification_status"]
           website?: string | null
         }
         Update: {
@@ -63,6 +69,7 @@ export type Database = {
           featured_order?: number
           id?: string
           last_scraped?: string | null
+          last_verified_at?: string | null
           logo_url?: string | null
           name?: string
           phone?: string | null
@@ -70,6 +77,8 @@ export type Database = {
           sponsor_tier?: Database["public"]["Enums"]["sponsor_tier"]
           subcategory?: string | null
           town_id?: string
+          verification_note?: string | null
+          verification_status?: Database["public"]["Enums"]["business_verification_status"]
           website?: string | null
         }
         Relationships: [
@@ -552,6 +561,7 @@ export type Database = {
           excluded_reason: string | null
           id: string
           last_scraped_at: string
+          last_verified_at: string | null
           logo_url: string | null
           name: string
           phone: string | null
@@ -565,6 +575,8 @@ export type Database = {
           status: Database["public"]["Enums"]["scraped_business_status"]
           town_id: string
           updated_at: string
+          verification_note: string | null
+          verification_status: Database["public"]["Enums"]["business_verification_status"]
           website: string | null
         }
         Insert: {
@@ -575,6 +587,7 @@ export type Database = {
           excluded_reason?: string | null
           id?: string
           last_scraped_at?: string
+          last_verified_at?: string | null
           logo_url?: string | null
           name: string
           phone?: string | null
@@ -588,6 +601,8 @@ export type Database = {
           status?: Database["public"]["Enums"]["scraped_business_status"]
           town_id: string
           updated_at?: string
+          verification_note?: string | null
+          verification_status?: Database["public"]["Enums"]["business_verification_status"]
           website?: string | null
         }
         Update: {
@@ -598,6 +613,7 @@ export type Database = {
           excluded_reason?: string | null
           id?: string
           last_scraped_at?: string
+          last_verified_at?: string | null
           logo_url?: string | null
           name?: string
           phone?: string | null
@@ -611,6 +627,8 @@ export type Database = {
           status?: Database["public"]["Enums"]["scraped_business_status"]
           town_id?: string
           updated_at?: string
+          verification_note?: string | null
+          verification_status?: Database["public"]["Enums"]["business_verification_status"]
           website?: string | null
         }
         Relationships: [
@@ -932,6 +950,11 @@ export type Database = {
         | "subscriber"
         | "realtor_admin"
         | "sponsor_user"
+      business_verification_status:
+        | "unknown"
+        | "open"
+        | "possibly_closed"
+        | "closed"
       marketing_topic:
         | "local_deals"
         | "new_businesses"
@@ -1085,6 +1108,12 @@ export const Constants = {
         "subscriber",
         "realtor_admin",
         "sponsor_user",
+      ],
+      business_verification_status: [
+        "unknown",
+        "open",
+        "possibly_closed",
+        "closed",
       ],
       marketing_topic: [
         "local_deals",
