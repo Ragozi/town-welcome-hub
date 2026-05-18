@@ -92,6 +92,27 @@ function TownLibrary() {
       toast.error("County scrape failed", { description: (e as Error).message }),
   });
 
+  const exportFn = useServerFn(exportMarketingLeads);
+  const exportMut = useMutation({
+    mutationFn: (format: "csv" | "json") =>
+      exportFn({ data: { town_slug: slug, format, include_unverified: true, limit: 5000 } }),
+    onSuccess: (r, format) => {
+      const date = new Date().toISOString().slice(0, 10);
+      const blob =
+        format === "csv"
+          ? new Blob([r.csv ?? ""], { type: "text/csv;charset=utf-8" })
+          : new Blob([JSON.stringify(r, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${slug}-leads-${date}.${format}`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success(`Exported ${r.count} leads`);
+    },
+    onError: (e) => toast.error("Export failed", { description: (e as Error).message }),
+  });
+
   const setStatusFn = useServerFn(setScrapedStatus);
   const setStatusMut = useMutation({
     mutationFn: (vars: {
