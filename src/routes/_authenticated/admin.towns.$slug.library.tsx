@@ -10,6 +10,7 @@ import {
   setScrapedStatus,
   promoteToBusiness,
 } from "@/lib/scraped.functions";
+import { exportMarketingLeads } from "@/lib/marketing-export.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -27,7 +28,7 @@ import {
   DialogFooter,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { ArrowLeft, Loader2, Globe, RefreshCw, Check, X, Star, Building2 } from "lucide-react";
+import { ArrowLeft, Loader2, Globe, RefreshCw, Check, X, Star, Building2, Download } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/admin/towns/$slug/library")({
@@ -89,6 +90,27 @@ function TownLibrary() {
     },
     onError: (e) =>
       toast.error("County scrape failed", { description: (e as Error).message }),
+  });
+
+  const exportFn = useServerFn(exportMarketingLeads);
+  const exportMut = useMutation({
+    mutationFn: (format: "csv" | "json") =>
+      exportFn({ data: { town_slug: slug, format, include_unverified: true, limit: 5000 } }),
+    onSuccess: (r, format) => {
+      const date = new Date().toISOString().slice(0, 10);
+      const blob =
+        format === "csv"
+          ? new Blob([r.csv ?? ""], { type: "text/csv;charset=utf-8" })
+          : new Blob([JSON.stringify(r, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${slug}-leads-${date}.${format}`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success(`Exported ${r.count} leads`);
+    },
+    onError: (e) => toast.error("Export failed", { description: (e as Error).message }),
   });
 
   const setStatusFn = useServerFn(setScrapedStatus);
@@ -171,6 +193,20 @@ function TownLibrary() {
               <Building2 className="mr-1.5 h-4 w-4" />
             )}
             Deep scrape (county)
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => exportMut.mutate("csv")}
+            disabled={exportMut.isPending}
+            className="rounded-full"
+            title="Download included + verified leads as CSV for marketing (e.g. OpenClaw)"
+          >
+            {exportMut.isPending ? (
+              <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="mr-1.5 h-4 w-4" />
+            )}
+            Export for marketing
           </Button>
           <Button onClick={() => setScrapeOpen(true)} className="rounded-full">
             <RefreshCw className="mr-1.5 h-4 w-4" /> Scrape now
