@@ -97,7 +97,7 @@ export const exportMarketingLeads = createServerFn({ method: "POST" })
           catId = c?.id ?? null;
         }
 
-        const verStatuses = data.include_unverified
+        const verStatuses: ("open" | "unknown")[] = data.include_unverified
           ? ["open", "unknown"]
           : ["open"];
 
