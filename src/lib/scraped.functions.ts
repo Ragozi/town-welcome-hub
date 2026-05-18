@@ -2,7 +2,10 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import type { Database } from "@/integrations/supabase/types";
 import { firecrawlSearch } from "./firecrawl.server";
+
+type ScrapedInsert = Database["public"]["Tables"]["scraped_businesses"]["Insert"];
 
 async function assertAdmin(userId: string) {
   const { data } = await supabaseAdmin
@@ -23,9 +26,9 @@ function hostFrom(url: string | undefined): string | null {
   }
 }
 
-// Normalize URL for deduplication: lowercase, strip trailing slash,
-// strip default ports. PostgREST onConflict requires plain-column unique
-// indexes (not functional), so we must normalize at write time.
+// Normalize URL for deduplication: lowercase, strip trailing slash on root,
+// strip hash. We normalize at write time so the (town_id, website) lookup
+// matches regardless of casing or trailing-slash variation between sources.
 function normalizeUrl(url: string): string {
   try {
     const u = new URL(url);
@@ -36,6 +39,57 @@ function normalizeUrl(url: string): string {
   } catch {
     return url.toLowerCase().trim();
   }
+}
+
+// Look up by (town_id, website) and either insert or update. This avoids the
+// PostgREST .upsert({ onConflict: ... }) path which requires an exact
+// unique-constraint match on the conflict target — we hit
+// "no unique or exclusion constraint matching the ON CONFLICT specification"
+// errors whenever the matching unique index isn't perfectly in place.
+// Slower than upsert (two queries) but works against any schema state.
+async function insertOrUpdateScrapedBusiness(
+  row: ScrapedInsert & { website: string },
+): Promise<{ error: { message: string; code?: string } | null; action: "inserted" | "updated" }> {
+  const { data: existing, error: selErr } = await supabaseAdmin
+    .from("scraped_businesses")
+    .select("id")
+    .eq("town_id", row.town_id)
+    .eq("website", row.website)
+    .limit(1)
+    .maybeSingle();
+  if (selErr) return { error: { message: selErr.message, code: selErr.code }, action: "inserted" };
+
+  if (existing?.id) {
+    // Don't overwrite admin-set fields like status, excluded_reason,
+    // promoted_business_id, address, phone, logo_url — only refresh what
+    // the scrape itself produces.
+    const updateFields: Database["public"]["Tables"]["scraped_businesses"]["Update"] = {
+      category_id: row.category_id,
+      source: row.source,
+      source_url: row.source_url,
+      source_query: row.source_query,
+      source_zip: row.source_zip,
+      source_county: row.source_county,
+      name: row.name,
+      description: row.description,
+      raw: row.raw,
+      last_scraped_at: row.last_scraped_at,
+    };
+    const { error } = await supabaseAdmin
+      .from("scraped_businesses")
+      .update(updateFields)
+      .eq("id", existing.id);
+    return {
+      error: error ? { message: error.message, code: error.code } : null,
+      action: "updated",
+    };
+  }
+
+  const { error } = await supabaseAdmin.from("scraped_businesses").insert(row);
+  return {
+    error: error ? { message: error.message, code: error.code } : null,
+    action: "inserted",
+  };
 }
 
 // Quick liveness check that doesn't burn Firecrawl credits. Tries a GET
@@ -173,25 +227,23 @@ export const scrapeTown = createServerFn({ method: "POST" })
               .slice(0, 200);
 
             const normalized = normalizeUrl(website);
-            const { error: insErr } = await supabaseAdmin.from("scraped_businesses").upsert(
-              {
-                town_id: town.id,
-                category_id: cat.id,
-                source: "firecrawl_search",
-                source_url: website,
-                source_query: query,
-                source_zip: target.zip,
-                name,
-                website: normalized,
-                description: r.description ?? null,
-                raw: r as never,
-                last_scraped_at: new Date().toISOString(),
-              },
-              { onConflict: "town_id,website", ignoreDuplicates: false },
-            );
+            const { error: insErr } = await insertOrUpdateScrapedBusiness({
+              town_id: town.id,
+              category_id: cat.id,
+              source: "firecrawl_search",
+              source_url: website,
+              source_query: query,
+              source_zip: target.zip,
+              source_county: null,
+              name,
+              website: normalized,
+              description: r.description ?? null,
+              raw: r as never,
+              last_scraped_at: new Date().toISOString(),
+            });
             if (insErr) {
-              // Unique-index expression conflict can throw; treat as skip
               skipped += 1;
+              errors.push(`${cat.name} write: ${insErr.message}`);
             } else {
               inserted += 1;
             }
@@ -300,7 +352,7 @@ export const scrapeCounty = createServerFn({ method: "POST" })
           const row = {
             town_id: town.id,
             category_id: catIdBySlug.get(core.category_slug) ?? null,
-            source: "firecrawl_search_county" as const,
+            source: "firecrawl_search_county",
             source_url: website,
             source_query: query,
             source_zip: null,
@@ -313,12 +365,10 @@ export const scrapeCounty = createServerFn({ method: "POST" })
             status: (isLive ? "pending" : "excluded") as "pending" | "excluded",
             excluded_reason: isLive ? null : (liveness as { reason: string }).reason,
           };
-          const { error: insErr } = await supabaseAdmin
-            .from("scraped_businesses")
-            .upsert(row, { onConflict: "town_id,website", ignoreDuplicates: false });
+          const { error: insErr } = await insertOrUpdateScrapedBusiness(row);
           if (insErr) {
             skipped += 1;
-            errors.push(`${core.label} upsert: ${insErr.message}`);
+            errors.push(`${core.label} write: ${insErr.message}`);
           } else {
             inserted += 1;
           }
