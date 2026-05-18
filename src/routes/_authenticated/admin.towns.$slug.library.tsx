@@ -28,7 +28,7 @@ import {
   DialogFooter,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { ArrowLeft, Loader2, Globe, RefreshCw, Check, X, Star, Building2 } from "lucide-react";
+import { ArrowLeft, Loader2, Globe, RefreshCw, Check, X, Star, Building2, Download } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/admin/towns/$slug/library")({
