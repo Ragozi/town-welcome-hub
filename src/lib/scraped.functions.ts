@@ -4,6 +4,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import type { Database } from "@/integrations/supabase/types";
 import { firecrawlSearch } from "./firecrawl.server";
+import { withDebugLog } from "./debug-log.server";
 
 type ScrapedInsert = Database["public"]["Tables"]["scraped_businesses"]["Insert"];
 
