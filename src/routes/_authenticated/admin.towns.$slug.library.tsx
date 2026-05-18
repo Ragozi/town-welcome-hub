@@ -10,6 +10,7 @@ import {
   setScrapedStatus,
   promoteToBusiness,
 } from "@/lib/scraped.functions";
+import { exportMarketingLeads } from "@/lib/marketing-export.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
