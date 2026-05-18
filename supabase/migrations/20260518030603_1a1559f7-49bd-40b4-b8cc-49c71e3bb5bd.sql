@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.increment_filter_rule_hits(uuid[]) FROM PUBLIC, anon, authenticated;

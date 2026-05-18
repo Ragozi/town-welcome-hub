@@ -28,6 +28,7 @@ import { Route as ApiPacketPdfSlugRouteImport } from './routes/api/packet-pdf.$s
 import { Route as AuthenticatedPacketsNewRouteImport } from './routes/_authenticated/packets.new'
 import { Route as AuthenticatedPacketsIdRouteImport } from './routes/_authenticated/packets.$id'
 import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authenticated/admin.users'
+import { Route as AuthenticatedAdminScrapeRulesRouteImport } from './routes/_authenticated/admin.scrape-rules'
 import { Route as AuthenticatedAdminInviteCodesRouteImport } from './routes/_authenticated/admin.invite-codes'
 import { Route as AuthenticatedAdminFinanceRouteImport } from './routes/_authenticated/admin.finance'
 import { Route as AuthenticatedAdminEventsRouteImport } from './routes/_authenticated/admin.events'
@@ -130,6 +131,12 @@ const AuthenticatedAdminUsersRoute = AuthenticatedAdminUsersRouteImport.update({
   path: '/users',
   getParentRoute: () => AuthenticatedAdminRoute,
 } as any)
+const AuthenticatedAdminScrapeRulesRoute =
+  AuthenticatedAdminScrapeRulesRouteImport.update({
+    id: '/scrape-rules',
+    path: '/scrape-rules',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 const AuthenticatedAdminInviteCodesRoute =
   AuthenticatedAdminInviteCodesRouteImport.update({
     id: '/invite-codes',
@@ -183,6 +190,7 @@ export interface FileRoutesByFullPath {
   '/admin/events': typeof AuthenticatedAdminEventsRoute
   '/admin/finance': typeof AuthenticatedAdminFinanceRoute
   '/admin/invite-codes': typeof AuthenticatedAdminInviteCodesRoute
+  '/admin/scrape-rules': typeof AuthenticatedAdminScrapeRulesRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/packets/$id': typeof AuthenticatedPacketsIdRoute
   '/packets/new': typeof AuthenticatedPacketsNewRoute
@@ -208,6 +216,7 @@ export interface FileRoutesByTo {
   '/admin/events': typeof AuthenticatedAdminEventsRoute
   '/admin/finance': typeof AuthenticatedAdminFinanceRoute
   '/admin/invite-codes': typeof AuthenticatedAdminInviteCodesRoute
+  '/admin/scrape-rules': typeof AuthenticatedAdminScrapeRulesRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/packets/$id': typeof AuthenticatedPacketsIdRoute
   '/packets/new': typeof AuthenticatedPacketsNewRoute
@@ -236,6 +245,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/events': typeof AuthenticatedAdminEventsRoute
   '/_authenticated/admin/finance': typeof AuthenticatedAdminFinanceRoute
   '/_authenticated/admin/invite-codes': typeof AuthenticatedAdminInviteCodesRoute
+  '/_authenticated/admin/scrape-rules': typeof AuthenticatedAdminScrapeRulesRoute
   '/_authenticated/admin/users': typeof AuthenticatedAdminUsersRoute
   '/_authenticated/packets/$id': typeof AuthenticatedPacketsIdRoute
   '/_authenticated/packets/new': typeof AuthenticatedPacketsNewRoute
@@ -264,6 +274,7 @@ export interface FileRouteTypes {
     | '/admin/events'
     | '/admin/finance'
     | '/admin/invite-codes'
+    | '/admin/scrape-rules'
     | '/admin/users'
     | '/packets/$id'
     | '/packets/new'
@@ -289,6 +300,7 @@ export interface FileRouteTypes {
     | '/admin/events'
     | '/admin/finance'
     | '/admin/invite-codes'
+    | '/admin/scrape-rules'
     | '/admin/users'
     | '/packets/$id'
     | '/packets/new'
@@ -316,6 +328,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/events'
     | '/_authenticated/admin/finance'
     | '/_authenticated/admin/invite-codes'
+    | '/_authenticated/admin/scrape-rules'
     | '/_authenticated/admin/users'
     | '/_authenticated/packets/$id'
     | '/_authenticated/packets/new'
@@ -475,6 +488,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminUsersRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/scrape-rules': {
+      id: '/_authenticated/admin/scrape-rules'
+      path: '/scrape-rules'
+      fullPath: '/admin/scrape-rules'
+      preLoaderRoute: typeof AuthenticatedAdminScrapeRulesRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/admin/invite-codes': {
       id: '/_authenticated/admin/invite-codes'
       path: '/invite-codes'
@@ -525,6 +545,7 @@ interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminEventsRoute: typeof AuthenticatedAdminEventsRoute
   AuthenticatedAdminFinanceRoute: typeof AuthenticatedAdminFinanceRoute
   AuthenticatedAdminInviteCodesRoute: typeof AuthenticatedAdminInviteCodesRoute
+  AuthenticatedAdminScrapeRulesRoute: typeof AuthenticatedAdminScrapeRulesRoute
   AuthenticatedAdminUsersRoute: typeof AuthenticatedAdminUsersRoute
   AuthenticatedAdminIndexRoute: typeof AuthenticatedAdminIndexRoute
   AuthenticatedAdminTownsIndexRoute: typeof AuthenticatedAdminTownsIndexRoute
@@ -536,6 +557,7 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminEventsRoute: AuthenticatedAdminEventsRoute,
   AuthenticatedAdminFinanceRoute: AuthenticatedAdminFinanceRoute,
   AuthenticatedAdminInviteCodesRoute: AuthenticatedAdminInviteCodesRoute,
+  AuthenticatedAdminScrapeRulesRoute: AuthenticatedAdminScrapeRulesRoute,
   AuthenticatedAdminUsersRoute: AuthenticatedAdminUsersRoute,
   AuthenticatedAdminIndexRoute: AuthenticatedAdminIndexRoute,
   AuthenticatedAdminTownsIndexRoute: AuthenticatedAdminTownsIndexRoute,

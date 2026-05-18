@@ -552,6 +552,48 @@ export type Database = {
         }
         Relationships: []
       }
+      scrape_filter_rules: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          enabled: boolean
+          hit_count: number
+          id: string
+          last_hit_at: string | null
+          notes: string | null
+          pattern: string
+          reason_label: string
+          rule_type: Database["public"]["Enums"]["scrape_filter_rule_type"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          enabled?: boolean
+          hit_count?: number
+          id?: string
+          last_hit_at?: string | null
+          notes?: string | null
+          pattern: string
+          reason_label: string
+          rule_type: Database["public"]["Enums"]["scrape_filter_rule_type"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          enabled?: boolean
+          hit_count?: number
+          id?: string
+          last_hit_at?: string | null
+          notes?: string | null
+          pattern?: string
+          reason_label?: string
+          rule_type?: Database["public"]["Enums"]["scrape_filter_rule_type"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       scraped_businesses: {
         Row: {
           address: string | null
@@ -923,6 +965,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      increment_filter_rule_hits: {
+        Args: { rule_ids: string[] }
+        Returns: undefined
+      }
       nearest_town: {
         Args: { lat: number; lng: number; max_km?: number }
         Returns: {
@@ -973,6 +1019,11 @@ export type Database = {
         | "share_click"
       packet_status: "draft" | "generated"
       saved_item_type: "business" | "coupon" | "packet"
+      scrape_filter_rule_type:
+        | "domain_contains"
+        | "url_regex"
+        | "title_regex"
+        | "url_suffix"
       scraped_business_status: "pending" | "included" | "excluded" | "promoted"
       sponsor_tier: "none" | "bronze" | "silver" | "gold" | "s_tier"
     }
@@ -1135,6 +1186,12 @@ export const Constants = {
       ],
       packet_status: ["draft", "generated"],
       saved_item_type: ["business", "coupon", "packet"],
+      scrape_filter_rule_type: [
+        "domain_contains",
+        "url_regex",
+        "title_regex",
+        "url_suffix",
+      ],
       scraped_business_status: ["pending", "included", "excluded", "promoted"],
       sponsor_tier: ["none", "bronze", "silver", "gold", "s_tier"],
     },

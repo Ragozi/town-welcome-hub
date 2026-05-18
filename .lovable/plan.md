@@ -1,80 +1,64 @@
-## Marketing Export — `exportMarketingLeads`
+## Admin-managed scrape filter rules
 
-A read-only admin server function that returns the curated, on-demand list of business leads from `scraped_businesses` so OpenClaw (or any downstream marketing tool) can consume them without ever hitting Firecrawl again.
+Build the table + admin UI + test tool exactly per your spec. Will NOT touch `src/lib/scrape-filter.ts`, `src/lib/scraped.functions.ts`, or `src/lib/firecrawl.server.ts` — those stay on the hard-coded list until you wire them up.
 
-### Where it lives
-- New export in `src/lib/scraped.functions.ts` (or a sibling `src/lib/marketing-export.functions.ts` if you'd prefer to keep scrape and export concerns separated — I'd lean toward the sibling file for clarity).
+### 1. Migration
+One additive migration containing exactly:
+- `scrape_filter_rule_type` enum (`domain_contains`, `url_regex`, `title_regex`, `url_suffix`)
+- `public.scrape_filter_rules` table (columns, indexes, RLS gated on `super_admin`, `touch_updated_at` trigger)
+- `public.increment_filter_rule_hits(uuid[])` RPC (`SECURITY DEFINER`, `search_path = public`)
+- Seed `INSERT` with all 60 rules from your prompt, copied verbatim
 
-### Signature
-```ts
-exportMarketingLeads({
-  data: {
-    town_slug?: string;          // optional filter; omit for all towns
-    town_id?: string;            // alternative to slug
-    state?: string;              // e.g. "WI" — multi-town filter
-    county?: string;             // e.g. "Ozaukee"
-    category_slug?: string;      // optional
-    include_unverified?: boolean; // default false — only "open" + "unknown-but-not-closed" rows
-    format?: "json" | "csv";     // default "json"
-    limit?: number;              // default 1000, max 5000
-  }
-})
-```
+### 2. Server functions — `src/lib/scrape-filter-rules.functions.ts` (new)
+Admin-only (`requireSupabaseAuth` + inline `assertAdmin`):
+- `listScrapeFilterRules()` — returns all rules, ordered `hit_count desc, created_at desc`
+- `createScrapeFilterRule({ rule_type, pattern, reason_label, notes?, enabled? })` — Zod-validated; for `*_regex` types, attempts `new RegExp(pattern)` server-side and rejects on throw
+- `updateScrapeFilterRule({ id, ...patch })` — same regex validation
+- `deleteScrapeFilterRule({ id })`
+- `bulkSetEnabled({ ids, enabled })`
+- `testScrapeFilter({ url, title? })` — loads enabled rules, runs the matching logic locally (duplicate of the spec'd semantics; will be replaced by Claude Code's shared helper later), returns `{ passed, matchedRule?: { id, rule_type, pattern, reason_label } }`
 
-### Filter logic (default behavior)
-Returns rows from `scraped_businesses` WHERE:
-- `status = 'included'` (you've vetted them) — **never** pending, excluded, or already-promoted
-- `verification_status IN ('open', 'unknown')` — exclude `'closed'` and `'possibly_closed'`
-- `website IS NOT NULL`
-- Joined to `towns` (name, slug, state, county) and `categories` (slug, name)
+Matching semantics (mirrors the current `scrape-filter.ts` behavior so the test card is accurate before Claude Code lands the shared helper):
+- `domain_contains` → substring against `new URL(url).hostname.toLowerCase().replace(/^www\./, "")`
+- `url_suffix` → `url.toLowerCase().endsWith(pattern.toLowerCase())`
+- `url_regex` → `new RegExp(pattern, "i").test(url)`
+- `title_regex` → `new RegExp(pattern, "i").test(title ?? "")`
+First match wins; iteration order = `hit_count desc, id` so the most-effective rules short-circuit first (matches what the production scraper will do).
 
-Setting `include_unverified: false` (default) means we keep `'unknown'` rows since nothing auto-verifies yet — otherwise the export would be empty. When the verification pass lands later, flip the default to `'open'` only.
+### 3. Admin route — `src/routes/_authenticated/admin.scrape-rules.tsx` (new)
+Style matches sibling admin pages.
 
-### Return shape (JSON)
-```ts
-{
-  generated_at: string;
-  filters: { ... echo of inputs ... };
-  count: number;
-  leads: Array<{
-    id: string;                  // scraped_businesses.id
-    name: string;
-    website: string;
-    phone: string | null;
-    address: string | null;
-    description: string | null;
-    category: { slug: string; name: string } | null;
-    town: { slug: string; name: string; county: string; state: string };
-    verification_status: "open" | "unknown" | "possibly_closed" | "closed";
-    last_scraped_at: string;
-    source_url: string | null;
-  }>
-}
-```
+**Stats banner** (top): enabled-rule count, total hits, top-3 rules by `last_hit_at` in last 24h.
 
-### CSV format
-When `format: "csv"`, return `{ csv: string, count, filters }` with columns: `name, website, phone, address, category, town, county, state, verification_status, last_scraped_at, source_url`. CSV-escape quotes/commas/newlines.
+**Test URL card**: URL input + optional title + "Test against rules" button → green `✓ Would PASS` or red `✗ Would EXCLUDE: <reason_label>` chip. When a rule matches, scrolls the table to that row and pulses its background ring.
 
-### Security
-- `.middleware([requireSupabaseAuth])` + inline `assertAdmin(userId)` (matches existing pattern in `scraped.functions.ts`) — only super_admins can pull the export.
-- Uses `supabaseAdmin` so RLS doesn't restrict the read, but the admin gate prevents abuse.
-- Input validated with Zod (`limit` capped at 5000, `format` enum, slug/state regex).
-- Wrap handler in `withDebugLog("exportMarketingLeads", ...)` so each export shows up in the Debug Lab with `{ count, filters }`.
+**Rules table**:
+- Columns: enabled toggle, rule_type badge, pattern (`<code>` monospace), reason_label, hit_count, last_hit_at (relative), actions (edit / delete)
+- Default sort: `hit_count DESC`
+- Filter dropdown by `rule_type`
+- Search box across pattern/reason_label/notes (client-side)
+- Checkbox column + "Disable selected" / "Enable selected" bulk action
 
-### UI surface (minimal, this turn)
-On `/admin/towns/$slug/library`, add a small **"Export for marketing"** button next to "Deep scrape (county)":
-- Default click → downloads `<town-slug>-leads-<YYYYMMDD>.csv` for the current town's `included` rows (verified-or-unknown).
-- Holding shift / a small dropdown → JSON download (for piping to OpenClaw API directly).
-- Toast shows `"Exported N leads"`.
+**Add / Edit dialog** (shadcn `Dialog`):
+- `Select` for `rule_type` with one-line help text per option
+- `Input` for pattern, `Input` for reason_label (placeholder `aggregator: foo`), `Textarea` for notes
+- For `url_regex` / `title_regex`: live `new RegExp(pattern)` check, inline error before submit is allowed
+- Submit button disabled until valid
 
-(No new route needed for OpenClaw itself — they can call the server fn via the existing TanStack RPC endpoint once we share the auth path, or we can add an `/api/public/marketing-export` route gated by an API key in a follow-up. Out of scope here.)
+All mutations use TanStack Query with `invalidateQueries(["scrape-filter-rules"])`.
 
-### Notes / non-goals for this turn
-- No auto-verification pass (Cheel-style closed-business filtering) — that's a separate task. For now `include_unverified: true` is opt-in if you want pre-verification rows.
-- No scheduling / cron — purely on-demand, matching your current scrape model.
-- No OpenClaw HTTP push — they pull from this endpoint.
-- No changes to `scrapeTown` / `scrapeCounty`.
+### 4. Nav link
+Add a "Scrape Rules" pill to the nav in `src/routes/_authenticated/admin.tsx`, between Town Libraries and Invitations, matching the existing gradient style (slate/violet gradient to keep it visually distinct from neighbors).
 
 ### Files touched
-- **New**: `src/lib/marketing-export.functions.ts` (server fn + CSV helper)
-- **Edit**: `src/routes/_authenticated/admin.towns.$slug.library.tsx` (Export button + handler)
+- **New**: `supabase/migrations/<ts>_scrape_filter_rules.sql`
+- **New**: `src/lib/scrape-filter-rules.functions.ts`
+- **New**: `src/routes/_authenticated/admin.scrape-rules.tsx`
+- **Edit**: `src/routes/_authenticated/admin.tsx` (nav link only)
+
+### Done criteria (matches your spec)
+- Table + RPC live, seeded with the 60 rules
+- `/admin/scrape-rules` supports list / add / edit / delete / enable-disable / bulk-disable
+- Test URL card returns the correct verdict against current enabled rules
+- Nav link present
+- Zero changes to `scrape-filter.ts`, `scraped.functions.ts`, `firecrawl.server.ts`
