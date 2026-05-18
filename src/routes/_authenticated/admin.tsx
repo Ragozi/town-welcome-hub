@@ -98,6 +98,8 @@ function AdminLayout() {
         >
           Scrape Rules
         </Link>
+        <Link
+          to="/admin/invite-codes"
           activeProps={{
             className:
               "!bg-gradient-to-r !from-pink-500 !via-rose-500 !to-orange-500 !text-white !border-transparent !shadow-[0_8px_24px_-6px_rgba(244,63,94,0.55)] !-translate-y-0.5",
