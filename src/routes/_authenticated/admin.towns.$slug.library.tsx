@@ -207,6 +207,7 @@ function TownLibrary() {
               <Download className="mr-1.5 h-4 w-4" />
             )}
             Export for marketing
+          </Button>
           <Button onClick={() => setScrapeOpen(true)} className="rounded-full">
             <RefreshCw className="mr-1.5 h-4 w-4" /> Scrape now
           </Button>
