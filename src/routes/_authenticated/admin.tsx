@@ -89,7 +89,15 @@ function AdminLayout() {
           Town Libraries
         </Link>
         <Link
-          to="/admin/invite-codes"
+          to="/admin/scrape-rules"
+          activeProps={{
+            className:
+              "!bg-gradient-to-br !from-slate-700 !via-violet-600 !to-indigo-600 !text-white !border-transparent !shadow-[0_8px_24px_-6px_rgba(124,58,237,0.55)] !-translate-y-0.5",
+          }}
+          className="inline-flex items-center rounded-full border border-border bg-background/60 px-4 py-2 font-display font-bold uppercase tracking-wide transition-all duration-200 hover:-translate-y-0.5 hover:border-violet-400/60 hover:bg-violet-50 hover:text-violet-700 hover:shadow-[0_6px_18px_-8px_rgba(124,58,237,0.45)] dark:hover:bg-violet-950/40 dark:hover:text-violet-200"
+        >
+          Scrape Rules
+        </Link>
           activeProps={{
             className:
               "!bg-gradient-to-r !from-pink-500 !via-rose-500 !to-orange-500 !text-white !border-transparent !shadow-[0_8px_24px_-6px_rgba(244,63,94,0.55)] !-translate-y-0.5",
