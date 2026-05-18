@@ -194,6 +194,19 @@ function TownLibrary() {
             )}
             Deep scrape (county)
           </Button>
+          <Button
+            variant="outline"
+            onClick={() => exportMut.mutate("csv")}
+            disabled={exportMut.isPending}
+            className="rounded-full"
+            title="Download included + verified leads as CSV for marketing (e.g. OpenClaw)"
+          >
+            {exportMut.isPending ? (
+              <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="mr-1.5 h-4 w-4" />
+            )}
+            Export for marketing
           <Button onClick={() => setScrapeOpen(true)} className="rounded-full">
             <RefreshCw className="mr-1.5 h-4 w-4" /> Scrape now
           </Button>
