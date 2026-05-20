@@ -75,7 +75,39 @@ function Settings() {
     }
     const { data: pub } = supabase.storage.from(bucket).getPublicUrl(path);
     set(pub.publicUrl);
-    toast.success("Uploaded.");
+
+    const column = bucket === "headshots" ? "headshot_url" : "brokerage_logo_url";
+    const { error: updateError } = await supabase
+      .from("profiles")
+      .update({ [column]: pub.publicUrl })
+      .eq("user_id", user.id);
+    if (updateError) {
+      toast.error("Saved to storage but couldn't update profile.", {
+        description: updateError.message,
+      });
+      return;
+    }
+    await refreshProfile();
+    toast.success("Image saved.");
+  };
+
+  const removeImage = async (
+    bucket: "headshots" | "brokerage-logos",
+    set: (url: string) => void,
+  ) => {
+    if (!user) return;
+    const column = bucket === "headshots" ? "headshot_url" : "brokerage_logo_url";
+    const { error } = await supabase
+      .from("profiles")
+      .update({ [column]: null })
+      .eq("user_id", user.id);
+    if (error) {
+      toast.error("Could not remove image.", { description: error.message });
+      return;
+    }
+    set("");
+    await refreshProfile();
+    toast.success("Image removed.");
   };
 
   const onSave = async () => {
