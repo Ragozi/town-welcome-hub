@@ -1,7 +1,7 @@
 import { Document, Page, Text, View, StyleSheet, Image } from "@react-pdf/renderer";
 import { tierPriority, type Business, type Category, type Town } from "@/lib/towns";
 import type { Packet } from "@/lib/packets";
-import type { HandbookRealtor } from "@/lib/handbook.functions";
+import type { HandbookRealtor, HandbookRecommendation } from "@/lib/handbook.functions";
 
 const styles = StyleSheet.create({
   page: {
@@ -93,11 +93,39 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
   note: { fontSize: 10, marginTop: 6, lineHeight: 1.5 },
-  agentRow: { flexDirection: "row", marginTop: 18, alignItems: "center", gap: 12 },
-  agentBlock: { flex: 1 },
-  agentName: { fontSize: 14, fontWeight: 700, textTransform: "uppercase" },
-  agentBrokerage: { fontSize: 9, color: "#6a5a48", marginTop: 2 },
-  agentMeta: { fontSize: 9, color: "#6a5a48", marginTop: 6 },
+
+  // Realtor branding card on cover
+  realtorCard: {
+    marginTop: 22,
+    padding: 14,
+    borderRadius: 10,
+    backgroundColor: "#FFFFFF",
+    border: "1 solid #f0d6b6",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+  },
+  realtorEyebrow: {
+    fontSize: 8,
+    fontWeight: 700,
+    letterSpacing: 1.5,
+    color: "#FF6B00",
+    textTransform: "uppercase",
+    marginBottom: 6,
+  },
+  headshot: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    objectFit: "cover",
+  },
+  realtorBlock: { flex: 1 },
+  realtorName: { fontSize: 14, fontWeight: 700, textTransform: "uppercase" },
+  realtorBrokerage: { fontSize: 9, color: "#6a5a48", marginTop: 2 },
+  realtorMeta: { fontSize: 9, color: "#6a5a48", marginTop: 6 },
+  brokerageLogo: { maxWidth: 80, maxHeight: 40, objectFit: "contain" },
+
+  qrBlock: { alignItems: "center", marginTop: 18 },
   qr: { width: 78, height: 78 },
   qrCaption: { fontSize: 7, textAlign: "center", color: "#6a5a48", marginTop: 2, maxWidth: 90 },
   header: {
@@ -179,6 +207,7 @@ export type HandbookDocumentProps = {
   town: Town | null;
   categories: Category[];
   businesses: Business[];
+  recommended?: HandbookRecommendation[];
   qrDataUrl: string;
   liveUrl: string;
 };
@@ -189,17 +218,29 @@ export function HandbookDocument({
   town,
   categories,
   businesses,
+  recommended,
   qrDataUrl,
   liveUrl,
 }: HandbookDocumentProps) {
-  const featured = businesses
-    .filter((b) => b.sponsor_tier !== "none")
-    .sort(
-      (a, b) =>
-        tierPriority[b.sponsor_tier] - tierPriority[a.sponsor_tier] ||
-        a.featured_order - b.featured_order,
-    )
-    .slice(0, 4);
+  // Featured: prefer scored recommendations from the recommender; fall back
+  // to sponsor-tier-only for older callers that haven't passed `recommended`.
+  let featured: Business[];
+  if (recommended && recommended.length > 0) {
+    const byId = new Map(businesses.map((b) => [b.id, b]));
+    featured = recommended
+      .map((r) => byId.get(r.business_id))
+      .filter((b): b is Business => !!b)
+      .slice(0, 4);
+  } else {
+    featured = businesses
+      .filter((b) => b.sponsor_tier !== "none")
+      .sort(
+        (a, b) =>
+          tierPriority[b.sponsor_tier] - tierPriority[a.sponsor_tier] ||
+          a.featured_order - b.featured_order,
+      )
+      .slice(0, 4);
+  }
 
   const byCategory = new Map<string, Business[]>();
   for (const b of businesses) {
@@ -211,6 +252,10 @@ export function HandbookDocument({
   const half = Math.ceil(cats.length / 2);
   const left = cats.slice(0, half);
   const right = cats.slice(half);
+
+  const realtorContact = [realtor?.email_public, realtor?.phone].filter(Boolean).join("  ·  ");
+  const hasHeadshot = !!realtor?.headshot_url;
+  const hasLogo = !!realtor?.brokerage_logo_url;
 
   return (
     <Document>
@@ -253,23 +298,30 @@ export function HandbookDocument({
             </View>
           )}
 
-          <View style={styles.agentRow}>
-            <View style={styles.agentBlock}>
-              <Text style={styles.agentName}>{realtor?.full_name ?? ""}</Text>
-              {realtor?.brokerage_name && (
-                <Text style={styles.agentBrokerage}>{realtor.brokerage_name}</Text>
-              )}
-              <Text style={styles.agentMeta}>
-                {[realtor?.email_public, realtor?.phone].filter(Boolean).join("  ·  ")}
-              </Text>
-            </View>
-            {qrDataUrl ? (
-              <View>
-                <Image src={qrDataUrl} style={styles.qr} />
-                <Text style={styles.qrCaption}>Scan for live page</Text>
+          {/* Branded realtor card — headshot, name, brokerage, contact, logo */}
+          {realtor && (
+            <View style={styles.realtorCard}>
+              {hasHeadshot && <Image src={realtor.headshot_url!} style={styles.headshot} />}
+              <View style={styles.realtorBlock}>
+                <Text style={styles.realtorEyebrow}>// Your guide</Text>
+                <Text style={styles.realtorName}>{realtor.full_name ?? ""}</Text>
+                {realtor.brokerage_name && (
+                  <Text style={styles.realtorBrokerage}>{realtor.brokerage_name}</Text>
+                )}
+                {realtorContact && <Text style={styles.realtorMeta}>{realtorContact}</Text>}
               </View>
-            ) : null}
-          </View>
+              {hasLogo && (
+                <Image src={realtor.brokerage_logo_url!} style={styles.brokerageLogo} />
+              )}
+            </View>
+          )}
+
+          {qrDataUrl ? (
+            <View style={styles.qrBlock}>
+              <Image src={qrDataUrl} style={styles.qr} />
+              <Text style={styles.qrCaption}>Scan for live page</Text>
+            </View>
+          ) : null}
         </View>
         <Text style={styles.footer}>Welcome Home · {liveUrl}</Text>
       </Page>
@@ -291,7 +343,7 @@ export function HandbookDocument({
 
           {featured.length > 0 && (
             <>
-              <Text style={styles.sectionTitle}>Locals we love</Text>
+              <Text style={styles.sectionTitle}>Picked for you</Text>
               <View style={styles.featuredRow}>
                 {featured.slice(0, 2).map((b) => (
                   <FeaturedCardPdf key={b.id} b={b} />
