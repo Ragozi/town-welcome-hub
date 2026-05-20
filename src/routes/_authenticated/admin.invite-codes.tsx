@@ -13,6 +13,12 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { Copy, Loader2, Plus, Ban } from "lucide-react";
 import { getPublicBaseUrl } from "@/lib/public-url";
@@ -222,14 +228,24 @@ function InviteCodesPage() {
                     <td className="px-4 py-3 text-right">
                       <div className="flex justify-end gap-1">
                         {usable && (
-                          <>
-                            <Button size="sm" variant="ghost" onClick={() => copyLink(c.code)}>
-                              <Copy className="h-3.5 w-3.5" />
-                            </Button>
-                            <Button size="sm" variant="ghost" onClick={() => revoke(c.id)}>
-                              <Ban className="h-3.5 w-3.5" />
-                            </Button>
-                          </>
+                          <TooltipProvider delayDuration={150}>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button size="sm" variant="ghost" onClick={() => copyLink(c.code)}>
+                                  <Copy className="h-3.5 w-3.5" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Copies the invitation link to your clipboard.</TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button size="sm" variant="ghost" onClick={() => revoke(c.id)}>
+                                  <Ban className="h-3.5 w-3.5" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Cancels this invitation code so it can't be used.</TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                         )}
                       </div>
                     </td>
