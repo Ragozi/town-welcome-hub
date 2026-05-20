@@ -268,12 +268,14 @@ function ImageField({
   url,
   onUrl,
   onUpload,
+  onRemove,
   shape,
 }: {
   label: string;
   url: string;
   onUrl: (s: string) => void;
   onUpload: (file: File) => void;
+  onRemove?: () => void | Promise<void>;
   shape: "circle" | "square";
 }) {
   return (
@@ -304,7 +306,7 @@ function ImageField({
           {url && (
             <button
               type="button"
-              onClick={() => onUrl("")}
+              onClick={() => (onRemove ? onRemove() : onUrl(""))}
               className="ml-2 text-xs text-muted-foreground hover:text-destructive"
             >
               Remove
