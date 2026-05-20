@@ -1,64 +1,79 @@
-## Admin-managed scrape filter rules
+# Fix: branding images vanish ~10s after upload
 
-Build the table + admin UI + test tool exactly per your spec. Will NOT touch `src/lib/scrape-filter.ts`, `src/lib/scraped.functions.ts`, or `src/lib/firecrawl.server.ts` — those stay on the hard-coded list until you wire them up.
+## Root cause
 
-### 1. Migration
-One additive migration containing exactly:
-- `scrape_filter_rule_type` enum (`domain_contains`, `url_regex`, `title_regex`, `url_suffix`)
-- `public.scrape_filter_rules` table (columns, indexes, RLS gated on `super_admin`, `touch_updated_at` trigger)
-- `public.increment_filter_rule_hits(uuid[])` RPC (`SECURITY DEFINER`, `search_path = public`)
-- Seed `INSERT` with all 60 rules from your prompt, copied verbatim
+Uploads to the `headshots` / `brokerage-logos` buckets succeed (storage rows exist), but the local form state holding the new public URL gets wiped before the user clicks **Save**.
 
-### 2. Server functions — `src/lib/scrape-filter-rules.functions.ts` (new)
-Admin-only (`requireSupabaseAuth` + inline `assertAdmin`):
-- `listScrapeFilterRules()` — returns all rules, ordered `hit_count desc, created_at desc`
-- `createScrapeFilterRule({ rule_type, pattern, reason_label, notes?, enabled? })` — Zod-validated; for `*_regex` types, attempts `new RegExp(pattern)` server-side and rejects on throw
-- `updateScrapeFilterRule({ id, ...patch })` — same regex validation
-- `deleteScrapeFilterRule({ id })`
-- `bulkSetEnabled({ ids, enabled })`
-- `testScrapeFilter({ url, title? })` — loads enabled rules, runs the matching logic locally (duplicate of the spec'd semantics; will be replaced by Claude Code's shared helper later), returns `{ passed, matchedRule?: { id, rule_type, pattern, reason_label } }`
+In `src/routes/_authenticated/settings.tsx`:
 
-Matching semantics (mirrors the current `scrape-filter.ts` behavior so the test card is accurate before Claude Code lands the shared helper):
-- `domain_contains` → substring against `new URL(url).hostname.toLowerCase().replace(/^www\./, "")`
-- `url_suffix` → `url.toLowerCase().endsWith(pattern.toLowerCase())`
-- `url_regex` → `new RegExp(pattern, "i").test(url)`
-- `title_regex` → `new RegExp(pattern, "i").test(title ?? "")`
-First match wins; iteration order = `hit_count desc, id` so the most-effective rules short-circuit first (matches what the production scraper will do).
+```ts
+useEffect(() => {
+  if (!profile) return;
+  setHeadshotUrl(profile.headshot_url ?? "");
+  setLogoUrl(profile.brokerage_logo_url ?? "");
+  // ...every other field
+}, [profile]);
+```
 
-### 3. Admin route — `src/routes/_authenticated/admin.scrape-rules.tsx` (new)
-Style matches sibling admin pages.
+`src/lib/auth.tsx` calls `loadProfile()` on every `supabase.auth.onAuthStateChange` event (INITIAL_SESSION, TOKEN_REFRESHED, USER_UPDATED, etc.). Each refetch returns a new `profile` object → effect re-runs → the just-uploaded URL is overwritten with the still-`null` DB value. Picture disappears.
 
-**Stats banner** (top): enabled-rule count, total hits, top-3 rules by `last_hit_at` in last 24h.
+## Fix
 
-**Test URL card**: URL input + optional title + "Test against rules" button → green `✓ Would PASS` or red `✗ Would EXCLUDE: <reason_label>` chip. When a rule matches, scrolls the table to that row and pulses its background ring.
+Persist the image URL to the profile immediately on successful upload (no Save click required for images), then refresh. This matches user expectation that "uploading = saved" and survives any future profile re-hydration.
 
-**Rules table**:
-- Columns: enabled toggle, rule_type badge, pattern (`<code>` monospace), reason_label, hit_count, last_hit_at (relative), actions (edit / delete)
-- Default sort: `hit_count DESC`
-- Filter dropdown by `rule_type`
-- Search box across pattern/reason_label/notes (client-side)
-- Checkbox column + "Disable selected" / "Enable selected" bulk action
+### Changes — `src/routes/_authenticated/settings.tsx` only
 
-**Add / Edit dialog** (shadcn `Dialog`):
-- `Select` for `rule_type` with one-line help text per option
-- `Input` for pattern, `Input` for reason_label (placeholder `aggregator: foo`), `Textarea` for notes
-- For `url_regex` / `title_regex`: live `new RegExp(pattern)` check, inline error before submit is allowed
-- Submit button disabled until valid
+Update the `upload()` helper to also write the new URL to `profiles` and refresh auth state:
 
-All mutations use TanStack Query with `invalidateQueries(["scrape-filter-rules"])`.
+```ts
+const upload = async (
+  bucket: "headshots" | "brokerage-logos",
+  file: File,
+  set: (url: string) => void,
+) => {
+  if (!user) return;
+  const ext = file.name.split(".").pop();
+  const path = `${user.id}/${Date.now()}.${ext}`;
+  const { error } = await supabase.storage.from(bucket).upload(path, file, { upsert: true });
+  if (error) {
+    toast.error("Upload failed.", { description: error.message });
+    return;
+  }
+  const { data: pub } = supabase.storage.from(bucket).getPublicUrl(path);
+  set(pub.publicUrl);
 
-### 4. Nav link
-Add a "Scrape Rules" pill to the nav in `src/routes/_authenticated/admin.tsx`, between Town Libraries and Invitations, matching the existing gradient style (slate/violet gradient to keep it visually distinct from neighbors).
+  // Persist immediately so the URL survives profile re-hydration
+  const column = bucket === "headshots" ? "headshot_url" : "brokerage_logo_url";
+  const { error: updateError } = await supabase
+    .from("profiles")
+    .update({ [column]: pub.publicUrl })
+    .eq("user_id", user.id);
+  if (updateError) {
+    toast.error("Saved to storage but couldn't update profile.", { description: updateError.message });
+    return;
+  }
+  await refreshProfile();
+  toast.success("Image saved.");
+};
+```
 
-### Files touched
-- **New**: `supabase/migrations/<ts>_scrape_filter_rules.sql`
-- **New**: `src/lib/scrape-filter-rules.functions.ts`
-- **New**: `src/routes/_authenticated/admin.scrape-rules.tsx`
-- **Edit**: `src/routes/_authenticated/admin.tsx` (nav link only)
+Also update the "Remove" button in `ImageField` so removal persists too. Pass an `onRemove` prop from the parent that nulls the column in `profiles` and calls `refreshProfile()`, instead of just calling `onUrl("")` which would similarly get wiped/ignored. Concretely:
 
-### Done criteria (matches your spec)
-- Table + RPC live, seeded with the 60 rules
-- `/admin/scrape-rules` supports list / add / edit / delete / enable-disable / bulk-disable
-- Test URL card returns the correct verdict against current enabled rules
-- Nav link present
-- Zero changes to `scrape-filter.ts`, `scraped.functions.ts`, `firecrawl.server.ts`
+- Add an `onRemove?: () => Promise<void>` prop to `ImageField`.
+- The "Remove" `<button>` calls `onRemove ?? (() => onUrl(""))`.
+- In `Settings`, pass `onRemove` for both images that runs the same `profiles.update({ [column]: null })` + `refreshProfile()` flow.
+
+### Out of scope (intentionally)
+
+- The other form fields (name, phone, social links, default town, thank-you message) still use the explicit **Save** button. They're text inputs where the user expects to edit before committing; persist-on-change would be wrong UX. The clobber-on-refetch risk for those is small because the user is actively typing — but if it bites later we can switch the hydration `useEffect` to a one-shot "hydrate on first non-null profile" pattern.
+
+## Verification
+
+1. Upload a headshot → wait 30s on the page → image still shown.
+2. Reload the page → image still shown.
+3. Check DB: `select headshot_url, brokerage_logo_url from profiles where user_id = '<me>'` → both populated.
+4. Click Remove → image clears, DB column becomes null, survives reload.
+
+## Files touched
+
+- `src/routes/_authenticated/settings.tsx` (only)
