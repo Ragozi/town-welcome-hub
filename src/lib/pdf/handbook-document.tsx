@@ -12,9 +12,56 @@ const styles = StyleSheet.create({
     backgroundColor: "#F9F2E8",
   },
   cover: { padding: 0, fontFamily: "Helvetica", color: "#1a1410", backgroundColor: "#F9F2E8" },
-  coverImageWrap: { height: 360, backgroundColor: "#1a1410", position: "relative" },
-  coverImage: { width: "100%", height: "100%", objectFit: "cover", opacity: 0.9 },
-  coverOverlay: { position: "absolute", inset: 0, backgroundColor: "rgba(26,20,16,0.35)" },
+  coverImageWrap: { height: 280, backgroundColor: "#F9F2E8", position: "relative" },
+  coverImage: { width: "100%", height: "100%", objectFit: "cover" },
+  coverOverlay: { position: "absolute", inset: 0, backgroundColor: "rgba(26,20,16,0.15)" },
+  coverImageFade: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 50,
+    backgroundColor: "#F9F2E8",
+    opacity: 0.6,
+  },
+  coverHeroNoPhoto: {
+    height: 200,
+    backgroundColor: "#F9F2E8",
+    paddingHorizontal: 36,
+    paddingTop: 56,
+    paddingBottom: 24,
+    position: "relative",
+  },
+  coverHeroEyebrow: {
+    fontSize: 9,
+    fontWeight: 700,
+    letterSpacing: 2,
+    textTransform: "uppercase",
+    color: "#FF6B00",
+  },
+  coverHeroTitle: {
+    fontSize: 30,
+    fontWeight: 700,
+    marginTop: 12,
+    textTransform: "uppercase",
+    letterSpacing: -0.5,
+    color: "#1a1410",
+  },
+  coverHeroSubtitle: {
+    fontSize: 10,
+    marginTop: 10,
+    color: "#6a5a48",
+    letterSpacing: 1.5,
+    textTransform: "uppercase",
+  },
+  coverHeroRule: {
+    position: "absolute",
+    left: 36,
+    right: 36,
+    bottom: 0,
+    height: 2,
+    backgroundColor: "#FF6B00",
+  },
   coverContent: { padding: 36 },
   brand: {
     fontSize: 9,
@@ -168,12 +215,26 @@ export function HandbookDocument({
   return (
     <Document>
       <Page size="A4" style={styles.cover}>
-        <View style={styles.coverImageWrap}>
-          {packet.home_photo_url ? (
+        {packet.home_photo_url ? (
+          <View style={styles.coverImageWrap}>
             <Image src={packet.home_photo_url} style={styles.coverImage} />
-          ) : null}
-          <View style={styles.coverOverlay} />
-        </View>
+            <View style={styles.coverOverlay} />
+            <View style={styles.coverImageFade} />
+          </View>
+        ) : (
+          <View style={styles.coverHeroNoPhoto}>
+            <Text style={styles.coverHeroEyebrow}>// Welcome Home</Text>
+            <Text style={styles.coverHeroTitle}>
+              {town ? `${town.name}, ${town.state}` : "Your new home"}
+            </Text>
+            <Text style={styles.coverHeroSubtitle}>
+              A handbook for {packet.buyer_first_name}
+              {packet.buyer_last_name ? ` & ${packet.buyer_last_name}` : ""}
+            </Text>
+            <View style={styles.coverHeroRule} />
+          </View>
+        )}
+
         <View style={styles.coverContent}>
           <Text style={styles.brand}>// Welcome Home</Text>
           <Text style={styles.buyerTitle}>

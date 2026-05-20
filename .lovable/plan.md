@@ -1,79 +1,39 @@
-# Fix: branding images vanish ~10s after upload
+## What the black slab is
 
-## Root cause
+In `src/lib/pdf/handbook-document.tsx`, the cover page renders a fixed 360pt tall `coverImageWrap` View with `backgroundColor: "#1a1410"` (near-black). It's meant to hold the buyer's home photo (`packet.home_photo_url`) under a dark overlay. When no photo is uploaded — like the "Me & Jones / 123 Jones St" test packet in your screenshot — only the dark background and overlay render, producing a giant featureless black rectangle above the cream content block.
 
-Uploads to the `headshots` / `brokerage-logos` buckets succeed (storage rows exist), but the local form state holding the new public URL gets wiped before the user clicks **Save**.
-
-In `src/routes/_authenticated/settings.tsx`:
-
-```ts
-useEffect(() => {
-  if (!profile) return;
-  setHeadshotUrl(profile.headshot_url ?? "");
-  setLogoUrl(profile.brokerage_logo_url ?? "");
-  // ...every other field
-}, [profile]);
-```
-
-`src/lib/auth.tsx` calls `loadProfile()` on every `supabase.auth.onAuthStateChange` event (INITIAL_SESSION, TOKEN_REFRESHED, USER_UPDATED, etc.). Each refetch returns a new `profile` object → effect re-runs → the just-uploaded URL is overwritten with the still-`null` DB value. Picture disappears.
+Even with a photo, the overlay (`rgba(26,20,16,0.35)`) plus near-black fallback makes it look heavy and dated.
 
 ## Fix
 
-Persist the image URL to the profile immediately on successful upload (no Save click required for images), then refresh. This matches user expectation that "uploading = saved" and survives any future profile re-hydration.
+Rework the cover hero so it never produces an ugly black slab and feels on-brand with the cream/orange identity.
 
-### Changes — `src/routes/_authenticated/settings.tsx` only
+1. **No-photo path (the case in your screenshot)** — replace the dark slab entirely. Render a shorter (~200pt) branded hero band using the cream palette:
+   - Background: `#F9F2E8` (matches body) with a thin warm divider or a soft orange→cream gradient stripe at the bottom.
+   - Centered eyebrow: `// Welcome Home` in orange (`#FF6B00`).
+   - Large display: town name + state (e.g. "Mequon, WI") — uppercase, tight tracking, in `#1a1410`.
+   - Subtle pattern or 1pt orange rule for visual interest, no flat black.
 
-Update the `upload()` helper to also write the new URL to `profiles` and refresh auth state:
+2. **With-photo path** — keep an image hero but:
+   - Drop fallback background to cream (`#F9F2E8`) so a slow/failed image load doesn't show black.
+   - Reduce height from 360 → 280pt so it doesn't dominate the page.
+   - Lighten the overlay from `rgba(26,20,16,0.35)` → `rgba(26,20,16,0.15)` and add a bottom gradient fade into the cream body for a softer seam.
 
-```ts
-const upload = async (
-  bucket: "headshots" | "brokerage-logos",
-  file: File,
-  set: (url: string) => void,
-) => {
-  if (!user) return;
-  const ext = file.name.split(".").pop();
-  const path = `${user.id}/${Date.now()}.${ext}`;
-  const { error } = await supabase.storage.from(bucket).upload(path, file, { upsert: true });
-  if (error) {
-    toast.error("Upload failed.", { description: error.message });
-    return;
-  }
-  const { data: pub } = supabase.storage.from(bucket).getPublicUrl(path);
-  set(pub.publicUrl);
+3. **Cover layout cleanup** — move the `// Welcome Home` eyebrow + buyer name **into** the hero region (overlay text when photo exists, centered when not), so the cover reads as one composition instead of "black box on top of content."
 
-  // Persist immediately so the URL survives profile re-hydration
-  const column = bucket === "headshots" ? "headshot_url" : "brokerage_logo_url";
-  const { error: updateError } = await supabase
-    .from("profiles")
-    .update({ [column]: pub.publicUrl })
-    .eq("user_id", user.id);
-  if (updateError) {
-    toast.error("Saved to storage but couldn't update profile.", { description: updateError.message });
-    return;
-  }
-  await refreshProfile();
-  toast.success("Image saved.");
-};
-```
+## Out of scope
 
-Also update the "Remove" button in `ImageField` so removal persists too. Pass an `onRemove` prop from the parent that nulls the column in `profiles` and calls `refreshProfile()`, instead of just calling `onUrl("")` which would similarly get wiped/ignored. Concretely:
+- No changes to page 2 (directory) or thank-you page styling.
+- No changes to how `home_photo_url` is uploaded or stored — purely PDF rendering.
+- No font additions (sticks with built-in Helvetica to avoid font-loading regressions).
 
-- Add an `onRemove?: () => Promise<void>` prop to `ImageField`.
-- The "Remove" `<button>` calls `onRemove ?? (() => onUrl(""))`.
-- In `Settings`, pass `onRemove` for both images that runs the same `profiles.update({ [column]: null })` + `refreshProfile()` flow.
+## Files
 
-### Out of scope (intentionally)
-
-- The other form fields (name, phone, social links, default town, thank-you message) still use the explicit **Save** button. They're text inputs where the user expects to edit before committing; persist-on-change would be wrong UX. The clobber-on-refetch risk for those is small because the user is actively typing — but if it bites later we can switch the hydration `useEffect` to a one-shot "hydrate on first non-null profile" pattern.
+- `src/lib/pdf/handbook-document.tsx` — only file touched. Update `styles.coverImageWrap`, `coverImage`, `coverOverlay`, `coverContent`, and the cover `<Page>` JSX to branch on `packet.home_photo_url`.
 
 ## Verification
 
-1. Upload a headshot → wait 30s on the page → image still shown.
-2. Reload the page → image still shown.
-3. Check DB: `select headshot_url, brokerage_logo_url from profiles where user_id = '<me>'` → both populated.
-4. Click Remove → image clears, DB column becomes null, survives reload.
-
-## Files touched
-
-- `src/routes/_authenticated/settings.tsx` (only)
+Open the packet PDF for the "Me & Jones" test packet (no photo) and one with a photo. Confirm:
+- No-photo cover shows a cream branded hero, no black.
+- Photo cover shows the image with a soft overlay and clean fade into the body.
+- Page 2 and the thank-you page are unchanged.
