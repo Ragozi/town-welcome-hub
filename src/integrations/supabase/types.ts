@@ -356,10 +356,12 @@ export type Database = {
           home_photo_url: string | null
           id: string
           interests: string[]
+          last_downloaded_at: string | null
           lifestyle_tags: string[]
           pdf_download_count: number
           pdf_url: string | null
           realtor_id: string
+          recommendation_log: Json
           slug: string
           status: Database["public"]["Enums"]["packet_status"]
           town_id: string | null
@@ -380,10 +382,12 @@ export type Database = {
           home_photo_url?: string | null
           id?: string
           interests?: string[]
+          last_downloaded_at?: string | null
           lifestyle_tags?: string[]
           pdf_download_count?: number
           pdf_url?: string | null
           realtor_id: string
+          recommendation_log?: Json
           slug: string
           status?: Database["public"]["Enums"]["packet_status"]
           town_id?: string | null
@@ -404,10 +408,12 @@ export type Database = {
           home_photo_url?: string | null
           id?: string
           interests?: string[]
+          last_downloaded_at?: string | null
           lifestyle_tags?: string[]
           pdf_download_count?: number
           pdf_url?: string | null
           realtor_id?: string
+          recommendation_log?: Json
           slug?: string
           status?: Database["public"]["Enums"]["packet_status"]
           town_id?: string | null
