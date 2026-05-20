@@ -111,12 +111,18 @@ export const adminInviteUser = createServerFn({ method: "POST" })
       },
     });
     if (error || !invited?.user) {
-      throw new Response(error?.message ?? "Could not invite user", { status: 400 });
+      const msg = error?.message ?? "Could not invite user";
+      // Surface clearer messaging for the most common cases.
+      const friendly = /already.*registered|already.*exists|duplicate/i.test(msg)
+        ? "A user with this email already exists."
+        : /smtp|email.*not.*sent|rate.*limit/i.test(msg)
+          ? "Email could not be sent. Confirm your transactional email is configured."
+          : msg;
+      console.error("[adminInviteUser] inviteUserByEmail failed", { email: data.email, error: msg });
+      throw new Response(friendly, { status: 400 });
     }
     const uid = invited.user.id;
 
-    // Profile + role are created by handle_new_user trigger using assigned_role,
-    // but we also do an explicit upsert in case the trigger ordering changes.
     await supabaseAdmin.from("profiles").upsert(
       {
         user_id: uid,
@@ -169,7 +175,13 @@ export const adminResendInvite = createServerFn({ method: "POST" })
       redirectTo,
       data: u.user.user_metadata ?? {},
     });
-    if (error) throw new Response(error.message, { status: 400 });
+    if (error) {
+      console.error("[adminResendInvite] failed", { email: u.user.email, error: error.message });
+      const friendly = /smtp|email.*not.*sent|rate.*limit/i.test(error.message)
+        ? "Email could not be sent. Confirm your transactional email is configured."
+        : error.message;
+      throw new Response(friendly, { status: 400 });
+    }
     return { ok: true };
   });
 
