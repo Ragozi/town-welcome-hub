@@ -102,17 +102,6 @@ function Settings() {
     const patch =
       bucket === "headshots" ? { headshot_url: null } : { brokerage_logo_url: null };
     const { error } = await supabase.from("profiles").update(patch).eq("user_id", user.id);
-
-  const removeImage = async (
-    bucket: "headshots" | "brokerage-logos",
-    set: (url: string) => void,
-  ) => {
-    if (!user) return;
-    const column = bucket === "headshots" ? "headshot_url" : "brokerage_logo_url";
-    const { error } = await supabase
-      .from("profiles")
-      .update({ [column]: null })
-      .eq("user_id", user.id);
     if (error) {
       toast.error("Could not remove image.", { description: error.message });
       return;
