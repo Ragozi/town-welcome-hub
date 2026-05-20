@@ -38,6 +38,12 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import {
@@ -104,7 +110,10 @@ function statusBadge(s: Status) {
 }
 
 function lastSignInLabel(u: UserRow): string {
-  if (!u.confirmed) return "Pending Verification";
+  if (!u.confirmed) {
+    if (u.invited_at) return `Invited ${new Date(u.invited_at).toLocaleString()}`;
+    return "Pending Verification";
+  }
   if (!u.last_sign_in_at) return "N/A";
   return new Date(u.last_sign_in_at).toLocaleString();
 }
@@ -112,8 +121,6 @@ function lastSignInLabel(u: UserRow): string {
 function IamPage() {
   const qc = useQueryClient();
   const { user, isAdmin } = useAuth();
-  // Super Admin == any user with super_admin role. We get this from /users list itself
-  // by checking the current user's roles, but for the gate we ask the server below.
   const list = useServerFn(adminListUsers);
   const invite = useServerFn(adminInviteUser);
   const setRole = useServerFn(adminSetRole);
@@ -140,11 +147,16 @@ function IamPage() {
           : [newUser as UserRow],
       );
       qc.invalidateQueries({ queryKey: ["admin-users"] });
-      toast.success("Invitation sent", {
-        description: `${newUser.email} will receive a setup link.`,
+      toast.success(`Invitation sent to ${newUser.email}`, {
+        description: "They should receive a setup link within a minute.",
       });
     },
-    onError: (e: Error) => toast.error("Could not invite user", { description: e.message }),
+    onError: (e: Error) =>
+      toast.error("Could not send invitation", {
+        description:
+          e.message ||
+          "Email delivery failed. Confirm your transactional email is configured.",
+      }),
   });
 
   const onSetRole = async (user_id: string, role: AssignableRole) => {
@@ -160,7 +172,10 @@ function IamPage() {
   const onResend = async (user_id: string, email: string) => {
     try {
       await resend({ data: { user_id } });
-      toast.success("Invitation resent", { description: `Sent a fresh link to ${email}.` });
+      toast.success(`Invitation resent to ${email}`, {
+        description: "A fresh setup link is on the way.",
+      });
+      qc.invalidateQueries({ queryKey: ["admin-users"] });
     } catch (e) {
       toast.error("Could not resend invitation", { description: (e as Error).message });
     }
@@ -206,133 +221,183 @@ function IamPage() {
   if (!isAdmin) return null;
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-end justify-between">
-        <div>
-          <h2 className="font-display text-2xl font-extrabold uppercase tracking-tight">
-            Identity & Access Management
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            {data?.length ?? 0} {data?.length === 1 ? "user" : "users"} ·{" "}
-            {isSuperAdmin
-              ? "You can invite, role-manage, and deactivate users."
-              : "Read-only — only Super Admins can modify users."}
-          </p>
+    <TooltipProvider delayDuration={150}>
+      <div className="space-y-4">
+        <div className="flex items-end justify-between">
+          <div>
+            <h2 className="font-display text-2xl font-extrabold uppercase tracking-tight">
+              Identity & Access Management
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              {data?.length ?? 0} {data?.length === 1 ? "user" : "users"} ·{" "}
+              {isSuperAdmin
+                ? "You can invite, role-manage, and deactivate users."
+                : "Read-only — only Super Admins can modify users."}
+            </p>
+          </div>
+          {isSuperAdmin && (
+            <NewUserDialog
+              busy={inviteMut.isPending}
+              onSubmit={(input) => inviteMut.mutateAsync(input)}
+            />
+          )}
         </div>
-        {isSuperAdmin && (
-          <NewUserDialog
-            busy={inviteMut.isPending}
-            onSubmit={(input) => inviteMut.mutateAsync(input)}
-          />
+
+        {isLoading ? (
+          <div className="flex justify-center py-12">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : (
+          <div className="overflow-hidden rounded-3xl border border-border bg-card shadow-[var(--shadow-soft)]">
+            <table className="w-full text-sm">
+              <thead className="bg-secondary/50 text-left text-xs uppercase tracking-wider text-muted-foreground">
+                <tr>
+                  <th className="px-5 py-3">User</th>
+                  <th className="px-5 py-3">Role</th>
+                  <th className="px-5 py-3">Status</th>
+                  <th className="px-5 py-3">Last sign-in</th>
+                  <th className="px-5 py-3">Packets</th>
+                  <th className="px-5 py-3 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(data ?? []).map((u) => {
+                  const status = statusOf(u);
+                  const primary = pickPrimaryRole(u.roles);
+                  const isMe = u.id === user?.id;
+                  return (
+                    <tr key={u.id} className="border-t border-border/60 align-middle">
+                      <td className="px-5 py-4">
+                        <p className="font-medium">{u.profile?.full_name ?? "—"}</p>
+                        <p className="text-xs text-muted-foreground">{u.email}</p>
+                      </td>
+                      <td className="px-5 py-4">
+                        {isSuperAdmin ? (
+                          <Select
+                            value={primary || undefined}
+                            onValueChange={(v) => onSetRole(u.id, v as AssignableRole)}
+                          >
+                            <SelectTrigger className="h-8 w-[160px] rounded-full text-xs">
+                              <SelectValue placeholder="Assign role" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {ROLE_OPTIONS.map((r) => (
+                                <SelectItem key={r.value} value={r.value}>
+                                  {r.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <span className="text-foreground/70">
+                            {primary ? roleLabel(primary) : "—"}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-5 py-4">{statusBadge(status)}</td>
+                      <td className="px-5 py-4 text-muted-foreground">{lastSignInLabel(u)}</td>
+                      <td className="px-5 py-4">{u.packet_count}</td>
+                      <td className="px-5 py-4 text-right">
+                        {isSuperAdmin ? (
+                          <Tooltip>
+                            <DropdownMenu>
+                              <TooltipTrigger asChild>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="sm">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                              </TooltipTrigger>
+                              <TooltipContent>Open user actions</TooltipContent>
+                              <DropdownMenuContent align="end">
+                                {(status === "Pending Invitation" ||
+                                  status === "Pending Verification") && (
+                                  <ActionItem
+                                    icon={<Mail className="mr-2 h-4 w-4" />}
+                                    label="Resend invitation"
+                                    tooltip="Resends the invite email to this user."
+                                    onClick={() => onResend(u.id, u.email)}
+                                  />
+                                )}
+                                <ActionItem
+                                  icon={<KeyRound className="mr-2 h-4 w-4" />}
+                                  label="Reset password"
+                                  tooltip="Sets a new password for this user."
+                                  onClick={() => onResetPw(u.id)}
+                                />
+                                <DropdownMenuSeparator />
+                                {status === "Disabled" ? (
+                                  <ActionItem
+                                    icon={<UserCheck className="mr-2 h-4 w-4" />}
+                                    label="Reactivate user"
+                                    tooltip="Restores this user's ability to sign in."
+                                    onClick={() => onSetActive(u.id, true, u.email)}
+                                  />
+                                ) : (
+                                  <ActionItem
+                                    icon={<UserX className="mr-2 h-4 w-4" />}
+                                    label="Deactivate user"
+                                    tooltip="Blocks this user from signing in."
+                                    disabled={isMe}
+                                    onClick={() => onSetActive(u.id, false, u.email)}
+                                  />
+                                )}
+                                <ActionItem
+                                  icon={<Trash2 className="mr-2 h-4 w-4" />}
+                                  label="Delete user"
+                                  tooltip="Permanently removes this user account."
+                                  destructive
+                                  disabled={isMe}
+                                  onClick={() => onDelete(u.id, u.email)}
+                                />
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </Tooltip>
+                        ) : (
+                          <ShieldAlert className="ml-auto h-4 w-4 text-muted-foreground" />
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
+    </TooltipProvider>
+  );
+}
 
-      {isLoading ? (
-        <div className="flex justify-center py-12">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-        </div>
-      ) : (
-        <div className="overflow-hidden rounded-3xl border border-border bg-card shadow-[var(--shadow-soft)]">
-          <table className="w-full text-sm">
-            <thead className="bg-secondary/50 text-left text-xs uppercase tracking-wider text-muted-foreground">
-              <tr>
-                <th className="px-5 py-3">User</th>
-                <th className="px-5 py-3">Role</th>
-                <th className="px-5 py-3">Status</th>
-                <th className="px-5 py-3">Last sign-in</th>
-                <th className="px-5 py-3">Packets</th>
-                <th className="px-5 py-3 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(data ?? []).map((u) => {
-                const status = statusOf(u);
-                const primary = pickPrimaryRole(u.roles);
-                const isMe = u.id === user?.id;
-                return (
-                  <tr key={u.id} className="border-t border-border/60 align-middle">
-                    <td className="px-5 py-4">
-                      <p className="font-medium">{u.profile?.full_name ?? "—"}</p>
-                      <p className="text-xs text-muted-foreground">{u.email}</p>
-                    </td>
-                    <td className="px-5 py-4">
-                      {isSuperAdmin ? (
-                        <Select
-                          value={primary || undefined}
-                          onValueChange={(v) => onSetRole(u.id, v as AssignableRole)}
-                        >
-                          <SelectTrigger className="h-8 w-[160px] rounded-full text-xs">
-                            <SelectValue placeholder="Assign role" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {ROLE_OPTIONS.map((r) => (
-                              <SelectItem key={r.value} value={r.value}>
-                                {r.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      ) : (
-                        <span className="text-foreground/70">
-                          {primary ? roleLabel(primary) : "—"}
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-5 py-4">{statusBadge(status)}</td>
-                    <td className="px-5 py-4 text-muted-foreground">{lastSignInLabel(u)}</td>
-                    <td className="px-5 py-4">{u.packet_count}</td>
-                    <td className="px-5 py-4 text-right">
-                      {isSuperAdmin ? (
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            {(status === "Pending Invitation" ||
-                              status === "Pending Verification") && (
-                              <DropdownMenuItem onClick={() => onResend(u.id, u.email)}>
-                                <Mail className="mr-2 h-4 w-4" /> Resend invitation
-                              </DropdownMenuItem>
-                            )}
-                            <DropdownMenuItem onClick={() => onResetPw(u.id)}>
-                              <KeyRound className="mr-2 h-4 w-4" /> Reset password
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            {status === "Disabled" ? (
-                              <DropdownMenuItem onClick={() => onSetActive(u.id, true, u.email)}>
-                                <UserCheck className="mr-2 h-4 w-4" /> Reactivate user
-                              </DropdownMenuItem>
-                            ) : (
-                              <DropdownMenuItem
-                                disabled={isMe}
-                                onClick={() => onSetActive(u.id, false, u.email)}
-                              >
-                                <UserX className="mr-2 h-4 w-4" /> Deactivate user
-                              </DropdownMenuItem>
-                            )}
-                            <DropdownMenuItem
-                              className="text-destructive focus:text-destructive"
-                              disabled={isMe}
-                              onClick={() => onDelete(u.id, u.email)}
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" /> Delete user
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      ) : (
-                        <ShieldAlert className="ml-auto h-4 w-4 text-muted-foreground" />
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </div>
+function ActionItem({
+  icon,
+  label,
+  tooltip,
+  onClick,
+  disabled,
+  destructive,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  tooltip: string;
+  onClick: () => void;
+  disabled?: boolean;
+  destructive?: boolean;
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <DropdownMenuItem
+          onClick={onClick}
+          disabled={disabled}
+          className={destructive ? "text-destructive focus:text-destructive" : undefined}
+        >
+          {icon}
+          {label}
+        </DropdownMenuItem>
+      </TooltipTrigger>
+      <TooltipContent side="left">{tooltip}</TooltipContent>
+    </Tooltip>
   );
 }
 
