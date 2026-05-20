@@ -104,12 +104,14 @@ export const getHandbookData = createServerFn({ method: "POST" })
       // Persist a recommendation log so admins can audit why each business
       // surfaced. Fire-and-forget — never block PDF generation on this.
       const log = buildRecommendationLog(scored, 24);
-      supabaseAdmin
-        .from("packets")
-        .update({ recommendation_log: log })
-        .eq("id", (packet as Packet).id)
-        .then(() => {})
-        .catch(() => {});
+      try {
+        await supabaseAdmin
+          .from("packets")
+          .update({ recommendation_log: log })
+          .eq("id", (packet as Packet).id);
+      } catch {
+        // non-fatal
+      }
     }
 
     const recommended: HandbookRecommendation[] = topRecommended(scored, 12).map((s) => ({
