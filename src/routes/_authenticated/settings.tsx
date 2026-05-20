@@ -75,7 +75,40 @@ function Settings() {
     }
     const { data: pub } = supabase.storage.from(bucket).getPublicUrl(path);
     set(pub.publicUrl);
-    toast.success("Uploaded.");
+
+    const patch =
+      bucket === "headshots"
+        ? { headshot_url: pub.publicUrl }
+        : { brokerage_logo_url: pub.publicUrl };
+    const { error: updateError } = await supabase
+      .from("profiles")
+      .update(patch)
+      .eq("user_id", user.id);
+    if (updateError) {
+      toast.error("Saved to storage but couldn't update profile.", {
+        description: updateError.message,
+      });
+      return;
+    }
+    await refreshProfile();
+    toast.success("Image saved.");
+  };
+
+  const removeImage = async (
+    bucket: "headshots" | "brokerage-logos",
+    set: (url: string) => void,
+  ) => {
+    if (!user) return;
+    const patch =
+      bucket === "headshots" ? { headshot_url: null } : { brokerage_logo_url: null };
+    const { error } = await supabase.from("profiles").update(patch).eq("user_id", user.id);
+    if (error) {
+      toast.error("Could not remove image.", { description: error.message });
+      return;
+    }
+    set("");
+    await refreshProfile();
+    toast.success("Image removed.");
   };
 
   const onSave = async () => {
@@ -140,6 +173,7 @@ function Settings() {
             url={headshotUrl}
             onUrl={setHeadshotUrl}
             onUpload={(f) => upload("headshots", f, setHeadshotUrl)}
+            onRemove={() => removeImage("headshots", setHeadshotUrl)}
             shape="circle"
           />
           <ImageField
@@ -147,6 +181,7 @@ function Settings() {
             url={logoUrl}
             onUrl={setLogoUrl}
             onUpload={(f) => upload("brokerage-logos", f, setLogoUrl)}
+            onRemove={() => removeImage("brokerage-logos", setLogoUrl)}
             shape="square"
           />
         </div>
@@ -233,12 +268,14 @@ function ImageField({
   url,
   onUrl,
   onUpload,
+  onRemove,
   shape,
 }: {
   label: string;
   url: string;
   onUrl: (s: string) => void;
   onUpload: (file: File) => void;
+  onRemove?: () => void | Promise<void>;
   shape: "circle" | "square";
 }) {
   return (
@@ -269,7 +306,7 @@ function ImageField({
           {url && (
             <button
               type="button"
-              onClick={() => onUrl("")}
+              onClick={() => (onRemove ? onRemove() : onUrl(""))}
               className="ml-2 text-xs text-muted-foreground hover:text-destructive"
             >
               Remove
