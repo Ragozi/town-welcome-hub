@@ -76,10 +76,13 @@ function Settings() {
     const { data: pub } = supabase.storage.from(bucket).getPublicUrl(path);
     set(pub.publicUrl);
 
-    const column = bucket === "headshots" ? "headshot_url" : "brokerage_logo_url";
+    const patch =
+      bucket === "headshots"
+        ? { headshot_url: pub.publicUrl }
+        : { brokerage_logo_url: pub.publicUrl };
     const { error: updateError } = await supabase
       .from("profiles")
-      .update({ [column]: pub.publicUrl })
+      .update(patch)
       .eq("user_id", user.id);
     if (updateError) {
       toast.error("Saved to storage but couldn't update profile.", {
@@ -90,6 +93,15 @@ function Settings() {
     await refreshProfile();
     toast.success("Image saved.");
   };
+
+  const removeImage = async (
+    bucket: "headshots" | "brokerage-logos",
+    set: (url: string) => void,
+  ) => {
+    if (!user) return;
+    const patch =
+      bucket === "headshots" ? { headshot_url: null } : { brokerage_logo_url: null };
+    const { error } = await supabase.from("profiles").update(patch).eq("user_id", user.id);
 
   const removeImage = async (
     bucket: "headshots" | "brokerage-logos",
