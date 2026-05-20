@@ -173,6 +173,7 @@ function Settings() {
             url={headshotUrl}
             onUrl={setHeadshotUrl}
             onUpload={(f) => upload("headshots", f, setHeadshotUrl)}
+            onRemove={() => removeImage("headshots", setHeadshotUrl)}
             shape="circle"
           />
           <ImageField
@@ -180,6 +181,7 @@ function Settings() {
             url={logoUrl}
             onUrl={setLogoUrl}
             onUpload={(f) => upload("brokerage-logos", f, setLogoUrl)}
+            onRemove={() => removeImage("brokerage-logos", setLogoUrl)}
             shape="square"
           />
         </div>
