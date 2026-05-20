@@ -5,13 +5,27 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { withDebugLog } from "@/lib/debug-log.server";
 import type { Business, Category, Town } from "@/lib/towns";
 import type { Packet } from "@/lib/packets";
+import {
+  buildRecommendationLog,
+  scoreBusinesses,
+  topRecommended,
+  type RecommendReason,
+  type ScoredBusiness,
+} from "@/lib/business-recommender";
 
 export type HandbookRealtor = {
   full_name: string | null;
   brokerage_name: string | null;
+  brokerage_logo_url: string | null;
   email_public: string | null;
   phone: string | null;
   headshot_url: string | null;
+};
+
+export type HandbookRecommendation = {
+  business_id: string;
+  score: number;
+  reasons: RecommendReason[];
 };
 
 export type HandbookData = {
@@ -20,6 +34,7 @@ export type HandbookData = {
   town: Town | null;
   categories: Category[];
   businesses: Business[];
+  recommended: HandbookRecommendation[];
   liveUrl: string;
   origin: string;
 };
@@ -48,7 +63,7 @@ export const getHandbookData = createServerFn({ method: "POST" })
     const [{ data: profile }, townRes, { data: categories }] = await Promise.all([
       supabaseAdmin
         .from("profiles")
-        .select("full_name, brokerage_name, email_public, phone, headshot_url")
+        .select("full_name, brokerage_name, brokerage_logo_url, email_public, phone, headshot_url")
         .eq("user_id", packet.realtor_id)
         .maybeSingle(),
       packet.town_id
@@ -64,6 +79,7 @@ export const getHandbookData = createServerFn({ method: "POST" })
     const town = (townRes.data ?? null) as Town | null;
 
     let businesses: Business[] = [];
+    let scored: ScoredBusiness<Business>[] = [];
     if (town) {
       const { data: bizData } = await supabaseAdmin
         .from("businesses")
@@ -74,11 +90,36 @@ export const getHandbookData = createServerFn({ method: "POST" })
           .excluded_business_ids ?? [],
       );
       businesses = ((bizData ?? []) as Business[]).filter((b) => !excluded.has(b.id));
+
+      const interests = [
+        ...((packet as Packet).interests ?? []),
+        ...((packet as Packet).lifestyle_tags ?? []),
+      ];
+      scored = scoreBusinesses({
+        businesses,
+        categories: (categories ?? []) as Category[],
+        interests,
+      });
+
+      // Persist a recommendation log so admins can audit why each business
+      // surfaced. Fire-and-forget — never block PDF generation on this.
+      const log = buildRecommendationLog(scored, 24);
+      try {
+        await supabaseAdmin
+          .from("packets")
+          .update({ recommendation_log: log })
+          .eq("id", (packet as Packet).id);
+      } catch {
+        // non-fatal
+      }
     }
 
-    // Derive a public origin from common forwarded headers, falling back to the
-    // request URL. The client also passes its own origin so the QR link matches
-    // the buyer's expected domain.
+    const recommended: HandbookRecommendation[] = topRecommended(scored, 12).map((s) => ({
+      business_id: s.business.id,
+      score: s.score,
+      reasons: s.reasons,
+    }));
+
     const origin = process.env.PUBLIC_BASE_URL || "";
 
     return {
@@ -87,6 +128,7 @@ export const getHandbookData = createServerFn({ method: "POST" })
       town,
       categories: (categories ?? []) as Category[],
       businesses,
+      recommended,
       liveUrl: `${origin}/p/${packet.slug}`,
       origin,
     };

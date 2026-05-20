@@ -1,11 +1,13 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
 import { PDFViewer, PDFDownloadLink, pdf } from "@react-pdf/renderer";
+import { useServerFn } from "@tanstack/react-start";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Download, Eye, Loader2 } from "lucide-react";
 import { HandbookDocument } from "@/lib/pdf/handbook-document";
 import type { HandbookData } from "@/lib/handbook.functions";
-import { logEvent } from "@/lib/tracking.functions";
+import { recordPdfDownload } from "@/lib/packet-downloads.functions";
 
 type Props = {
   data: HandbookData;
@@ -16,6 +18,9 @@ type Props = {
 
 export function HandbookPdfPanel({ data, liveUrl }: Props) {
   const [qrDataUrl, setQrDataUrl] = useState<string>("");
+  const recordDownload = useServerFn(recordPdfDownload);
+  const qc = useQueryClient();
+  const lastDownloadAt = useRef<number>(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -39,6 +44,7 @@ export function HandbookPdfPanel({ data, liveUrl }: Props) {
         town={data.town}
         categories={data.categories}
         businesses={data.businesses}
+        recommended={data.recommended}
         qrDataUrl={qrDataUrl}
         liveUrl={liveUrl}
       />
@@ -53,6 +59,22 @@ export function HandbookPdfPanel({ data, liveUrl }: Props) {
     );
     return `${safe}.pdf`;
   }, [data.packet]);
+
+  // De-dupes double-fires (PDFDownloadLink can trigger onClick twice in
+  // some browsers); also keeps Open-in-new-tab from counting as download.
+  const recordOnce = () => {
+    const now = Date.now();
+    if (now - lastDownloadAt.current < 2000) return;
+    lastDownloadAt.current = now;
+    recordDownload({ data: { slug: data.packet.slug } })
+      .then(() => {
+        qc.invalidateQueries({ queryKey: ["packets"] });
+        qc.invalidateQueries({ queryKey: ["packet", data.packet.id] });
+      })
+      .catch((e: unknown) => {
+        console.warn("[recordPdfDownload]", e);
+      });
+  };
 
   const openInNewTab = async () => {
     try {
@@ -82,15 +104,7 @@ export function HandbookPdfPanel({ data, liveUrl }: Props) {
             document={doc}
             fileName={fileName}
             className="inline-flex h-9 items-center rounded-full bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-            onClick={() => {
-              logEvent({
-                data: {
-                  packet_slug: data.packet.slug,
-                  event_type: "pdf_downloaded",
-                  source: "direct",
-                },
-              }).catch(() => {});
-            }}
+            onClick={recordOnce}
           >
             {({ loading }) =>
               loading ? (
