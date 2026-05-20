@@ -215,12 +215,26 @@ export function HandbookDocument({
   return (
     <Document>
       <Page size="A4" style={styles.cover}>
-        <View style={styles.coverImageWrap}>
-          {packet.home_photo_url ? (
+        {packet.home_photo_url ? (
+          <View style={styles.coverImageWrap}>
             <Image src={packet.home_photo_url} style={styles.coverImage} />
-          ) : null}
-          <View style={styles.coverOverlay} />
-        </View>
+            <View style={styles.coverOverlay} />
+            <View style={styles.coverImageFade} />
+          </View>
+        ) : (
+          <View style={styles.coverHeroNoPhoto}>
+            <Text style={styles.coverHeroEyebrow}>// Welcome Home</Text>
+            <Text style={styles.coverHeroTitle}>
+              {town ? `${town.name}, ${town.state}` : "Your new home"}
+            </Text>
+            <Text style={styles.coverHeroSubtitle}>
+              A handbook for {packet.buyer_first_name}
+              {packet.buyer_last_name ? ` & ${packet.buyer_last_name}` : ""}
+            </Text>
+            <View style={styles.coverHeroRule} />
+          </View>
+        )}
+
         <View style={styles.coverContent}>
           <Text style={styles.brand}>// Welcome Home</Text>
           <Text style={styles.buyerTitle}>
