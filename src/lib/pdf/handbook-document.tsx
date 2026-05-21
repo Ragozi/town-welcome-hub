@@ -399,12 +399,12 @@ export function HandbookDocument({
           <View style={styles.twoCol}>
             <View style={styles.col}>
               {left.map((c) => (
-                <CategoryPdf key={c.id} category={c} list={byCategory.get(c.id) ?? []} />
+                <CategoryPdf key={c.id} category={c} list={byCategory.get(c.id) ?? []} styles={styles} />
               ))}
             </View>
             <View style={styles.col}>
               {right.map((c) => (
-                <CategoryPdf key={c.id} category={c} list={byCategory.get(c.id) ?? []} />
+                <CategoryPdf key={c.id} category={c} list={byCategory.get(c.id) ?? []} styles={styles} />
               ))}
             </View>
           </View>
