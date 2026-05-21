@@ -11,7 +11,12 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 export const recordPdfDownload = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) =>
-    z.object({ slug: z.string().min(1).max(64) }).parse(input),
+    z
+      .object({
+        slug: z.string().min(1).max(64),
+        variant: z.enum(["color", "print"]).default("color"),
+      })
+      .parse(input),
   )
   .handler(async ({ data, context }) => {
     const { userId } = context;
