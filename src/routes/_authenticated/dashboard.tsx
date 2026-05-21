@@ -3,8 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth";
 import { listMyPackets } from "@/lib/packets";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, FilePlus2, FileText, Sparkles, Users, Download, Eye } from "lucide-react";
-import { format } from "date-fns";
+import { ArrowRight, FilePlus2, FileText, Sparkles, Users, Download, Eye, Clock } from "lucide-react";
+import { format, formatDistanceToNow } from "date-fns";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   component: Dashboard,
@@ -21,6 +21,11 @@ function Dashboard() {
   const generated = packets.filter((p) => p.status === "generated");
   const drafts = packets.filter((p) => p.status === "draft");
   const totalDownloads = packets.reduce((s, p) => s + (p.pdf_download_count ?? 0), 0);
+  const lastDownloadAt = packets.reduce<string | null>((latest, p) => {
+    if (!p.last_downloaded_at) return latest;
+    if (!latest || p.last_downloaded_at > latest) return p.last_downloaded_at;
+    return latest;
+  }, null);
 
   return (
     <div className="space-y-10">
@@ -50,11 +55,21 @@ function Dashboard() {
       </div>
 
       {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-5">
         <StatCard label="Packets created" value={packets.length} icon={FileText} />
         <StatCard label="Buyers welcomed" value={generated.length} icon={Users} />
         <StatCard label="PDF downloads" value={totalDownloads} icon={Download} />
         <StatCard label="Drafts in progress" value={drafts.length} icon={Sparkles} />
+        <StatCard
+          label="Last download"
+          value={
+            lastDownloadAt
+              ? formatDistanceToNow(new Date(lastDownloadAt), { addSuffix: true })
+              : "Never"
+          }
+          sublabel={totalDownloads > 0 ? `${totalDownloads} total` : undefined}
+          icon={Clock}
+        />
       </div>
 
       {/* Recent packets */}
@@ -140,10 +155,12 @@ function Dashboard() {
 function StatCard({
   label,
   value,
+  sublabel,
   icon: Icon,
 }: {
   label: string;
-  value: number;
+  value: number | string;
+  sublabel?: string;
   icon: React.ComponentType<{ className?: string }>;
 }) {
   return (
@@ -154,7 +171,15 @@ function StatCard({
         </p>
         <Icon className="h-4 w-4 text-primary" />
       </div>
-      <p className="font-display mt-3 text-3xl font-extrabold">{value}</p>
+      <p
+        className={
+          "font-display mt-3 font-extrabold " +
+          (typeof value === "number" ? "text-3xl" : "text-xl leading-tight")
+        }
+      >
+        {value}
+      </p>
+      {sublabel && <p className="mt-1 text-xs text-muted-foreground">{sublabel}</p>}
     </div>
   );
 }

@@ -22,6 +22,7 @@ export type Packet = {
   status: PacketStatus;
   pdf_url: string | null;
   pdf_download_count: number;
+  last_downloaded_at: string | null;
   created_at: string;
   updated_at: string;
 };
