@@ -54,8 +54,8 @@ export const recordPdfDownload = createServerFn({ method: "POST" })
       town_id: packet.town_id,
       event_type: "pdf_downloaded",
       source: "direct",
-      metadata: { triggered_by: "realtor_dashboard" },
+      metadata: { triggered_by: "realtor_dashboard", variant: data.variant },
     });
 
-    return { ok: true, count: (packet.pdf_download_count ?? 0) + 1, at: nowIso };
+    return { ok: true, count: (packet.pdf_download_count ?? 0) + 1, at: nowIso, variant: data.variant };
   });
