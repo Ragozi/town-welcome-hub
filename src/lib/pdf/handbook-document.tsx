@@ -3,30 +3,66 @@ import { tierPriority, type Business, type Category, type Town } from "@/lib/tow
 import type { Packet } from "@/lib/packets";
 import type { HandbookRealtor, HandbookRecommendation } from "@/lib/handbook.functions";
 
-const styles = StyleSheet.create({
+const COLORS_COLOR = {
+  pageBg: "#F9F2E8",
+  cardBg: "#FFFFFF",
+  cardBorder: "#f0d6b6",
+  accent: "#FF6B00",
+  text: "#1a1410",
+  muted: "#6a5a48",
+  thankBg: "#1a1410",
+  thankText: "#F9F2E8",
+  thankBodyMuted: "rgba(249,242,232,0.85)",
+  thankAgentMuted: "rgba(249,242,232,0.7)",
+  thankCtaBorder: "rgba(249,242,232,0.25)",
+  ruleSoft: "#e7d9c5",
+  ruleSofter: "#f5d8b8",
+  overlay: "rgba(26,20,16,0.15)",
+};
+
+const COLORS_PRINT = {
+  pageBg: "#FFFFFF",
+  cardBg: "#FFFFFF",
+  cardBorder: "#999999",
+  accent: "#000000",
+  text: "#000000",
+  muted: "#444444",
+  thankBg: "#FFFFFF",
+  thankText: "#000000",
+  thankBodyMuted: "#333333",
+  thankAgentMuted: "#444444",
+  thankCtaBorder: "#999999",
+  ruleSoft: "#cccccc",
+  ruleSofter: "#cccccc",
+  overlay: "rgba(255,255,255,0)",
+};
+
+function makeStyles(variant: "color" | "print") {
+  const C = variant === "print" ? COLORS_PRINT : COLORS_COLOR;
+  return StyleSheet.create({
   page: {
     padding: 36,
     fontSize: 10,
     fontFamily: "Helvetica",
-    color: "#1a1410",
-    backgroundColor: "#F9F2E8",
+    color: C.text,
+    backgroundColor: C.pageBg,
   },
-  cover: { padding: 0, fontFamily: "Helvetica", color: "#1a1410", backgroundColor: "#F9F2E8" },
-  coverImageWrap: { height: 280, backgroundColor: "#F9F2E8", position: "relative" },
+  cover: { padding: 0, fontFamily: "Helvetica", color: C.text, backgroundColor: C.pageBg },
+  coverImageWrap: { height: 280, backgroundColor: C.pageBg, position: "relative" },
   coverImage: { width: "100%", height: "100%", objectFit: "cover" },
-  coverOverlay: { position: "absolute", inset: 0, backgroundColor: "rgba(26,20,16,0.15)" },
+  coverOverlay: { position: "absolute", inset: 0, backgroundColor: C.overlay },
   coverImageFade: {
     position: "absolute",
     left: 0,
     right: 0,
     bottom: 0,
     height: 50,
-    backgroundColor: "#F9F2E8",
+    backgroundColor: C.pageBg,
     opacity: 0.6,
   },
   coverHeroNoPhoto: {
     height: 200,
-    backgroundColor: "#F9F2E8",
+    backgroundColor: C.pageBg,
     paddingHorizontal: 36,
     paddingTop: 56,
     paddingBottom: 24,
@@ -37,7 +73,7 @@ const styles = StyleSheet.create({
     fontWeight: 700,
     letterSpacing: 2,
     textTransform: "uppercase",
-    color: "#FF6B00",
+    color: C.accent,
   },
   coverHeroTitle: {
     fontSize: 30,
@@ -45,12 +81,12 @@ const styles = StyleSheet.create({
     marginTop: 12,
     textTransform: "uppercase",
     letterSpacing: -0.5,
-    color: "#1a1410",
+    color: C.text,
   },
   coverHeroSubtitle: {
     fontSize: 10,
     marginTop: 10,
-    color: "#6a5a48",
+    color: C.muted,
     letterSpacing: 1.5,
     textTransform: "uppercase",
   },
@@ -60,7 +96,7 @@ const styles = StyleSheet.create({
     right: 36,
     bottom: 0,
     height: 2,
-    backgroundColor: "#FF6B00",
+    backgroundColor: C.accent,
   },
   coverContent: { padding: 36 },
   brand: {
@@ -68,7 +104,7 @@ const styles = StyleSheet.create({
     fontWeight: 700,
     letterSpacing: 2,
     textTransform: "uppercase",
-    color: "#FF6B00",
+    color: C.accent,
   },
   buyerTitle: {
     fontSize: 36,
@@ -77,30 +113,28 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     letterSpacing: -0.5,
   },
-  buyerAddr: { fontSize: 12, marginTop: 6, color: "#6a5a48" },
+  buyerAddr: { fontSize: 12, marginTop: 6, color: C.muted },
   noteBox: {
     marginTop: 22,
     padding: 16,
     borderRadius: 8,
-    backgroundColor: "#FFFFFF",
-    border: "1 solid #f0d6b6",
+    backgroundColor: C.cardBg,
+    border: `1 solid ${C.cardBorder}`,
   },
   noteEyebrow: {
     fontSize: 8,
     fontWeight: 700,
     letterSpacing: 1.5,
-    color: "#FF6B00",
+    color: C.accent,
     textTransform: "uppercase",
   },
   note: { fontSize: 10, marginTop: 6, lineHeight: 1.5 },
-
-  // Realtor branding card on cover
   realtorCard: {
     marginTop: 22,
     padding: 14,
     borderRadius: 10,
-    backgroundColor: "#FFFFFF",
-    border: "1 solid #f0d6b6",
+    backgroundColor: C.cardBg,
+    border: `1 solid ${C.cardBorder}`,
     flexDirection: "row",
     alignItems: "center",
     gap: 14,
@@ -109,31 +143,25 @@ const styles = StyleSheet.create({
     fontSize: 8,
     fontWeight: 700,
     letterSpacing: 1.5,
-    color: "#FF6B00",
+    color: C.accent,
     textTransform: "uppercase",
     marginBottom: 6,
   },
-  headshot: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    objectFit: "cover",
-  },
+  headshot: { width: 56, height: 56, borderRadius: 28, objectFit: "cover" },
   realtorBlock: { flex: 1 },
   realtorName: { fontSize: 14, fontWeight: 700, textTransform: "uppercase" },
-  realtorBrokerage: { fontSize: 9, color: "#6a5a48", marginTop: 2 },
-  realtorMeta: { fontSize: 9, color: "#6a5a48", marginTop: 6 },
+  realtorBrokerage: { fontSize: 9, color: C.muted, marginTop: 2 },
+  realtorMeta: { fontSize: 9, color: C.muted, marginTop: 6 },
   brokerageLogo: { maxWidth: 80, maxHeight: 40, objectFit: "contain" },
-
   qrBlock: { alignItems: "center", marginTop: 18 },
   qr: { width: 78, height: 78 },
-  qrCaption: { fontSize: 7, textAlign: "center", color: "#6a5a48", marginTop: 2, maxWidth: 90 },
+  qrCaption: { fontSize: 7, textAlign: "center", color: C.muted, marginTop: 2, maxWidth: 90 },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     marginBottom: 14,
     paddingBottom: 10,
-    borderBottom: "1 solid #e7d9c5",
+    borderBottom: `1 solid ${C.ruleSoft}`,
   },
   pageTitle: { fontSize: 18, fontWeight: 700, textTransform: "uppercase" },
   sectionTitle: {
@@ -141,23 +169,23 @@ const styles = StyleSheet.create({
     fontWeight: 700,
     marginTop: 12,
     marginBottom: 6,
-    color: "#FF6B00",
+    color: C.accent,
     textTransform: "uppercase",
     letterSpacing: 1,
-    borderBottom: "1 solid #f5d8b8",
+    borderBottom: `1 solid ${C.ruleSofter}`,
     paddingBottom: 3,
   },
   featuredRow: { flexDirection: "row", gap: 6, marginBottom: 6 },
   featuredCard: {
     flex: 1,
-    border: "1 solid #f0d6b6",
-    backgroundColor: "#FFFFFF",
+    border: `1 solid ${C.cardBorder}`,
+    backgroundColor: C.cardBg,
     padding: 10,
     borderRadius: 6,
   },
   bizName: { fontSize: 10, fontWeight: 700 },
-  bizMeta: { fontSize: 8, color: "#6a5a48", marginTop: 1 },
-  coupon: { fontSize: 8, color: "#FF6B00", marginTop: 3, fontWeight: 700 },
+  bizMeta: { fontSize: 8, color: C.muted, marginTop: 1 },
+  coupon: { fontSize: 8, color: C.accent, marginTop: 3, fontWeight: 700 },
   twoCol: { flexDirection: "row", gap: 12 },
   col: { flex: 1 },
   catTitle: {
@@ -175,31 +203,35 @@ const styles = StyleSheet.create({
     left: 36,
     right: 36,
     fontSize: 7,
-    color: "#6a5a48",
+    color: C.muted,
     textAlign: "center",
   },
   thankYouPage: {
     padding: 36,
-    backgroundColor: "#1a1410",
-    color: "#F9F2E8",
+    backgroundColor: C.thankBg,
+    color: C.thankText,
     fontFamily: "Helvetica",
   },
   thankBig: { fontSize: 32, fontWeight: 700, textTransform: "uppercase", marginTop: 24 },
   thankBody: {
     fontSize: 11,
     marginTop: 12,
-    color: "rgba(249,242,232,0.85)",
+    color: C.thankBodyMuted,
     lineHeight: 1.6,
     maxWidth: 380,
   },
-  thankAgent: { marginTop: 28, fontSize: 11, color: "rgba(249,242,232,0.7)" },
+  thankAgent: { marginTop: 28, fontSize: 11, color: C.thankAgentMuted },
   thankCta: {
     marginTop: 14,
     padding: 12,
-    border: "1 solid rgba(249,242,232,0.25)",
+    border: `1 solid ${C.thankCtaBorder}`,
     borderRadius: 8,
   },
-});
+  });
+}
+
+type Styles = ReturnType<typeof makeStyles>;
+
 
 export type HandbookDocumentProps = {
   packet: Packet;
@@ -210,6 +242,7 @@ export type HandbookDocumentProps = {
   recommended?: HandbookRecommendation[];
   qrDataUrl: string;
   liveUrl: string;
+  variant?: "color" | "print";
 };
 
 export function HandbookDocument({
@@ -221,7 +254,10 @@ export function HandbookDocument({
   recommended,
   qrDataUrl,
   liveUrl,
+  variant = "color",
 }: HandbookDocumentProps) {
+  const styles = makeStyles(variant);
+  const accent = variant === "print" ? "#000000" : "#FF6B00";
   // Featured: prefer scored recommendations from the recommender; fall back
   // to sponsor-tier-only for older callers that haven't passed `recommended`.
   let featured: Business[];
@@ -346,13 +382,13 @@ export function HandbookDocument({
               <Text style={styles.sectionTitle}>Picked for you</Text>
               <View style={styles.featuredRow}>
                 {featured.slice(0, 2).map((b) => (
-                  <FeaturedCardPdf key={b.id} b={b} />
+                  <FeaturedCardPdf key={b.id} b={b} styles={styles} />
                 ))}
               </View>
               {featured.length > 2 && (
                 <View style={styles.featuredRow}>
                   {featured.slice(2, 4).map((b) => (
-                    <FeaturedCardPdf key={b.id} b={b} />
+                    <FeaturedCardPdf key={b.id} b={b} styles={styles} />
                   ))}
                 </View>
               )}
@@ -363,12 +399,12 @@ export function HandbookDocument({
           <View style={styles.twoCol}>
             <View style={styles.col}>
               {left.map((c) => (
-                <CategoryPdf key={c.id} category={c} list={byCategory.get(c.id) ?? []} />
+                <CategoryPdf key={c.id} category={c} list={byCategory.get(c.id) ?? []} styles={styles} />
               ))}
             </View>
             <View style={styles.col}>
               {right.map((c) => (
-                <CategoryPdf key={c.id} category={c} list={byCategory.get(c.id) ?? []} />
+                <CategoryPdf key={c.id} category={c} list={byCategory.get(c.id) ?? []} styles={styles} />
               ))}
             </View>
           </View>
@@ -389,7 +425,7 @@ export function HandbookDocument({
           <Text
             style={{
               fontSize: 9,
-              color: "#FF6B00",
+              color: accent,
               fontWeight: 700,
               letterSpacing: 1,
               textTransform: "uppercase",
@@ -413,7 +449,7 @@ export function HandbookDocument({
   );
 }
 
-function FeaturedCardPdf({ b }: { b: Business }) {
+function FeaturedCardPdf({ b, styles }: { b: Business; styles: Styles }) {
   return (
     <View style={styles.featuredCard}>
       <Text style={styles.bizName}>{b.name}</Text>
@@ -426,7 +462,7 @@ function FeaturedCardPdf({ b }: { b: Business }) {
   );
 }
 
-function CategoryPdf({ category, list }: { category: Category; list: Business[] }) {
+function CategoryPdf({ category, list, styles }: { category: Category; list: Business[]; styles: Styles }) {
   const sorted = [...list].sort(
     (a, b) =>
       tierPriority[b.sponsor_tier] - tierPriority[a.sponsor_tier] || a.name.localeCompare(b.name),

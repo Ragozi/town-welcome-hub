@@ -1,63 +1,45 @@
-# Finish remaining items from the consolidated update
 
-Three things left from the last pass. All scoped to UI + one email-infra setup — no schema changes.
+## Goal
 
-## 1. Dashboard: "Last download" stat tile
+Replace the one-click "Download" on the handbook PDF preview with a dialog that lets the user choose between the existing **Full Color PDF** and a new **Print-Friendly PDF** variant. Track which variant was downloaded.
 
-File: `src/routes/_authenticated/dashboard.tsx`
+## Changes
 
-- `totalDownloads` and `lastDownload` are already computed but unrendered.
-- Add a 5th `StatCard` to the existing stats row:
-  - Label: "Last download"
-  - Value: relative time (e.g. "2h ago") via `date-fns` `formatDistanceToNow`, or "Never" when null.
-  - Sub-label: total downloads count ("12 total").
-- No new queries — reuse the existing `packets` query data.
+### 1. `src/lib/pdf/handbook-document.tsx`
+- Add a `variant?: "color" | "print"` prop to `HandbookDocument` (default `"color"`).
+- Define a second `StyleSheet` (or merge overrides) for the `"print"` variant:
+  - White page background (replace `#F9F2E8` cream).
+  - Drop the dark thank-you page background → white with black text.
+  - Remove cover photo overlay tint; keep the photo but skip the fade tint.
+  - Replace orange accents (`#FF6B00`) with black/dark gray for headings, eyebrows, rules, coupon text.
+  - Remove `noteBox` / `realtorCard` / `featuredCard` fill colors → transparent with a 1px gray border.
+  - Keep all layout, fonts, sizes, QR, sections identical (same engine, same component tree).
+- Implement via a small `getStyles(variant)` helper that returns the merged sheet — no duplication of the JSX tree.
 
-## 2. Admin recommendation audit UI — "Why these businesses?"
+### 2. `src/components/handbook-pdf-panel.tsx`
+- Replace the single `<PDFDownloadLink>` button with a **"Download" button** that opens a `Dialog` (`@/components/ui/dialog` — already in project).
+- Dialog content: two cards/options
+  - **Full Color PDF** — "Branded version with full images, colors, sponsor highlights. Best for digital viewing and premium printing."
+  - **Print-Friendly PDF** — "Reduced color, white background, high contrast. Optimized for home printers and lower ink."
+- Each option renders its own `<PDFDownloadLink>` (built from `<HandbookDocument variant=... />`) so the file is generated on click with the chosen variant.
+- File name suffix: `…-welcome-<slug>.pdf` for color, `…-welcome-<slug>-print.pdf` for print.
+- `recordOnce()` becomes `recordOnce(variant)` and passes `variant` through to the server fn.
+- Keep the existing `<PDFViewer>` preview as-is (always shows the color version — it's the design preview).
 
-Goal: let admins see why each business surfaced in a specific packet's handbook, using the `packets.recommendation_log` jsonb we already write from `getHandbookData`.
+### 3. `src/lib/packet-downloads.functions.ts`
+- Extend the input validator to accept `variant: z.enum(["color", "print"]).default("color")`.
+- Persist the variant in the `packet_events.metadata` JSON (`{ triggered_by, variant }`) so analytics can split downloads by variant.
+- Leave the `packets.pdf_download_count` increment unchanged (both variants count as a download).
 
-### a. Packet detail page (owner-visible)
-File: `src/routes/_authenticated/packets.$id.tsx`
+### 4. (Optional, only if needed) Migration
+- No schema change required. `packet_events.metadata` is already `jsonb`, so the variant flows in without a migration. Skip the migration step.
 
-- Add a collapsible `<Collapsible>` panel titled "Why these businesses?" beneath the existing business list.
-- Render each entry from `recommendation_log`:
-  - Business name + score
-  - Reason chips: "Town match", "Verified", "Sponsor: gold", "Interest: pet friendly (subcategory)", "Manual pin", "Essential: grocery"
-- Reason → human label mapping lives in a small helper `src/lib/recommendation-labels.ts` (pure function, reused by admin view).
-- Show empty state when log is `{}` ("Regenerate this packet's PDF to populate audit data").
+## Out of scope
+- No new analytics dashboard tile for variant split — data is captured in `packet_events.metadata` and can be surfaced later.
+- No change to `/api/packet-pdf/$slug` server route (live link still serves the color version).
+- No change to `HandbookPdfPanel`'s on-screen preview.
 
-### b. Admin-only deep view
-New file: `src/routes/_authenticated/admin.packets.$id.recommendations.tsx`
-
-- Loader uses a new `getRecommendationAudit` server fn (`src/lib/admin-recommendations.functions.ts`) that:
-  - Requires `super_admin` role (returns 403 otherwise).
-  - Fetches packet + log + buyer interests + town name + the underlying businesses (joined on log keys).
-  - Returns a typed payload.
-- Page renders:
-  - Packet header (buyer, town, interests, sponsor pin list).
-  - Sortable table: Business · Score · Top reasons · Sponsor tier · Verified · Category.
-  - Link back to `/admin/packets` (will reuse existing admin nav).
-- Add a "View recommendation audit" link from the packet detail page when the viewer has `super_admin`.
-
-## 3. Invitation email delivery
-
-User confirmation needed (open question from last round): use **Lovable transactional email** for `adminInviteUser` / `adminResendInvite`?
-
-Plan if yes:
-- Call email-domain setup tool to provision the project's transactional sender.
-- No code change to `admin.functions.ts` required — Supabase Auth will route invite emails through the configured SMTP automatically once domain is verified.
-- If the user wants a custom sender domain (e.g. `invites@hearthhandbook.com`), they'll need to add DNS records; tool will surface the exact records.
-
-Plan if no (bring own SMTP, e.g. Resend):
-- Ask for `RESEND_API_KEY` via `add_secret`.
-- Wrap `adminInviteUser` to also send a branded HTML invite via Resend after the Supabase user is created (Supabase still sends the magic link; Resend sends the welcome/branding wrapper). Out of scope for this round unless requested.
-
-## Out of scope (not touching this turn)
-- Email template redesign
-- New admin "Invitations" list page
-- Sponsor tier rework
-- Cover photo / hero treatment
-
-## Open question for you
-Should I proceed with **Lovable transactional email** (option A — simplest, branded sender on `hearthhandbook.com`) for the invite emails, or skip the email setup this turn and just ship #1 and #2?
+## Files touched
+- `src/lib/pdf/handbook-document.tsx` (add variant styling)
+- `src/components/handbook-pdf-panel.tsx` (dialog + two download links)
+- `src/lib/packet-downloads.functions.ts` (accept + log variant)
