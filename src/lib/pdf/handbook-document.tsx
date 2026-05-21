@@ -449,7 +449,7 @@ export function HandbookDocument({
   );
 }
 
-function FeaturedCardPdf({ b }: { b: Business }) {
+function FeaturedCardPdf({ b, styles }: { b: Business; styles: Styles }) {
   return (
     <View style={styles.featuredCard}>
       <Text style={styles.bizName}>{b.name}</Text>
