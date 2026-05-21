@@ -3,7 +3,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import type { Database } from "@/integrations/supabase/types";
-import { firecrawlSearch } from "./firecrawl.server";
+import { firecrawlSearch, firecrawlScrapeJson } from "./firecrawl.server";
 import { withDebugLog } from "./debug-log.server";
 import { filterResult, queryVariants } from "./scrape-filter";
 
@@ -691,4 +691,212 @@ export const getQaHandbook = createServerFn({ method: "GET" })
       .eq("slug", "qa-sample")
       .maybeSingle();
     return data;
+  });
+
+// ----- Mine listicles -----
+// "Best of" / aggregator articles (e.g. an OpenTable "Best Restaurants in
+// Ozaukee County" page) get filtered out of the main scrape as aggregators —
+// but they are human-curated lists of REAL businesses. This pass reads those
+// excluded rows back, JSON-extracts the business list from each article via
+// Firecrawl's structured extraction, resolves each named business to its OWN
+// website, liveness-checks it, and inserts survivors as fresh Pending rows
+// tagged source='listicle_mined' with source_query pointing at the parent
+// article (provenance).
+//
+// Cost per run with default caps: up to 10 article extractions (~5 credits
+// each) + up to 120 resolution searches (~2 credits each) ≈ 290 credits.
+const LISTICLE_SCHEMA = {
+  type: "object",
+  properties: {
+    businesses: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          name: { type: "string" },
+          website: { type: "string" },
+          address: { type: "string" },
+          phone: { type: "string" },
+        },
+        required: ["name"],
+      },
+    },
+  },
+  required: ["businesses"],
+};
+
+type ExtractedBiz = { name?: string; website?: string; address?: string; phone?: string };
+
+export const mineListicles = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    z.object({
+      townId: z.string().uuid(),
+      maxArticles: z.number().min(1).max(25).default(10),
+      maxPerArticle: z.number().min(1).max(30).default(12),
+    }).parse,
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.userId);
+
+    return withDebugLog(
+      {
+        event_type: "scrape",
+        function_name: "mineListicles",
+        user_id: context.userId,
+        input: data,
+      },
+      async () => {
+        const { data: town, error: tErr } = await supabaseAdmin
+          .from("towns")
+          .select("id, name, state")
+          .eq("id", data.townId)
+          .maybeSingle();
+        if (tErr || !town) throw new Response("Town not found", { status: 404 });
+
+        // Pull this town's Excluded rows and keep the ones that look like
+        // mineable list articles. Listicle-titled rows first (cleanest
+        // signal), then aggregator rows.
+        const { data: allExcluded } = await supabaseAdmin
+          .from("scraped_businesses")
+          .select("id, website, source_url, name, excluded_reason, category_id")
+          .eq("town_id", town.id)
+          .eq("status", "excluded")
+          .order("created_at", { ascending: false })
+          .limit(300);
+
+        const candidates = (allExcluded ?? [])
+          .map((r) => {
+            const reason = r.excluded_reason ?? "";
+            const isListicle = reason.includes("listicle");
+            const isAggregator = reason.startsWith("filter: aggregator:");
+            return { row: r, isListicle, mineable: isListicle || isAggregator };
+          })
+          .filter((c) => c.mineable)
+          .sort((a, b) => Number(b.isListicle) - Number(a.isListicle))
+          .slice(0, data.maxArticles)
+          .map((c) => c.row);
+
+        if (candidates.length === 0) {
+          return {
+            articlesProcessed: 0,
+            businessesFound: 0,
+            inserted: 0,
+            skipped: 0,
+            searches: 0,
+            errors: ["No aggregator/listicle rows in the Excluded tab to mine"],
+          };
+        }
+
+        let inserted = 0;
+        let skipped = 0;
+        let searches = 0;
+        let businessesFound = 0;
+        const errors: string[] = [];
+        const seenWebsites = new Set<string>();
+
+        for (const article of candidates) {
+          const articleUrl = article.source_url ?? article.website;
+          if (!articleUrl) {
+            skipped += 1;
+            continue;
+          }
+          try {
+            const extracted = await firecrawlScrapeJson<{ businesses?: ExtractedBiz[] }>(
+              articleUrl,
+              LISTICLE_SCHEMA,
+              'Extract every business named in this "best of" / recommendations / ' +
+                "directory article. For each business give its name, and its " +
+                "website, address, and phone if the article states them. " +
+                "Ignore the publishing site itself.",
+            );
+            const bizList = (extracted?.businesses ?? []).slice(0, data.maxPerArticle);
+            businessesFound += bizList.length;
+
+            for (const biz of bizList) {
+              const bizName = (biz.name ?? "").trim();
+              if (!bizName) {
+                skipped += 1;
+                continue;
+              }
+
+              // Resolve to the business's own website.
+              let website: string | null = null;
+              // 1) If the article gave a website and it's not itself junk, use it.
+              if (biz.website) {
+                const v = filterResult(biz.website, bizName);
+                if (v.ok) website = biz.website;
+              }
+              // 2) Otherwise search for the business by name + town.
+              if (!website) {
+                const found = await firecrawlSearch(
+                  `${bizName} ${town.name} ${town.state}`,
+                  { limit: 3 },
+                );
+                searches += 1;
+                for (const r of found) {
+                  const v = filterResult(r.url, r.title);
+                  if (v.ok) {
+                    website = r.url;
+                    break;
+                  }
+                }
+              }
+              if (!website) {
+                skipped += 1;
+                continue;
+              }
+
+              const normalized = normalizeUrl(website);
+              if (seenWebsites.has(normalized)) {
+                skipped += 1;
+                continue;
+              }
+              seenWebsites.add(normalized);
+
+              const liveness = await verifyUrlLive(website);
+              const isLive = liveness.live;
+              const row = {
+                town_id: town.id,
+                category_id: article.category_id ?? null,
+                source: "listicle_mined",
+                source_url: website,
+                source_query: articleUrl,
+                source_zip: null,
+                source_county: null,
+                name: bizName.slice(0, 200),
+                website: normalized,
+                description: biz.address
+                  ? `Listed in "${article.name}". ${biz.address}`
+                  : `Listed in "${article.name}".`,
+                raw: { extracted: biz, from_article: articleUrl } as never,
+                last_scraped_at: new Date().toISOString(),
+                status: (isLive ? "pending" : "excluded") as "pending" | "excluded",
+                excluded_reason: isLive
+                  ? null
+                  : `liveness: ${(liveness as { reason: string }).reason}`,
+              };
+              const { error: insErr } = await insertOrUpdateScrapedBusiness(row);
+              if (insErr) {
+                skipped += 1;
+                errors.push(`${bizName} write: ${insErr.message}`);
+              } else {
+                inserted += 1;
+              }
+            }
+          } catch (e) {
+            errors.push(`${article.name}: ${(e as Error).message}`);
+          }
+        }
+
+        return {
+          articlesProcessed: candidates.length,
+          businessesFound,
+          inserted,
+          skipped,
+          searches,
+          errors,
+        };
+      },
+    );
   });

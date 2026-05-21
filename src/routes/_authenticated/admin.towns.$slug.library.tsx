@@ -7,6 +7,7 @@ import {
   listScrapedForTown,
   scrapeTown,
   scrapeCounty,
+  mineListicles,
   setScrapedStatus,
   promoteToBusiness,
 } from "@/lib/scraped.functions";
@@ -28,7 +29,18 @@ import {
   DialogFooter,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { ArrowLeft, Loader2, Globe, RefreshCw, Check, X, Star, Building2, Download } from "lucide-react";
+import {
+  ArrowLeft,
+  Loader2,
+  Globe,
+  RefreshCw,
+  Check,
+  X,
+  Star,
+  Building2,
+  Download,
+  Sparkles,
+} from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/admin/towns/$slug/library")({
@@ -90,6 +102,20 @@ function TownLibrary() {
     },
     onError: (e) =>
       toast.error("County scrape failed", { description: (e as Error).message }),
+  });
+
+  const mineFn = useServerFn(mineListicles);
+  const mineMut = useMutation({
+    mutationFn: () => mineFn({ data: { townId: townQ.data!.id } }),
+    onSuccess: (r) => {
+      toast.success(
+        `Mined ${r.articlesProcessed} articles: ${r.businessesFound} businesses found, ${r.inserted} added, ${r.skipped} skipped`,
+      );
+      if (r.errors.length) toast.warning(r.errors.slice(0, 3).join(" • "));
+      qc.invalidateQueries({ queryKey: ["scraped", townQ.data?.id] });
+    },
+    onError: (e) =>
+      toast.error("Mine listicles failed", { description: (e as Error).message }),
   });
 
   const exportFn = useServerFn(exportMarketingLeads);
@@ -207,6 +233,20 @@ function TownLibrary() {
               <Download className="mr-1.5 h-4 w-4" />
             )}
             Export for marketing
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => mineMut.mutate()}
+            disabled={mineMut.isPending}
+            className="rounded-full"
+            title="Extract individual businesses named inside 'best of' / aggregator articles in the Excluded tab, resolve each to its own website, and add as Pending"
+          >
+            {mineMut.isPending ? (
+              <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+            ) : (
+              <Sparkles className="mr-1.5 h-4 w-4" />
+            )}
+            Mine listicles
           </Button>
           <Button onClick={() => setScrapeOpen(true)} className="rounded-full">
             <RefreshCw className="mr-1.5 h-4 w-4" /> Scrape now
