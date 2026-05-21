@@ -382,13 +382,13 @@ export function HandbookDocument({
               <Text style={styles.sectionTitle}>Picked for you</Text>
               <View style={styles.featuredRow}>
                 {featured.slice(0, 2).map((b) => (
-                  <FeaturedCardPdf key={b.id} b={b} />
+                  <FeaturedCardPdf key={b.id} b={b} styles={styles} />
                 ))}
               </View>
               {featured.length > 2 && (
                 <View style={styles.featuredRow}>
                   {featured.slice(2, 4).map((b) => (
-                    <FeaturedCardPdf key={b.id} b={b} />
+                    <FeaturedCardPdf key={b.id} b={b} styles={styles} />
                   ))}
                 </View>
               )}
