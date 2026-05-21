@@ -462,7 +462,7 @@ function FeaturedCardPdf({ b, styles }: { b: Business; styles: Styles }) {
   );
 }
 
-function CategoryPdf({ category, list }: { category: Category; list: Business[] }) {
+function CategoryPdf({ category, list, styles }: { category: Category; list: Business[]; styles: Styles }) {
   const sorted = [...list].sort(
     (a, b) =>
       tierPriority[b.sponsor_tier] - tierPriority[a.sponsor_tier] || a.name.localeCompare(b.name),
