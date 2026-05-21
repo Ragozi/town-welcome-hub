@@ -22,6 +22,8 @@ export type Packet = {
   status: PacketStatus;
   pdf_url: string | null;
   pdf_download_count: number;
+  last_downloaded_at: string | null;
+  recommendation_log: Record<string, { score: number; reasons: unknown[]; name: string }>;
   created_at: string;
   updated_at: string;
 };
