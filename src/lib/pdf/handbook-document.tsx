@@ -242,6 +242,7 @@ export type HandbookDocumentProps = {
   recommended?: HandbookRecommendation[];
   qrDataUrl: string;
   liveUrl: string;
+  variant?: "color" | "print";
 };
 
 export function HandbookDocument({
@@ -253,7 +254,10 @@ export function HandbookDocument({
   recommended,
   qrDataUrl,
   liveUrl,
+  variant = "color",
 }: HandbookDocumentProps) {
+  const styles = makeStyles(variant);
+  const accent = variant === "print" ? "#000000" : "#FF6B00";
   // Featured: prefer scored recommendations from the recommender; fall back
   // to sponsor-tier-only for older callers that haven't passed `recommended`.
   let featured: Business[];
