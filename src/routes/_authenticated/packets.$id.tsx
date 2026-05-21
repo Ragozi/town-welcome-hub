@@ -17,9 +17,16 @@ import {
   Loader2,
   QrCode,
   FileText,
+  Info as InfoIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 import { getPublicBaseUrl, packetUrl } from "@/lib/public-url";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { chipClassForReason, labelForReason } from "@/lib/recommendation-labels";
 
 const HandbookPdfPanel = lazy(() =>
   import("@/components/handbook-pdf-panel").then((m) => ({ default: m.HandbookPdfPanel })),
