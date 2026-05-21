@@ -425,7 +425,7 @@ export function HandbookDocument({
           <Text
             style={{
               fontSize: 9,
-              color: "#FF6B00",
+              color: accent,
               fontWeight: 700,
               letterSpacing: 1,
               textTransform: "uppercase",
