@@ -285,3 +285,65 @@ function Info({ label, value }: { label: string; value: string }) {
     </div>
   );
 }
+
+function RecommendationAuditPanel({
+  data,
+}: {
+  data: import("@/lib/handbook.functions").HandbookData;
+}) {
+  const businessById = new Map(data.businesses.map((b) => [b.id, b]));
+  const rows = data.recommended
+    .map((r) => ({ ...r, business: businessById.get(r.business_id) }))
+    .filter((r) => r.business);
+
+  return (
+    <Collapsible className="rounded-3xl border border-border bg-card p-6 shadow-[var(--shadow-soft)]">
+      <CollapsibleTrigger className="flex w-full items-center justify-between gap-3 text-left">
+        <div>
+          <p className="eyebrow">// Audit</p>
+          <h2 className="font-display mt-1 text-lg font-extrabold uppercase tracking-tight">
+            Why these businesses?
+          </h2>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Top {rows.length} picks for this buyer. Click to see scoring reasons.
+          </p>
+        </div>
+        <InfoIcon className="h-4 w-4 text-muted-foreground" />
+      </CollapsibleTrigger>
+      <CollapsibleContent className="mt-4 space-y-2">
+        {rows.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            No recommendations yet — open the PDF preview to generate them.
+          </p>
+        ) : (
+          rows.map((r) => (
+            <div
+              key={r.business_id}
+              className="rounded-2xl border border-border bg-secondary/30 p-4"
+            >
+              <div className="flex items-baseline justify-between gap-3">
+                <p className="font-medium">{r.business!.name}</p>
+                <span className="font-mono text-xs text-muted-foreground">
+                  score {r.score}
+                </span>
+              </div>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {r.reasons.map((reason, i) => (
+                  <span
+                    key={i}
+                    className={
+                      "inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-medium " +
+                      chipClassForReason(reason)
+                    }
+                  >
+                    {labelForReason(reason)}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ))
+        )}
+      </CollapsibleContent>
+    </Collapsible>
+  );
+}
