@@ -182,7 +182,7 @@ function DownloadOptionCard({
   icon: React.ReactNode;
   title: string;
   description: string;
-  doc: React.ReactElement;
+  doc: React.ReactElement<any>;
   fileName: string;
   onClick: () => void;
 }) {
