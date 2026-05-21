@@ -206,6 +206,8 @@ function PacketDetail() {
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           )}
+
+          {handbookData && <RecommendationAuditPanel data={handbookData} />}
         </div>
 
         <div className="space-y-4">
