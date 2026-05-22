@@ -1,45 +1,33 @@
+## Plan
 
-## Goal
+The issue is likely on the public buyer handbook route (`/p/$slug`), not only the authenticated dashboard PDF preview. The custom URL you tested (`/packets/...`) falls through to the auth-only packet detail behavior and the current preview also appears stuck on the auth gate/loading state.
 
-Replace the one-click "Download" on the handbook PDF preview with a dialog that lets the user choose between the existing **Full Color PDF** and a new **Print-Friendly PDF** variant. Track which variant was downloaded.
+### What I’ll change
 
-## Changes
+1. **Add the same download-version dialog to the public handbook page**
+   - Locate the “Download Handbook” button on the buyer-facing page.
+   - Replace its direct PDF link/download action with a small dialog.
+   - Show the two options:
+     - Full Color PDF
+     - Print-Friendly PDF
 
-### 1. `src/lib/pdf/handbook-document.tsx`
-- Add a `variant?: "color" | "print"` prop to `HandbookDocument` (default `"color"`).
-- Define a second `StyleSheet` (or merge overrides) for the `"print"` variant:
-  - White page background (replace `#F9F2E8` cream).
-  - Drop the dark thank-you page background → white with black text.
-  - Remove cover photo overlay tint; keep the photo but skip the fade tint.
-  - Replace orange accents (`#FF6B00`) with black/dark gray for headings, eyebrows, rules, coupon text.
-  - Remove `noteBox` / `realtorCard` / `featuredCard` fill colors → transparent with a 1px gray border.
-  - Keep all layout, fonts, sizes, QR, sections identical (same engine, same component tree).
-- Implement via a small `getStyles(variant)` helper that returns the merged sheet — no duplication of the JSX tree.
+2. **Keep the existing PDF engine/layouts**
+   - Reuse the existing `HandbookDocument` variant support (`color` / `print`).
+   - Generate the selected PDF in-browser using the same `@react-pdf/renderer` flow already used by the dashboard preview.
+   - Avoid re-enabling the retired server PDF endpoint, since it was intentionally stubbed out for runtime compatibility.
 
-### 2. `src/components/handbook-pdf-panel.tsx`
-- Replace the single `<PDFDownloadLink>` button with a **"Download" button** that opens a `Dialog` (`@/components/ui/dialog` — already in project).
-- Dialog content: two cards/options
-  - **Full Color PDF** — "Branded version with full images, colors, sponsor highlights. Best for digital viewing and premium printing."
-  - **Print-Friendly PDF** — "Reduced color, white background, high contrast. Optimized for home printers and lower ink."
-- Each option renders its own `<PDFDownloadLink>` (built from `<HandbookDocument variant=... />`) so the file is generated on click with the chosen variant.
-- File name suffix: `…-welcome-<slug>.pdf` for color, `…-welcome-<slug>-print.pdf` for print.
-- `recordOnce()` becomes `recordOnce(variant)` and passes `variant` through to the server fn.
-- Keep the existing `<PDFViewer>` preview as-is (always shows the color version — it's the design preview).
+3. **Track analytics by variant**
+   - For authenticated dashboard downloads, keep using the existing `recordPdfDownload` server function.
+   - For public buyer-page downloads, use the existing public tracking flow (`logEvent`) and include metadata like `{ variant: "color" }` or `{ variant: "print" }` on `pdf_downloaded`.
 
-### 3. `src/lib/packet-downloads.functions.ts`
-- Extend the input validator to accept `variant: z.enum(["color", "print"]).default("color")`.
-- Persist the variant in the `packet_events.metadata` JSON (`{ triggered_by, variant }`) so analytics can split downloads by variant.
-- Leave the `packets.pdf_download_count` increment unchanged (both variants count as a download).
+4. **Fix route confusion if needed**
+   - Ensure download UX is available where users actually land from share links: `/p/$slug`.
+   - Keep `/packets/$id` as the authenticated dashboard detail page only.
 
-### 4. (Optional, only if needed) Migration
-- No schema change required. `packet_events.metadata` is already `jsonb`, so the variant flows in without a migration. Skip the migration step.
+### Verification
 
-## Out of scope
-- No new analytics dashboard tile for variant split — data is captured in `packet_events.metadata` and can be surfaced later.
-- No change to `/api/packet-pdf/$slug` server route (live link still serves the color version).
-- No change to `HandbookPdfPanel`'s on-screen preview.
-
-## Files touched
-- `src/lib/pdf/handbook-document.tsx` (add variant styling)
-- `src/components/handbook-pdf-panel.tsx` (dialog + two download links)
-- `src/lib/packet-downloads.functions.ts` (accept + log variant)
+- Open the preview buyer page for the packet.
+- Click “Download Handbook”.
+- Confirm the dialog opens instead of immediate download.
+- Click each option and confirm the selected PDF starts downloading.
+- Confirm analytics calls include the selected variant.
